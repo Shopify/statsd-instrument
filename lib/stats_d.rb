@@ -1,7 +1,9 @@
 require 'socket'
 
 module StatsD
-  mattr_accessor :host, :port, :mode, :logger, :enabled
+  class << self
+    attr_accessor :host, :port, :mode, :logger, :enabled
+  end
   self.enabled = true
 
   trap("TTOU") { self.enabled = false }

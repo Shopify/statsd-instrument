@@ -1,8 +1,7 @@
-require 'active_support/all'
-$LOAD_PATH << File.dirname(__FILE__) + '/../lib'
 require 'stats_d'
 require 'test/unit'
 require 'mocha'
+require 'logger'
 
 StatsD.logger = Logger.new('/dev/null')
 
@@ -110,7 +109,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.unstub(:increment)
     StatsD.stubs(:rand).returns(0.01)
     StatsD.logger.expects(:info).once.with do |string|
-      string.ends_with?('@0.1')
+      string.include?('@0.1')
     end
 
     StatsD.increment('sampling.foo.bar', 1, 0.1)
