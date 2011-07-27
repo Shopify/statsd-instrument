@@ -1,6 +1,6 @@
-== StatsD client for Ruby
+# StatsD client for Ruby apps
 
-== Overview
+## Overview
 
 This is a ruby client for statsd (http://github.com/etsy/statsd). It provides a lightweight way to track and measure metrics in your application. 
 
@@ -13,13 +13,15 @@ For Shopify, our retention periods are:
 2) 60 seconds of granularity for the last week
 3) 10 minutes of granularity for the last 5 years
 
-== StatsD keys
+This is the same as what Etsy uses (mentioned in the README for [http://github.com/etsy/statd](http://github.com/etsy/statd])).
+
+## StatsD keys
 
 StatsD keys look like 'admin.logins.api.success'. Each dot in the key represents a 'folder' in the graphite interface. You can include any data you want in the keys.
 
-== Usage
+## Usage
 
-= StatsD.measure
+# StatsD.measure
 
 Lets you benchmark how long the execution of a specific method takes.
 
@@ -36,7 +38,7 @@ Rather than using this method directly it's more common to use the metaprogrammi
 		GoogleBase.extend StatsD::Instrument
 		GoogleBase.statsd_measure :insert, 'GoogleBase.insert'
 		
-= StatsD.increment
+# StatsD.increment
 
 Lets you increment a key in statsd to keep a count of something. If the specified key doesn't exist it will create it for you.
 
@@ -47,7 +49,17 @@ Lets you increment a key in statsd to keep a count of something. If the specifie
 		
 Again it's more common to use the metaprogramming methods.
 
-= statsd_count
+## Metaprogramming Methods
+
+As mentioned, it's most common to use the provided metaprogramming methods. This lets you define all of your instrumentation in one file and not litter your code with instrumentation details. You should enable a class for instrumentation by extending it with the `StatsD::Instrument` class.
+
+``` ruby
+  GoogleBase.extend StatsD::Instrument
+```
+
+Then use the methods provided below to instrument methods in your class.
+
+# statsd\_count
 
 This will increment the given key even if the method doesn't finish (ie. raises).
 
@@ -55,13 +67,13 @@ This will increment the given key even if the method doesn't finish (ie. raises)
 
 Note how I used the 'GoogleBase.insert' key above when measuring this method, and I reused here when counting the method calls. StatsD automatically separates these two kinds of stats into namespaces so there won't be a key collision here.
 
-= statsd_count_if
+# statsd\_count\_if
 
 This will only increment the given key if the method executes successfully.
 
 		GoogleBase.statsd_count_if :insert, 'GoogleBase.insert'
 		
-So now, if GoogleBase#insert raises an exception or returns false (ie. result === false), we won't increment the key. If you want to define what success means for a given method you can pass a block that takes the result of the method.
+So now, if GoogleBase#insert raises an exception or returns false (ie. result == false), we won't increment the key. If you want to define what success means for a given method you can pass a block that takes the result of the method.
 
 		GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
 		  result.code == 200
@@ -69,7 +81,7 @@ So now, if GoogleBase#insert raises an exception or returns false (ie. result ==
 		
 In the above example we will only increment the key in statsd if the result of the block returns true. So the method is returning a Net::HTTP response and we're checking the status code.
 
-= statsd_count_success
+# statsd\_count\_success
 
 Similar to statsd_count_if, except this will increment one key in the case of success and another key in the case of failure.
 
