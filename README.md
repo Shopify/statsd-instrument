@@ -21,31 +21,37 @@ StatsD keys look like 'admin.logins.api.success'. Each dot in the key represents
 
 ## Usage
 
-# StatsD.measure
+### StatsD.measure
 
 Lets you benchmark how long the execution of a specific method takes.
 
-		# You can pass a key and a ms value
-		StatsD.measure('GoogleBase.insert', 2.55)
+``` ruby
+# You can pass a key and a ms value
+StatsD.measure('GoogleBase.insert', 2.55)
 
-		# or more commonly pass a block that calls your code
-		StatsD.measure('GoogleBase.insert') do
-		  GoogleBase.insert(product)
-		end
+# or more commonly pass a block that calls your code
+StatsD.measure('GoogleBase.insert') do
+  GoogleBase.insert(product)
+end
+```
 
 Rather than using this method directly it's more common to use the metaprogramming methods made available.
 
-		GoogleBase.extend StatsD::Instrument
-		GoogleBase.statsd_measure :insert, 'GoogleBase.insert'
+``` ruby
+GoogleBase.extend StatsD::Instrument
+GoogleBase.statsd_measure :insert, 'GoogleBase.insert'
+```
 		
-# StatsD.increment
+### StatsD.increment
 
 Lets you increment a key in statsd to keep a count of something. If the specified key doesn't exist it will create it for you.
 
-		# increments default to +1
-		StatsD.increment('GoogleBase.insert')
-		# you can also specify how much to increment the key by
-		StatsD.increment('GoogleBase.insert', 10)
+``` ruby
+# increments default to +1
+StatsD.increment('GoogleBase.insert')
+# you can also specify how much to increment the key by
+StatsD.increment('GoogleBase.insert', 10)
+```
 		
 Again it's more common to use the metaprogramming methods.
 
@@ -54,54 +60,54 @@ Again it's more common to use the metaprogramming methods.
 As mentioned, it's most common to use the provided metaprogramming methods. This lets you define all of your instrumentation in one file and not litter your code with instrumentation details. You should enable a class for instrumentation by extending it with the `StatsD::Instrument` class.
 
 ``` ruby
-  GoogleBase.extend StatsD::Instrument
+GoogleBase.extend StatsD::Instrument
 ```
 
 Then use the methods provided below to instrument methods in your class.
 
-# statsd\_count
+### statsd\_count
 
 This will increment the given key even if the method doesn't finish (ie. raises).
 
-		GoogleBase.statsd_count :insert, 'GoogleBase.insert'
+``` ruby
+GoogleBase.statsd_count :insert, 'GoogleBase.insert'
+```
 
 Note how I used the 'GoogleBase.insert' key above when measuring this method, and I reused here when counting the method calls. StatsD automatically separates these two kinds of stats into namespaces so there won't be a key collision here.
 
-# statsd\_count\_if
+### statsd\_count\_if
 
 This will only increment the given key if the method executes successfully.
 
-		GoogleBase.statsd_count_if :insert, 'GoogleBase.insert'
+``` ruby
+GoogleBase.statsd_count_if :insert, 'GoogleBase.insert'
+```
 		
 So now, if GoogleBase#insert raises an exception or returns false (ie. result == false), we won't increment the key. If you want to define what success means for a given method you can pass a block that takes the result of the method.
 
-		GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
-		  result.code == 200
-		end
+``` ruby
+GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
+  result.code == 200
+end
+```
 		
 In the above example we will only increment the key in statsd if the result of the block returns true. So the method is returning a Net::HTTP response and we're checking the status code.
 
-# statsd\_count\_success
+### statsd\_count\_success
 
 Similar to statsd_count_if, except this will increment one key in the case of success and another key in the case of failure.
 
-		GoogleBase.statsd_count_success :insert, 'GoogleBase.insert'
+``` ruby
+GoogleBase.statsd_count_success :insert, 'GoogleBase.insert'
+```
 		
 So if this method fails execution (raises or returns false) we'll increment the failure key ('GoogleBase.insert.failure'), otherwise we'll increment the success key ('GoogleBase.insert.success'). Notice that we're modifying the given key before sending it to statsd.
 
 Again you can pass a block to define what success means.
 		
-		GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
-		  result.code == 200
-		end
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+``` ruby
+GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
+  result.code == 200
+end
+```
 		
