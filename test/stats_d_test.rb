@@ -40,7 +40,6 @@ ActiveMerchant::Base.extend StatsD::Instrument
 class StatsDTest < Test::Unit::TestCase
   def setup
     StatsD.stubs(:increment)
-    #StatsD.enabled = true
   end
 
   def test_statsd_count_if
@@ -135,7 +134,7 @@ class StatsDTest < Test::Unit::TestCase
 
   def test_receiving_TTOU_should_disable
     Process.kill("TTOU", $$)
-    sleep 1
+    sleep 0.5
     assert !StatsD.enabled
   end
 

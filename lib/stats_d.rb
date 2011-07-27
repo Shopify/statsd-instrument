@@ -69,7 +69,7 @@ module StatsD
       end
     end
 
-    #private
+    private
     def statsd_memoize(metric_name, name)
       define_method(metric_name) do
         name = eval("\"#{name}\"", binding)
@@ -119,7 +119,7 @@ module StatsD
   private
 
   def self.socket
-    @socket ||= socket = UDPSocket.new
+    @socket ||= UDPSocket.new
   end
 
   def self.write(k,v,op, sample_rate = 1)
