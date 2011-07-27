@@ -1,4 +1,4 @@
-require 'stats_d'
+require 'statsd-instrument'
 require 'test/unit'
 require 'mocha'
 require 'logger'
