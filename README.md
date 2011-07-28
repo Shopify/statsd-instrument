@@ -9,11 +9,22 @@ We call out to statsd by sending data over a UDP socket. UDP sockets are fast, b
 The fact that all of your stats data may not make it into statsd is no issue. Graphite (the graph database that statsd is built on) will only show you trends in your data. Internally it only keeps enough data to satisfy the levels of granularity we specify. As well as satisfying it's requirement as a fixed size database. We can throw as much data at it as we want it and it will do it's best to show us the trends over time and get rid of the fluff.
 
 For Shopify, our retention periods are:
-1) 10 seconds of granularity for the last 6 hours
-2) 60 seconds of granularity for the last week
-3) 10 minutes of granularity for the last 5 years
+
+1. 10 seconds of granularity for the last 6 hours
+2. 60 seconds of granularity for the last week
+3. 10 minutes of granularity for the last 5 years
 
 This is the same as what Etsy uses (mentioned in the README for [http://github.com/etsy/statd](http://github.com/etsy/statd])).
+
+## Configuration
+
+``` ruby
+StatsD.server = 'statsd.myservice.com:8125'
+StatsD.logger = Rails.logger
+StatsD.mode = :production
+```
+
+If you set the mode to anything besides production then the library will print its calls to the logger, rather than sending them over the wire.
 
 ## StatsD keys
 
@@ -51,8 +62,11 @@ Lets you increment a key in statsd to keep a count of something. If the specifie
 StatsD.increment('GoogleBase.insert')
 # you can also specify how much to increment the key by
 StatsD.increment('GoogleBase.insert', 10)
+# you can also specify a sample rate, so only 1/10 of events
+# actually get to statsd. Useful for very high volume data
+StatsD.increment('GoogleBase.insert', 1, 0.1)
 ```
-		
+
 Again it's more common to use the metaprogramming methods.
 
 ## Metaprogramming Methods
@@ -82,7 +96,7 @@ This will only increment the given key if the method executes successfully.
 ``` ruby
 GoogleBase.statsd_count_if :insert, 'GoogleBase.insert'
 ```
-		
+
 So now, if GoogleBase#insert raises an exception or returns false (ie. result == false), we won't increment the key. If you want to define what success means for a given method you can pass a block that takes the result of the method.
 
 ``` ruby
@@ -90,7 +104,7 @@ GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
   result.code == 200
 end
 ```
-		
+
 In the above example we will only increment the key in statsd if the result of the block returns true. So the method is returning a Net::HTTP response and we're checking the status code.
 
 ### statsd\_count\_success
@@ -100,14 +114,14 @@ Similar to statsd_count_if, except this will increment one key in the case of su
 ``` ruby
 GoogleBase.statsd_count_success :insert, 'GoogleBase.insert'
 ```
-		
+
 So if this method fails execution (raises or returns false) we'll increment the failure key ('GoogleBase.insert.failure'), otherwise we'll increment the success key ('GoogleBase.insert.success'). Notice that we're modifying the given key before sending it to statsd.
 
 Again you can pass a block to define what success means.
-		
+
 ``` ruby
 GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
   result.code == 200
 end
 ```
-		
+
