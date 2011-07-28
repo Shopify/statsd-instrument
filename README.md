@@ -99,7 +99,7 @@ So now, if GoogleBase#insert raises an exception or returns false (ie. result ==
 
 ``` ruby
 GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
-  result.code == 200
+  response.code == 200
 end
 ```
 
@@ -119,7 +119,7 @@ Again you can pass a block to define what success means.
 
 ``` ruby
 GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
-  result.code == 200
+  response.code == 200
 end
 ```
 
