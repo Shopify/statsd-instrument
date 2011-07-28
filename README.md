@@ -12,7 +12,7 @@ For Shopify, our retention periods are:
 2. 60 seconds of granularity for the last week
 3. 10 minutes of granularity for the last 5 years
 
-This is the same as what Etsy uses (mentioned in the README for [http://github.com/etsy/statd](http://github.com/etsy/statd])).
+This is the same as what Etsy uses (mentioned in the README for http://github.com/etsy/statsd).
 
 ## Configuration
 
