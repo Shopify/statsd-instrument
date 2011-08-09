@@ -118,7 +118,7 @@ So if this method fails execution (raises or returns false) we'll increment the 
 Again you can pass a block to define what success means.
 
 ``` ruby
-GoogleBase.statsd_count_if :insert, 'GoogleBase.insert' do |response|
+GoogleBase.statsd_count_success :insert, 'GoogleBase.insert' do |response|
   response.code == 200
 end
 ```
