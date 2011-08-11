@@ -23,6 +23,14 @@ class ActiveMerchant::Gateway < ActiveMerchant::Base
   rescue
     false
   end
+
+  def self.sync
+    true
+  end 
+
+  def self.singleton_class
+    class << self; self; end
+  end
 end
 
 class ActiveMerchant::UniqueGateway < ActiveMerchant::Base
@@ -43,7 +51,7 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_count_if
-    ActiveMerchant::Gateway.statsd_count_if :ssl_post, 'ActiveMerchant.Billing.#{self.class.name}.if'
+    ActiveMerchant::Gateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
 
     StatsD.expects(:increment).with(includes('if')).once
     ActiveMerchant::Gateway.new.purchase(true)
@@ -51,7 +59,7 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_count_if_with_block
-    ActiveMerchant::UniqueGateway.statsd_count_if :ssl_post, 'ActiveMerchant.Billing.#{self.class.name}.block' do |result|
+    ActiveMerchant::UniqueGateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.block' do |result|
       result[:success]
     end
 
@@ -61,7 +69,7 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_count_success
-    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Billing.#{self.class.name}'
+    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway'
 
     StatsD.expects(:increment).with(includes('success'))
     ActiveMerchant::Gateway.new.purchase(true)
@@ -71,7 +79,7 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_count_success_with_block
-    ActiveMerchant::UniqueGateway.statsd_count_success :ssl_post, 'ActiveMerchant.Billing.#{self.class.name}' do |result|
+    ActiveMerchant::UniqueGateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway' do |result|
       result[:success]
     end
 
@@ -83,17 +91,25 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_count
-    ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Billing.#{self.class.name}.ssl_post'
+    ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 
     StatsD.expects(:increment).with(includes('ssl_post'))
     ActiveMerchant::Gateway.new.purchase(true)
   end
 
   def test_statsd_measure
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Billing.#{self.class.name}.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 
     StatsD.expects(:measure).with(includes('ssl_post')).returns({:success => true})
     ActiveMerchant::UniqueGateway.new.purchase(true)
+  end
+
+  def test_instrumenting_class_method
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
+
+    StatsD.expects(:increment).with(includes('sync'))
+    ActiveMerchant::Gateway.sync
   end
 
   def test_count_with_sampling

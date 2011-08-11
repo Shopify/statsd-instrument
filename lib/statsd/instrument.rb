@@ -16,7 +16,7 @@ module StatsD
     def statsd_measure(method, name)
       add_to_method(method, name, :measure) do |old_method, new_method, metric_name, *args|
         define_method(new_method) do |*args|
-          StatsD.measure(send(metric_name)) { send(old_method, *args) }
+          StatsD.measure(metric_name) { send(old_method, *args) }
         end
       end
     end
@@ -33,7 +33,7 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment("#{send(metric_name)}." + (truthiness == false ? 'failure' : 'success'))
+            StatsD.increment("#{metric_name}." + (truthiness == false ? 'failure' : 'success'))
           end
         end
       end
@@ -51,7 +51,7 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment(send(metric_name)) if truthiness
+            StatsD.increment(metric_name) if truthiness
           end
         end
       end
@@ -60,27 +60,15 @@ module StatsD
     def statsd_count(method, name)
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args|
-          StatsD.increment(send(metric_name))
+          StatsD.increment(metric_name)
           send(old_method, *args)
         end
       end
     end
 
     private
-    def statsd_memoize(metric_name, name)
-      define_method(metric_name) do
-        name = eval("\"#{name}\"", binding)
-
-        self.class.send(:define_method, metric_name) do
-          name
-        end
-        send(metric_name)
-      end
-    end
-
     def add_to_method(method, name, action, &block)
-      metric_name = :"#{method}_#{name}_metric_name"
-      statsd_memoize(metric_name, name)
+      metric_name = name
 
       method_name_without_statsd = :"#{method}_for_#{action}_on_#{self.name}_without_#{name}"
       # raw_ssl_request_for_measure_on_FedEx_without_ActiveMerchant.Shipping.#{self.class.name}.ssl_request
