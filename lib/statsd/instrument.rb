@@ -6,9 +6,6 @@ module StatsD
   end
   self.enabled = true
 
-  trap("TTOU") { self.enabled = false }
-  trap("TTIN") { self.enabled = true }
-
   # StatsD.server = 'localhost:1234'
   def self.server=(conn)
     self.host, port = conn.split(':')

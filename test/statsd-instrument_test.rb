@@ -131,18 +131,4 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.increment('fooz')
     StatsD.enabled = true
   end
-
-  def test_receiving_TTOU_should_disable
-    Process.kill("TTOU", $$)
-    sleep 0.5
-    assert !StatsD.enabled
-  end
-
-  def test_receiving_TTIN_should_disable
-    StatsD.enabled = false
-
-    Process.kill("TTIN", $$)
-    sleep 0.5
-    assert StatsD.enabled
-  end
 end
