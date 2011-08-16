@@ -123,3 +123,11 @@ GoogleBase.statsd_count_success :insert, 'GoogleBase.insert' do |response|
 end
 ```
 
+### Instrumenting Class Methods
+
+You can instrument class methods, just like instance methods, using the metaprogramming methods. You simply have to configure the instrumentation on the singleton class of the Class you want to instrument.
+
+```ruby
+AWS::S3::Base.singleton_class.extend StatsD::Instrument
+AWS::S3::Base.singleton_class.statsd_measure :request, 'S3.request'
+```
