@@ -147,4 +147,10 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.increment('fooz')
     StatsD.enabled = true
   end
+  
+  def test_statsd_measure_with_explicit_value
+    StatsD.expects(:write).with('values.foobar', 42, :ms)
+
+    StatsD.measure('values.foobar', 42)
+  end
 end
