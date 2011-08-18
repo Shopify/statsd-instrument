@@ -89,9 +89,9 @@ module StatsD
   # glork:320|ms
   def self.measure(key, milli = nil)
     result = nil
-    ms = Benchmark.ms do
+    ms = milli || Benchmark.ms do
       result = yield 
-    end if milli.nil?
+    end
 
     write(key, ms, :ms)
     result
