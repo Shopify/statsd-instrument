@@ -3,10 +3,11 @@ require 'benchmark'
 
 module StatsD
   class << self
-    attr_accessor :host, :port, :mode, :logger, :enabled
+    attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate
   end
   self.enabled = true
-
+  self.default_sample_rate = 1
+  
   # StatsD.server = 'localhost:1234'
   def self.server=(conn)
     self.host, port = conn.split(':')
@@ -98,7 +99,7 @@ module StatsD
   end
 
   # gorets:1|c
-  def self.increment(key, delta = 1, sample_rate = 1)
+  def self.increment(key, delta = 1, sample_rate = default_sample_rate)
     write(key, delta, :incr, sample_rate)
   end
 
@@ -108,7 +109,7 @@ module StatsD
     @socket ||= UDPSocket.new
   end
 
-  def self.write(k,v,op, sample_rate = 1)
+  def self.write(k,v,op, sample_rate = default_sample_rate)
     return unless enabled
     return if sample_rate < 1 && rand > sample_rate
 
