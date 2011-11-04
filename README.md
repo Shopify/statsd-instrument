@@ -20,6 +20,7 @@ This is the same as what Etsy uses (mentioned in the README for http://github.co
 StatsD.server = 'statsd.myservice.com:8125'
 StatsD.logger = Rails.logger
 StatsD.mode = :production
+StatsD.default_sample_rate = 0.1 # Sample 10% of events. By default all events are reported.
 ```
 
 If you set the mode to anything besides production then the library will print its calls to the logger, rather than sending them over the wire.
