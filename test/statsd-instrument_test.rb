@@ -100,7 +100,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_measure
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 
-    StatsD.expects(:measure).with(includes('ssl_post')).returns({:success => true})
+    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms).returns({:success => true})
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
 

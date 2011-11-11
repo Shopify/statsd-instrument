@@ -1,6 +1,12 @@
 require 'socket'
 require 'benchmark'
 
+class << Benchmark
+  def ms
+    1000 * realtime { yield }
+  end
+end
+
 module StatsD
   class << self
     attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate
