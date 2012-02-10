@@ -1,11 +1,13 @@
 require 'socket'
 require 'benchmark'
+require 'timeout'
 
 class << Benchmark
   def ms
     1000 * realtime { yield }
   end
 end
+
 
 module StatsD
   class << self
@@ -14,6 +16,8 @@ module StatsD
   self.enabled = true
   self.default_sample_rate = 1
   
+  Timeout = defined?(::SystemTimer) ? ::SystemTimer : ::Timeout
+
   # StatsD.server = 'localhost:1234'
   def self.server=(conn)
     self.host, port = conn.split(':')
@@ -130,10 +134,16 @@ module StatsD
     command << "|@#{sample_rate}" if sample_rate < 1
 
     if mode == :production
-      socket.send(command, 0, host, port)
+      socket_wrapper { socket.send(command, 0, host, port) }
     else
       logger.info "[StatsD] #{command}"
     end
+  end
+
+  def self.socket_wrapper(options = {})
+    Timeout.timeout(options.fetch(:timeout, 0.1)) { yield }
+  rescue Timeout::Error, SocketError, IOError, SystemCallError => e
+    logger.error e
   end
 end
 
