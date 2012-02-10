@@ -153,4 +153,45 @@ class StatsDTest < Test::Unit::TestCase
 
     StatsD.measure('values.foobar', 42)
   end
+
+  def test_socket_error_should_not_raise
+    StatsD.mode = :production
+    UDPSocket.any_instance.expects(:send).raises(SocketError)
+    StatsD.measure('values.foobar', 42)
+    StatsD.mode = :test
+  end
+
+  def test_timeout_error_should_not_raise
+    StatsD.mode = :production
+    UDPSocket.any_instance.expects(:send).raises(Timeout::Error)
+    StatsD.measure('values.foobar', 42)
+    StatsD.mode = :test
+  end
+
+  def test_system_call_error_should_not_raise
+    StatsD.mode = :production
+    UDPSocket.any_instance.expects(:send).raises(Errno::ETIMEDOUT)
+    StatsD.measure('values.foobar', 42)
+    StatsD.mode = :test
+  end
+
+  def test_io_error_should_not_raise
+    StatsD.mode = :production
+    UDPSocket.any_instance.expects(:send).raises(IOError)
+    StatsD.measure('values.foobar', 42)
+    StatsD.mode = :test
+  end
+
+  def test_long_request_should_timeout
+    StatsD.mode = :production
+    UDPSocket.any_instance.expects(:send).yields do
+      begin
+        Timeout.timeout(0.5) { sleep 1 }
+      rescue Timeout::Error
+        raise "Allowed long running request"
+      end
+    end
+    StatsD.measure('values.foobar', 42)
+    StatsD.mode = :test
+  end
 end
