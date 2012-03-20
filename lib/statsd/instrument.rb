@@ -11,7 +11,8 @@ end
 
 module StatsD
   class << self
-    attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate
+    attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate,
+                  :prefix
   end
   self.enabled = true
   self.default_sample_rate = 1
@@ -123,7 +124,7 @@ module StatsD
     return unless enabled
     return if sample_rate < 1 && rand > sample_rate
 
-    command = "#{k}:#{v}"
+    command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
     case op
     when :incr
       command << '|c'
