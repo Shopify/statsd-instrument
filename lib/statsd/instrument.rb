@@ -124,8 +124,7 @@ module StatsD
     return unless enabled
     return if sample_rate < 1 && rand > sample_rate
 
-    command = "#{k}:#{v}"
-    command.prepend("#{prefix}.") if prefix
+    command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
     case op
     when :incr
       command << '|c'
