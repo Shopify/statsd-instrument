@@ -147,7 +147,21 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.increment('fooz')
     StatsD.enabled = true
   end
-  
+
+  def test_statsd_prefix
+    StatsD.unstub(:increment)
+    StatsD.prefix = 'my_app'
+    StatsD.logger.expects(:info).once.with do |string|
+      string.include?('my_app.foo')
+    end
+    StatsD.logger.expects(:info).once.with do |string|
+      string.include?('food')
+    end
+    StatsD.increment('foo')
+    StatsD.prefix = nil
+    StatsD.increment('food')
+  end
+
   def test_statsd_measure_with_explicit_value
     StatsD.expects(:write).with('values.foobar', 42, :ms)
 
