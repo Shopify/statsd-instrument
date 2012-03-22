@@ -134,7 +134,7 @@ module StatsD
 
     command << "|@#{sample_rate}" if sample_rate < 1
 
-    if mode == :production
+    if mode.to_s == 'production'
       socket_wrapper { socket.send(command, 0, host, port) }
     else
       logger.info "[StatsD] #{command}"
