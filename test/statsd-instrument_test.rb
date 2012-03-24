@@ -47,6 +47,7 @@ ActiveMerchant::Base.extend StatsD::Instrument
 
 class StatsDTest < Test::Unit::TestCase
   def setup
+    StatsD.mode = nil
     StatsD.stubs(:increment)
   end
 
@@ -146,6 +147,18 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.expects(:logger).never
     StatsD.increment('fooz')
     StatsD.enabled = true
+  end
+
+  def test_statsd_mode
+    StatsD.unstub(:increment)
+    StatsD.logger.expects(:info).once
+    StatsD.expects(:socket_wrapper).twice
+    StatsD.mode = :foo
+    StatsD.increment('foo')
+    StatsD.mode = :production
+    StatsD.increment('foo')
+    StatsD.mode = 'production'
+    StatsD.increment('foo')
   end
 
   def test_statsd_prefix
