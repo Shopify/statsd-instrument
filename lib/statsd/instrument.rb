@@ -16,7 +16,7 @@ module StatsD
   self.enabled = true
   self.default_sample_rate = 1
   
-  Timeout = defined?(::SystemTimer) ? ::SystemTimer : ::Timeout
+  TimeoutClass = defined?(::SystemTimer) ? ::SystemTimer : ::Timeout
 
   # StatsD.server = 'localhost:1234'
   def self.server=(conn)
@@ -141,7 +141,7 @@ module StatsD
   end
 
   def self.socket_wrapper(options = {})
-    Timeout.timeout(options.fetch(:timeout, 0.1)) { yield }
+    TimeoutClass.timeout(options.fetch(:timeout, 0.1)) { yield }
   rescue Timeout::Error, SocketError, IOError, SystemCallError => e
     logger.error e
   end
