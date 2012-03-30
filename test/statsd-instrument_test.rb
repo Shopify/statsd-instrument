@@ -1,3 +1,9 @@
+# Allow testing with the SystemTimer gem on 1.8
+if RUBY_VERSION =~ /^1.8/
+  puts "Loading SystemTimer gem"
+  require 'system_timer'
+end
+
 require 'statsd-instrument'
 require 'test/unit'
 require 'mocha'
