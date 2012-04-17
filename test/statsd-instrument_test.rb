@@ -148,6 +148,17 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.mode = :test
   end
 
+  def test_write_supports_gauge_syntax
+    StatsD.unstub(:gauge)
+
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    UDPSocket.any_instance.expects(:send).with('fooy:42|g', 0, 'localhost', 123)
+
+    StatsD.gauge('fooy', 42)
+  end
+
   def test_should_not_write_when_disabled
     StatsD.enabled = false
     StatsD.expects(:logger).never
@@ -185,6 +196,14 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.expects(:write).with('values.foobar', 42, :ms)
 
     StatsD.measure('values.foobar', 42)
+  end
+
+  def test_statsd_gauge
+    StatsD.expects(:write).with('values.foobar', 12, :g, 1)
+
+    StatsD.default_sample_rate = 1
+
+    StatsD.gauge('values.foobar', 12)
   end
 
   def test_socket_error_should_not_raise

@@ -114,6 +114,11 @@ module StatsD
     write(key, delta, :incr, sample_rate)
   end
 
+  #gaugor:333|g
+  def self.gauge(key, value, sample_rate = default_sample_rate)
+    write(key, value, :g, sample_rate)
+  end
+
   private
 
   def self.socket
@@ -130,6 +135,8 @@ module StatsD
       command << '|c'
     when :ms
       command << '|ms'
+    when :g
+      command << '|g'
     end
 
     command << "|@#{sample_rate}" if sample_rate < 1
