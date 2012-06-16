@@ -159,6 +159,30 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.gauge('fooy', 42)
   end
 
+  def test_write_supports_statsite_gauge_syntax
+    StatsD.unstub(:gauge)
+
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+    StatsD.implementation = :statsite
+
+    UDPSocket.any_instance.expects(:send).with('fooy:42|kv', 0, 'localhost', 123)
+
+    StatsD.gauge('fooy', 42)
+  end
+
+  def test_write_supports_statsite_gauge_timestamp
+    StatsD.unstub(:gauge)
+
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+    StatsD.implementation = :statsite
+
+    UDPSocket.any_instance.expects(:send).with('fooy:42|kv|@123456', 0, 'localhost', 123)
+
+    StatsD.gauge('fooy', 42, 123456)
+  end
+
   def test_should_not_write_when_disabled
     StatsD.enabled = false
     StatsD.expects(:logger).never
