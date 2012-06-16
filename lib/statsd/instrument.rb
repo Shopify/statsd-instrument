@@ -142,6 +142,7 @@ module StatsD
     end
 
     command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
+    command << "\n" if self.implementation == :statsite
 
     if mode.to_s == 'production'
       socket_wrapper { socket.send(command, 0, host, port) }
