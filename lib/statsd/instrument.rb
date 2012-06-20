@@ -12,11 +12,12 @@ end
 module StatsD
   class << self
     attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate,
-                  :prefix
+                  :prefix, :implementation
   end
   self.enabled = true
   self.default_sample_rate = 1
-  
+  self.implementation = :statsd
+
   TimeoutClass = defined?(::SystemTimer) ? ::SystemTimer : ::Timeout
 
   # StatsD.server = 'localhost:1234'
@@ -114,9 +115,10 @@ module StatsD
     write(key, delta, :incr, sample_rate)
   end
 
-  #gaugor:333|g
-  def self.gauge(key, value, sample_rate = default_sample_rate)
-    write(key, value, :g, sample_rate)
+  # gaugor:333|g
+  # guagor:1234|kv|@1339864935 (statsite)
+  def self.gauge(key, value, sample_rate_or_epoch = default_sample_rate)
+    write(key, value, :g, sample_rate_or_epoch)
   end
 
   private
@@ -136,10 +138,11 @@ module StatsD
     when :ms
       command << '|ms'
     when :g
-      command << '|g'
+      command << (self.implementation == :statsite ? '|kv' : '|g')
     end
 
-    command << "|@#{sample_rate}" if sample_rate < 1
+    command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
+    command << "\n" if self.implementation == :statsite
 
     if mode.to_s == 'production'
       socket_wrapper { socket.send(command, 0, host, port) }
