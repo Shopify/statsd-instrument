@@ -166,7 +166,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.server = 'localhost:123'
     StatsD.implementation = :statsite
 
-    UDPSocket.any_instance.expects(:send).with('fooy:42|kv', 0, 'localhost', 123)
+    UDPSocket.any_instance.expects(:send).with("fooy:42|kv\n", 0, 'localhost', 123)
 
     StatsD.gauge('fooy', 42)
   end
@@ -178,7 +178,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.server = 'localhost:123'
     StatsD.implementation = :statsite
 
-    UDPSocket.any_instance.expects(:send).with('fooy:42|kv|@123456', 0, 'localhost', 123)
+    UDPSocket.any_instance.expects(:send).with("fooy:42|kv|@123456\n", 0, 'localhost', 123)
 
     StatsD.gauge('fooy', 42, 123456)
   end
