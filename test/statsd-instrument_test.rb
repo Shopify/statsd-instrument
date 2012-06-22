@@ -32,7 +32,7 @@ class ActiveMerchant::Gateway < ActiveMerchant::Base
 
   def self.sync
     true
-  end 
+  end
 
   def self.singleton_class
     class << self; self; end
@@ -107,7 +107,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_measure
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 
-    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms).returns({:success => true})
+    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms, is_a(Numeric)).returns({:success => true})
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
 
@@ -217,9 +217,15 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_measure_with_explicit_value
-    StatsD.expects(:write).with('values.foobar', 42, :ms)
+    StatsD.expects(:write).with('values.foobar', 42, :ms, is_a(Numeric))
 
     StatsD.measure('values.foobar', 42)
+  end
+
+  def test_statsd_measure_with_explicit_value_and_sample_rate
+    StatsD.expects(:write).with('values.foobar', 42, :ms, 0.1)
+
+    StatsD.measure('values.foobar', 42, 0.1)
   end
 
   def test_statsd_gauge

@@ -15,7 +15,7 @@ module StatsD
                   :prefix, :implementation
   end
   self.enabled = true
-  self.default_sample_rate = 1
+  self.default_sample_rate = 1.0
   self.implementation = :statsd
 
   TimeoutClass = defined?(::SystemTimer) ? ::SystemTimer : ::Timeout
@@ -100,13 +100,13 @@ module StatsD
   end
 
   # glork:320|ms
-  def self.measure(key, milli = nil)
+  def self.measure(key, milli = nil, sample_rate = default_sample_rate)
     result = nil
     ms = milli || Benchmark.ms do
-      result = yield 
+      result = yield
     end
 
-    write(key, ms, :ms)
+    write(key, ms, :ms, sample_rate)
     result
   end
 
