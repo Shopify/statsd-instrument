@@ -29,17 +29,17 @@ module StatsD
   module Instrument
     def statsd_measure(method, name)
       add_to_method(method, name, :measure) do |old_method, new_method, metric_name, *args|
-        define_method(new_method) do |*args|
-          StatsD.measure(metric_name) { send(old_method, *args) }
+        define_method(new_method) do |*args, &block|
+          StatsD.measure(metric_name) { send(old_method, *args, &block) }
         end
       end
     end
 
     def statsd_count_success(method, name)
       add_to_method(method, name, :count_success) do |old_method, new_method, metric_name|
-        define_method(new_method) do |*args|
+        define_method(new_method) do |*args, &block|
           begin
-            truthiness = result = send(old_method, *args)
+            truthiness = result = send(old_method, *args, &block)
           rescue
             truthiness = false
             raise
@@ -55,9 +55,9 @@ module StatsD
 
     def statsd_count_if(method, name)
       add_to_method(method, name, :count_if) do |old_method, new_method, metric_name|
-        define_method(new_method) do |*args|
+        define_method(new_method) do |*args, &block|
           begin
-            truthiness = result = send(old_method, *args)
+            truthiness = result = send(old_method, *args, &block)
           rescue
             truthiness = false
             raise
@@ -73,9 +73,9 @@ module StatsD
 
     def statsd_count(method, name)
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
-        define_method(new_method) do |*args|
+        define_method(new_method) do |*args, &block|
           StatsD.increment(metric_name)
-          send(old_method, *args)
+          send(old_method, *args, &block)
         end
       end
     end
@@ -103,7 +103,7 @@ module StatsD
   def self.measure(key, milli = nil)
     result = nil
     ms = milli || Benchmark.ms do
-      result = yield 
+      result = yield
     end
 
     write(key, ms, :ms)
