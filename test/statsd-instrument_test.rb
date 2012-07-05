@@ -20,6 +20,10 @@ class ActiveMerchant::Base
       raise 'Not OK'
     end
   end
+
+  def post_with_block(&block)
+    yield if block_given?
+  end
 end
 
 class ActiveMerchant::Gateway < ActiveMerchant::Base
@@ -32,7 +36,7 @@ class ActiveMerchant::Gateway < ActiveMerchant::Base
 
   def self.sync
     true
-  end 
+  end
 
   def self.singleton_class
     class << self; self; end
@@ -65,6 +69,16 @@ class StatsDTest < Test::Unit::TestCase
     ActiveMerchant::Gateway.new.purchase(false)
   end
 
+  def test_statsd_count_if_with_method_receiving_block
+    ActiveMerchant::Base.statsd_count_if :post_with_block, 'ActiveMerchant.Base.post_with_block' do |result|
+      result[:success]
+    end
+
+    return_value = ActiveMerchant::Base.new.post_with_block {'block called'}
+
+    assert_equal 'block called', return_value
+  end
+
   def test_statsd_count_if_with_block
     ActiveMerchant::UniqueGateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.block' do |result|
       result[:success]
@@ -83,6 +97,16 @@ class StatsDTest < Test::Unit::TestCase
 
     StatsD.expects(:increment).with(includes('failure'))
     ActiveMerchant::Gateway.new.purchase(false)
+  end
+
+  def test_statsd_count_success_with_method_receiving_block
+    ActiveMerchant::Base.statsd_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block' do |result|
+      result[:success]
+    end
+
+    return_value = ActiveMerchant::Base.new.post_with_block {'block called'}
+
+    assert_equal 'block called', return_value
   end
 
   def test_statsd_count_success_with_block
@@ -104,11 +128,27 @@ class StatsDTest < Test::Unit::TestCase
     ActiveMerchant::Gateway.new.purchase(true)
   end
 
+  def test_statsd_count_with_method_receiving_block
+    ActiveMerchant::Base.statsd_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
+
+    return_value = ActiveMerchant::Base.new.post_with_block {'block called'}
+
+    assert_equal 'block called', return_value
+  end
+
   def test_statsd_measure
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 
     StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms).returns({:success => true})
     ActiveMerchant::UniqueGateway.new.purchase(true)
+  end
+
+  def test_statsd_measure_with_method_receiving_block
+    ActiveMerchant::Base.statsd_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
+
+    return_value = ActiveMerchant::Base.new.post_with_block {'block called'}
+
+    assert_equal 'block called', return_value
   end
 
   def test_instrumenting_class_method
