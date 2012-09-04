@@ -129,7 +129,7 @@ module StatsD
 
   def self.write(k,v,op, sample_rate = default_sample_rate)
     return unless enabled
-    return if sample_rate < 1 && rand > sample_rate
+    return if sample_rate < 1 && rand < sample_rate
 
     command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
     case op
