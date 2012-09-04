@@ -161,15 +161,15 @@ class StatsDTest < Test::Unit::TestCase
 
   def test_count_with_sampling
     StatsD.unstub(:increment)
-    StatsD.stubs(:rand).returns(0.6)
+    StatsD.stubs(:rand).returns(0.1)
     StatsD.logger.expects(:info).never
 
-    StatsD.increment('sampling.foo.bar', 1, 0.1)
+    StatsD.increment('sampling.foo.bar', 1, 0.6)
   end
 
   def test_count_with_successful_sample
     StatsD.unstub(:increment)
-    StatsD.stubs(:rand).returns(0.01)
+    StatsD.stubs(:rand).returns(0.2)
     StatsD.logger.expects(:info).once.with do |string|
       string.include?('@0.1')
     end
