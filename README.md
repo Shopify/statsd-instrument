@@ -136,6 +136,14 @@ AWS::S3::Base.singleton_class.extend StatsD::Instrument
 AWS::S3::Base.singleton_class.statsd_measure :request, 'S3.request'
 ```
 
+### Lambda As Metric Name
+
+Send a lambda instead of a string as the metric name to dynamically set the name of the metric. Useful when measuring sub classes.
+
+``` ruby
+GoogleBase.statsd_count :insert, lamdba{|object| object.class.to_s.downcase + ".insert" }
+```
+
 ## Reliance on DNS
 Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Configuring the StatsD host to be a non-ip will trigger a DNS lookup (ie synchronous round trip network call) for each metric sent. This can be particularly problematic in clouds that have a shared DNS infrastructure such as AWS.
 
