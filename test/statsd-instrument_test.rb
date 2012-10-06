@@ -53,6 +53,9 @@ class ActiveMerchant::UniqueGateway < ActiveMerchant::Base
   end
 end
 
+class GatewaySubClass < ActiveMerchant::Gateway
+end
+
 ActiveMerchant::Base.extend StatsD::Instrument
 
 class StatsDTest < Test::Unit::TestCase
@@ -126,6 +129,13 @@ class StatsDTest < Test::Unit::TestCase
 
     StatsD.expects(:increment).with(includes('ssl_post'))
     ActiveMerchant::Gateway.new.purchase(true)
+  end
+
+  def test_statsd_count_with_name_as_lambda
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, lambda {|object| object.class.to_s.downcase + ".insert"})
+
+    StatsD.expects(:increment).with('gatewaysubclass.insert')
+    GatewaySubClass.new.purchase(true)
   end
 
   def test_statsd_count_with_method_receiving_block
