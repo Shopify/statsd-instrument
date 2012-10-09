@@ -136,6 +136,15 @@ class StatsDTest < Test::Unit::TestCase
     assert_equal 'block called', return_value
   end
 
+  def test_statsd_measure_with_nested_modules
+    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+
+    StatsD.stubs(:mode).returns(:production)
+    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0, 'localhost', 123).at_least(1)
+
+    ActiveMerchant::UniqueGateway.new.purchase(true)
+  end
+
   def test_statsd_measure
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 

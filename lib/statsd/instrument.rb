@@ -131,6 +131,8 @@ module StatsD
     return unless enabled
     return if sample_rate < 1 && rand > sample_rate
 
+    k =  k.gsub('::', '.')
+
     command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
     case op
     when :incr
