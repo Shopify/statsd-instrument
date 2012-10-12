@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = "statsd-instrument"
-  s.version     = '1.3.3'
+  s.version     = '1.4.0'
   s.authors     = ["Jesse Storimer", "Tobias Lutke"]
   s.email       = ["jesse@shopify.com"]
   s.homepage    = "http://github.com/shopify/statsd-instrument"
