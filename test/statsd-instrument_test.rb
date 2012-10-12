@@ -64,7 +64,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_count_if
     ActiveMerchant::Gateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
 
-    StatsD.expects(:increment).with(includes('if')).once
+    StatsD.expects(:increment).with(includes('if'), 1).once
     ActiveMerchant::Gateway.new.purchase(true)
     ActiveMerchant::Gateway.new.purchase(false)
   end
@@ -84,18 +84,18 @@ class StatsDTest < Test::Unit::TestCase
       result[:success]
     end
 
-    StatsD.expects(:increment).with(includes('block')).once
+    StatsD.expects(:increment).with(includes('block'), 1).once
     ActiveMerchant::UniqueGateway.new.purchase(true)
     ActiveMerchant::UniqueGateway.new.purchase(false)
   end
 
   def test_statsd_count_success
-    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway'
+    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', 0.5
 
-    StatsD.expects(:increment).with(includes('success'))
+    StatsD.expects(:increment).with(includes('success'), 0.5)
     ActiveMerchant::Gateway.new.purchase(true)
 
-    StatsD.expects(:increment).with(includes('failure'))
+    StatsD.expects(:increment).with(includes('failure'), 0.5)
     ActiveMerchant::Gateway.new.purchase(false)
   end
 
@@ -114,17 +114,17 @@ class StatsDTest < Test::Unit::TestCase
       result[:success]
     end
 
-    StatsD.expects(:increment).with(includes('success'))
+    StatsD.expects(:increment).with(includes('success'), StatsD.default_sample_rate)
     ActiveMerchant::UniqueGateway.new.purchase(true)
 
-    StatsD.expects(:increment).with(includes('failure'))
+    StatsD.expects(:increment).with(includes('failure'), StatsD.default_sample_rate)
     ActiveMerchant::UniqueGateway.new.purchase(false)
   end
 
   def test_statsd_count
     ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 
-    StatsD.expects(:increment).with(includes('ssl_post'))
+    StatsD.expects(:increment).with(includes('ssl_post'), 1)
     ActiveMerchant::Gateway.new.purchase(true)
   end
 
@@ -136,12 +136,22 @@ class StatsDTest < Test::Unit::TestCase
     assert_equal 'block called', return_value
   end
 
-  def test_statsd_measure
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  def test_statsd_measure_with_nested_modules
+    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
 
-    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms, is_a(Numeric)).returns({:success => true})
+    StatsD.stubs(:mode).returns(:production)
+    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0, 'localhost', 123).at_least(1)
+
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
+
+  def test_statsd_measure
+    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 0.3
+
+    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms, 0.3).returns({:success => true})
+    ActiveMerchant::UniqueGateway.new.purchase(true)
+  end
+
 
   def test_statsd_measure_with_method_receiving_block
     ActiveMerchant::Base.statsd_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
@@ -155,7 +165,7 @@ class StatsDTest < Test::Unit::TestCase
     ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
     ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
 
-    StatsD.expects(:increment).with(includes('sync'))
+    StatsD.expects(:increment).with(includes('sync'), 1)
     ActiveMerchant::Gateway.sync
   end
 
