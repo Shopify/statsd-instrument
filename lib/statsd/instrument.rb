@@ -27,15 +27,15 @@ module StatsD
   end
 
   module Instrument
-    def statsd_measure(method, name)
+    def statsd_measure(method, name, sample_rate = StatsD.default_sample_rate)
       add_to_method(method, name, :measure) do |old_method, new_method, metric_name, *args|
         define_method(new_method) do |*args, &block|
-          StatsD.measure(metric_name) { send(old_method, *args, &block) }
+          StatsD.measure(metric_name, nil, sample_rate) { send(old_method, *args, &block) }
         end
       end
     end
 
-    def statsd_count_success(method, name)
+    def statsd_count_success(method, name, sample_rate = StatsD.default_sample_rate)
       add_to_method(method, name, :count_success) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
           begin
@@ -47,13 +47,13 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment("#{metric_name}." + (truthiness == false ? 'failure' : 'success'))
+            StatsD.increment("#{metric_name}." + (truthiness == false ? 'failure' : 'success'), sample_rate)
           end
         end
       end
     end
 
-    def statsd_count_if(method, name)
+    def statsd_count_if(method, name, sample_rate = StatsD.default_sample_rate)
       add_to_method(method, name, :count_if) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
           begin
@@ -65,16 +65,16 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment(metric_name) if truthiness
+            StatsD.increment(metric_name, sample_rate) if truthiness
           end
         end
       end
     end
 
-    def statsd_count(method, name)
+    def statsd_count(method, name, sample_rate = StatsD.default_sample_rate)
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
-          StatsD.increment(metric_name)
+          StatsD.increment(metric_name, sample_rate)
           send(old_method, *args, &block)
         end
       end
@@ -130,6 +130,8 @@ module StatsD
   def self.write(k,v,op, sample_rate = default_sample_rate)
     return unless enabled
     return if sample_rate < 1 && rand > sample_rate
+
+    k =  k.gsub('::', '.')
 
     command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
     case op
