@@ -252,6 +252,19 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.increment('foo')
   end
 
+  def test_statds_live_modes
+    StatsD.unstub(:increment)
+    StatsD.logger.expects(:info).once
+    StatsD.expects(:socket_wrapper).twice
+    StatsD.live_modes = %w(production staging)
+    StatsD.mode = :production
+    StatsD.increment('foo')
+    StatsD.mode = :staging
+    StatsD.increment('foo')
+    StatsD.mode = :foo
+    StatsD.increment('foo')
+  end
+
   def test_statsd_prefix
     StatsD.unstub(:increment)
     StatsD.prefix = 'my_app'
