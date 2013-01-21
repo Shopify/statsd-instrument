@@ -134,7 +134,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_count_with_name_as_lambda
     ActiveMerchant::Gateway.statsd_count(:ssl_post, lambda {|object| object.class.to_s.downcase + ".insert"})
 
-    StatsD.expects(:increment).with('gatewaysubclass.insert')
+    StatsD.expects(:increment).with('gatewaysubclass.insert', 1)
     GatewaySubClass.new.purchase(true)
   end
 
