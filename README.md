@@ -136,12 +136,15 @@ AWS::S3::Base.singleton_class.extend StatsD::Instrument
 AWS::S3::Base.singleton_class.statsd_measure :request, 'S3.request'
 ```
 
-### Lambda As Metric Name
+### Dynamic Metric Names
 
-Send a lambda instead of a string as the metric name to dynamically set the name of the metric. Useful when measuring sub classes.
+You can use a lambda function instead of a string dynamically set
+the name of the metric. The lambda function must accept two arguments:
+the object the function is being called on and the array of arguments
+passed.
 
-``` ruby
-GoogleBase.statsd_count :insert, lamdba{|object| object.class.to_s.downcase + ".insert" }
+```ruby
+GoogleBase.statsd_count :insert, lamdba{|object, args| object.class.to_s.downcase + "." + args.first.to_s + ".insert" }
 ```
 
 ## Reliance on DNS
