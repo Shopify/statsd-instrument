@@ -47,7 +47,10 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment("#{metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name}." + (truthiness == false ? 'failure' : 'success'), sample_rate)
+            result = truthiness == false ? 'failure' : 'success'
+            key = metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name
+
+            StatsD.increment("#{key}.#{result}", sample_rate)
           end
         end
       end
