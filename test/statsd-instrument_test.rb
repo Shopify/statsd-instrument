@@ -67,7 +67,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_count_if
     ActiveMerchant::Gateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
 
-    StatsD.expects(:increment).with(includes('if'), 1).once
+    StatsD.expects(:increment).with(includes('if'), 1, StatsD.default_sample_rate).once
     ActiveMerchant::Gateway.new.purchase(true)
     ActiveMerchant::Gateway.new.purchase(false)
   end
@@ -87,7 +87,7 @@ class StatsDTest < Test::Unit::TestCase
       result[:success]
     end
 
-    StatsD.expects(:increment).with(includes('block'), 1).once
+    StatsD.expects(:increment).with(includes('block'), 1, StatsD.default_sample_rate).once
     ActiveMerchant::UniqueGateway.new.purchase(true)
     ActiveMerchant::UniqueGateway.new.purchase(false)
   end
@@ -95,10 +95,10 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_count_success
     ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', 0.5
 
-    StatsD.expects(:increment).with(includes('success'), 0.5)
+    StatsD.expects(:increment).with(includes('success'), 1, 0.5)
     ActiveMerchant::Gateway.new.purchase(true)
 
-    StatsD.expects(:increment).with(includes('failure'), 0.5)
+    StatsD.expects(:increment).with(includes('failure'), 1, 0.5)
     ActiveMerchant::Gateway.new.purchase(false)
   end
 
@@ -117,24 +117,24 @@ class StatsDTest < Test::Unit::TestCase
       result[:success]
     end
 
-    StatsD.expects(:increment).with(includes('success'), StatsD.default_sample_rate)
+    StatsD.expects(:increment).with(includes('success'), 1, StatsD.default_sample_rate)
     ActiveMerchant::UniqueGateway.new.purchase(true)
 
-    StatsD.expects(:increment).with(includes('failure'), StatsD.default_sample_rate)
+    StatsD.expects(:increment).with(includes('failure'), 1, StatsD.default_sample_rate)
     ActiveMerchant::UniqueGateway.new.purchase(false)
   end
 
   def test_statsd_count
     ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 
-    StatsD.expects(:increment).with(includes('ssl_post'), 1)
+    StatsD.expects(:increment).with(includes('ssl_post'), 1, StatsD.default_sample_rate)
     ActiveMerchant::Gateway.new.purchase(true)
   end
 
   def test_statsd_count_with_name_as_lambda
     ActiveMerchant::Gateway.statsd_count(:ssl_post, lambda {|object, args| object.class.to_s.downcase + ".insert." + args.first.to_s})
 
-    StatsD.expects(:increment).with('gatewaysubclass.insert.true', 1)
+    StatsD.expects(:increment).with('gatewaysubclass.insert.true', 1, StatsD.default_sample_rate)
     GatewaySubClass.new.purchase(true)
   end
 
@@ -175,7 +175,7 @@ class StatsDTest < Test::Unit::TestCase
     ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
     ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
 
-    StatsD.expects(:increment).with(includes('sync'), 1)
+    StatsD.expects(:increment).with(includes('sync'), 1, StatsD.default_sample_rate)
     ActiveMerchant::Gateway.sync
   end
 

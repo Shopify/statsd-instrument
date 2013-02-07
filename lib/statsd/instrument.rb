@@ -50,7 +50,7 @@ module StatsD
             result = truthiness == false ? 'failure' : 'success'
             key = metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name
 
-            StatsD.increment("#{key}.#{result}", sample_rate)
+            StatsD.increment("#{key}.#{result}", 1, sample_rate)
           end
         end
       end
@@ -68,7 +68,7 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment(metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name, sample_rate) if truthiness
+            StatsD.increment(metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name, 1, sample_rate) if truthiness
           end
         end
       end
@@ -77,7 +77,7 @@ module StatsD
     def statsd_count(method, name, sample_rate = StatsD.default_sample_rate)
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
-          StatsD.increment(metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name, sample_rate)
+          StatsD.increment(metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name, 1, sample_rate)
           send(old_method, *args, &block)
         end
       end
