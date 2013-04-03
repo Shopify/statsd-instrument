@@ -11,12 +11,13 @@ end
 
 module StatsD
   class << self
-    attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate,
+    attr_accessor :host, :port, :live_modes, :mode, :logger, :enabled, :default_sample_rate,
                   :prefix, :implementation
   end
   self.enabled = true
   self.default_sample_rate = 1.0
   self.implementation = :statsd
+  self.live_modes = %w(production)
 
   TimeoutClass = defined?(::SystemTimer) ? ::SystemTimer : ::Timeout
 
@@ -149,7 +150,7 @@ module StatsD
     command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
     command << "\n" if self.implementation == :statsite
 
-    if mode.to_s == 'production'
+    if live_modes.map { |m| m.to_s }.include?(mode.to_s)
       socket_wrapper { socket.send(command, 0, host, port) }
     else
       logger.info "[StatsD] #{command}"
@@ -162,4 +163,3 @@ module StatsD
     logger.error e
   end
 end
-
