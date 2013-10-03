@@ -14,6 +14,8 @@ module StatsD
     attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate,
                   :prefix, :implementation
   end
+  self.host = '127.0.0.1'
+  self.port = 8125
   self.enabled = true
   self.default_sample_rate = 1.0
   self.implementation = :statsd
@@ -22,8 +24,21 @@ module StatsD
 
   # StatsD.server = 'localhost:1234'
   def self.server=(conn)
-    self.host, port = conn.split(':')
-    self.port = port.to_i
+    self.host, self.port = conn.split(':')
+  end
+
+  def self.host=(host)
+    @host = host
+    @packed_addr = nil
+  end
+
+  def self.port=(port)
+    @port = port.to_i
+    @packed_addr = nil
+  end
+
+  def self.packed_addr
+    @packed_addr ||= Socket.pack_sockaddr_in(port, host)
   end
 
   module Instrument
@@ -150,7 +165,7 @@ module StatsD
     command << "\n" if self.implementation == :statsite
 
     if mode.to_s == 'production'
-      socket_wrapper { socket.send(command, 0, host, port) }
+      socket_wrapper { socket.send(command, 0, packed_addr) }
     else
       logger.info "[StatsD] #{command}"
     end
