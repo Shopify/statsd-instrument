@@ -12,13 +12,14 @@ end
 module StatsD
   class << self
     attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate,
-                  :prefix, :implementation
+                  :prefix, :cache_server_address, :implementation
   end
   self.host = '127.0.0.1'
   self.port = 8125
   self.enabled = true
   self.default_sample_rate = 1.0
   self.implementation = :statsd
+  self.cache_server_address = true
 
   TimeoutClass = defined?(::SystemTimer) ? ::SystemTimer : ::Timeout
 
@@ -165,7 +166,7 @@ module StatsD
     command << "\n" if self.implementation == :statsite
 
     if mode.to_s == 'production'
-      socket_wrapper { socket.send(command, 0, packed_addr) }
+      socket_wrapper { socket_send(command) }
     else
       logger.info "[StatsD] #{command}"
     end
@@ -175,6 +176,14 @@ module StatsD
     TimeoutClass.timeout(options.fetch(:timeout, 0.1)) { yield }
   rescue Timeout::Error, SocketError, IOError, SystemCallError => e
     logger.error e
+  end
+
+  def self.socket_send(command)
+    if cache_server_address
+      socket.send(command, 0, packed_addr)
+    else
+      socket.send(command, 0, host, port)
+    end
   end
 end
 

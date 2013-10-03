@@ -381,4 +381,17 @@ class StatsDTest < Test::Unit::TestCase
 
     StatsD.mode = :test
   end
+
+  def test_send_without_cached_address
+    StatsD.unstub(:increment)
+
+    StatsD.mode = :production
+    StatsD.cache_server_address = false
+    StatsD.server = 'localhost:123'
+    UDPSocket.any_instance.expects(:send).with("fooz:1|c", 0, 'localhost', 123)
+
+    StatsD.increment('fooz', 1, 1.0)
+    StatsD.mode = :test
+    StatsD.cache_server_address = true
+  end
 end

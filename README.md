@@ -2,7 +2,7 @@
 
 [![Built on Travis](https://secure.travis-ci.org/Shopify/statsd-instrument.png?branch=master)](https://secure.travis-ci.org/Shopify/statsd-instrument)
 
-This is a ruby client for statsd (http://github.com/etsy/statsd). It provides a lightweight way to track and measure metrics in your application. 
+This is a ruby client for statsd (http://github.com/etsy/statsd). It provides a lightweight way to track and measure metrics in your application.
 
 We call out to statsd by sending data over a UDP socket. UDP sockets are fast, but unreliable, there is no guarantee that your data will ever arrive at it's location. In other words, fire and forget. This is perfect for this use case because it means your code doesn't get bogged down trying to log statistics. We send data to statsd several times per request and haven't noticed a performance hit.
 
@@ -54,7 +54,7 @@ Rather than using this method directly it's more common to use the metaprogrammi
 GoogleBase.extend StatsD::Instrument
 GoogleBase.statsd_measure :insert, 'GoogleBase.insert'
 ```
-		
+
 ### StatsD.increment
 
 Lets you increment a key in statsd to keep a count of something. If the specified key doesn't exist it will create it for you.
@@ -148,7 +148,9 @@ GoogleBase.statsd_count :insert, lamdba{|object, args| object.class.to_s.downcas
 ```
 
 ## Reliance on DNS
-Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Configuring the StatsD host to be a non-ip will trigger a DNS lookup (ie synchronous round trip network call) for each metric sent. This can be particularly problematic in clouds that have a shared DNS infrastructure such as AWS.
+Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Since version 1.6.0 it resolves DNS name on first usage, and caches it locally to reduce performance impact of DNS names resolving. To disable this behavior set `cache_server_address` to `false` (but take into account that even for IP addresses this switching off this option could lead to 6x performance degradation - see [Issue #28](https://github.com/Shopify/statsd-instrument/pull/28) for details.)
+
+Configuring the StatsD host to be a non-ip will trigger a DNS lookup (ie synchronous round trip network call) for each metric sent. This can be particularly problematic in clouds that have a shared DNS infrastructure such as AWS.
 
 ### Common Workarounds
 1. Using an IP avoids the DNS lookup but generally requires an application deploy to change.
