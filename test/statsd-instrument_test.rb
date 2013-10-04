@@ -150,7 +150,7 @@ class StatsDTest < Test::Unit::TestCase
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
 
     StatsD.stubs(:mode).returns(:production)
-    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0, 'localhost', 123).at_least(1)
+    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0, Socket.pack_sockaddr_in(123, 'localhost')).at_least(1)
 
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
@@ -214,7 +214,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.mode = :production
     StatsD.server = 'localhost:123'
 
-    UDPSocket.any_instance.expects(:send).with('fooy:42|g', 0, 'localhost', 123)
+    UDPSocket.any_instance.expects(:send).with('fooy:42|g', 0, Socket.pack_sockaddr_in(123, 'localhost'))
 
     StatsD.gauge('fooy', 42)
   end
@@ -226,7 +226,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.server = 'localhost:123'
     StatsD.implementation = :statsite
 
-    UDPSocket.any_instance.expects(:send).with("fooy:42|kv\n", 0, 'localhost', 123)
+    UDPSocket.any_instance.expects(:send).with("fooy:42|kv\n", 0, Socket.pack_sockaddr_in(123, 'localhost'))
 
     StatsD.gauge('fooy', 42)
   end
@@ -238,7 +238,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.server = 'localhost:123'
     StatsD.implementation = :statsite
 
-    UDPSocket.any_instance.expects(:send).with("fooy:42|kv|@123456\n", 0, 'localhost', 123)
+    UDPSocket.any_instance.expects(:send).with("fooy:42|kv|@123456\n", 0, Socket.pack_sockaddr_in(123, 'localhost'))
 
     StatsD.gauge('fooy', 42, 123456)
   end
@@ -335,5 +335,63 @@ class StatsDTest < Test::Unit::TestCase
     end
     StatsD.measure('values.foobar', 42)
     StatsD.mode = :test
+  end
+
+  def test_packed_addr
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    assert_equal Socket.pack_sockaddr_in(123, 'localhost'), StatsD.packed_addr
+
+    StatsD.mode = :test
+  end
+
+  def test_packed_addr_after_server_change
+    StatsD.mode = :production
+
+    StatsD.server = '8.8.8.8:123'
+    assert_equal Socket.pack_sockaddr_in(123, '8.8.8.8'), StatsD.packed_addr
+
+    StatsD.server = '8.8.4.4:124'
+    assert_equal Socket.pack_sockaddr_in(124, '8.8.4.4'), StatsD.packed_addr
+
+    StatsD.mode = :test
+  end
+
+  def test_packed_addr_after_host_change
+    StatsD.mode = :production
+
+    StatsD.server = '8.8.8.8:123'
+    assert_equal Socket.pack_sockaddr_in(123, '8.8.8.8'), StatsD.packed_addr
+
+    StatsD.host = '8.8.4.4'
+    assert_equal Socket.pack_sockaddr_in(123, '8.8.4.4'), StatsD.packed_addr
+
+    StatsD.mode = :test
+  end
+
+  def test_packed_addr_after_port_change
+    StatsD.mode = :production
+
+    StatsD.server = '8.8.8.8:123'
+    assert_equal Socket.pack_sockaddr_in(123, '8.8.8.8'), StatsD.packed_addr
+
+    StatsD.port = '124'
+    assert_equal Socket.pack_sockaddr_in(124, '8.8.8.8'), StatsD.packed_addr
+
+    StatsD.mode = :test
+  end
+
+  def test_send_without_cached_address
+    StatsD.unstub(:increment)
+
+    StatsD.mode = :production
+    StatsD.cache_server_address = false
+    StatsD.server = 'localhost:123'
+    UDPSocket.any_instance.expects(:send).with("fooz:1|c", 0, 'localhost', 123)
+
+    StatsD.increment('fooz', 1, 1.0)
+    StatsD.mode = :test
+    StatsD.cache_server_address = true
   end
 end
