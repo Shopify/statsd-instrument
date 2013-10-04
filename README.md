@@ -24,6 +24,7 @@ StatsD.logger = Rails.logger
 StatsD.mode = :production
 StatsD.prefix = 'my_app' # An optional prefix to be added to each stat.
 StatsD.default_sample_rate = 0.1 # Sample 10% of events. By default all events are reported.
+StatsD.cache_server_address = true # When true (default), server address will be resolved and cached on first usage. See "Reliance on DNS" section for details
 ```
 
 If you set the mode to anything besides production then the library will print its calls to the logger, rather than sending them over the wire.
