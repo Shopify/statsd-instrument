@@ -1,6 +1,5 @@
 require 'socket'
 require 'benchmark'
-require 'timeout'
 
 class << Benchmark
   def ms
@@ -18,12 +17,21 @@ module StatsD
   self.default_sample_rate = 1.0
   self.implementation = :statsd
 
-  TimeoutClass = defined?(::SystemTimer) ? ::SystemTimer : ::Timeout
-
   # StatsD.server = 'localhost:1234'
   def self.server=(conn)
     self.host, port = conn.split(':')
     self.port = port.to_i
+    invalidate_socket
+  end
+
+  def self.host=(host)
+    @host = host
+    invalidate_socket
+  end
+
+  def self.port=(port)
+    @port = port
+    invalidate_socket
   end
 
   module Instrument
@@ -126,8 +134,16 @@ module StatsD
 
   private
 
+  def self.invalidate_socket
+    @socket = nil
+  end
+
   def self.socket
-    @socket ||= UDPSocket.new
+    if @socket.nil?
+      @socket = UDPSocket.new
+      @socket.connect(host, port)
+    end
+    @socket
   end
 
   def self.write(k,v,op, sample_rate = default_sample_rate)
@@ -150,15 +166,15 @@ module StatsD
     command << "\n" if self.implementation == :statsite
 
     if mode.to_s == 'production'
-      socket_wrapper { socket.send(command, 0, host, port) }
+      socket_wrapper { socket.send(command, 0) }
     else
       logger.info "[StatsD] #{command}"
     end
   end
 
   def self.socket_wrapper(options = {})
-    TimeoutClass.timeout(options.fetch(:timeout, 0.1)) { yield }
-  rescue Timeout::Error, SocketError, IOError, SystemCallError => e
+    yield
+  rescue SocketError, IOError, SystemCallError => e
     logger.error e
   end
 end

@@ -1,9 +1,3 @@
-# Allow testing with the SystemTimer gem on 1.8
-if RUBY_VERSION =~ /^1.8/
-  puts "Loading SystemTimer gem"
-  require 'system_timer'
-end
-
 require 'statsd-instrument'
 require 'test/unit'
 require 'mocha'
@@ -62,6 +56,7 @@ class StatsDTest < Test::Unit::TestCase
   def setup
     StatsD.mode = nil
     StatsD.stubs(:increment)
+    StatsD.server = 'localhost:123'
   end
 
   def test_statsd_count_if
@@ -150,7 +145,7 @@ class StatsDTest < Test::Unit::TestCase
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
 
     StatsD.stubs(:mode).returns(:production)
-    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0, 'localhost', 123).at_least(1)
+    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0).at_least(1)
 
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
@@ -214,7 +209,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.mode = :production
     StatsD.server = 'localhost:123'
 
-    UDPSocket.any_instance.expects(:send).with('fooy:42|g', 0, 'localhost', 123)
+    UDPSocket.any_instance.expects(:send).with('fooy:42|g', 0)
 
     StatsD.gauge('fooy', 42)
   end
@@ -226,7 +221,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.server = 'localhost:123'
     StatsD.implementation = :statsite
 
-    UDPSocket.any_instance.expects(:send).with("fooy:42|kv\n", 0, 'localhost', 123)
+    UDPSocket.any_instance.expects(:send).with("fooy:42|kv\n", 0)
 
     StatsD.gauge('fooy', 42)
   end
@@ -238,7 +233,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.server = 'localhost:123'
     StatsD.implementation = :statsite
 
-    UDPSocket.any_instance.expects(:send).with("fooy:42|kv|@123456\n", 0, 'localhost', 123)
+    UDPSocket.any_instance.expects(:send).with("fooy:42|kv|@123456\n", 0)
 
     StatsD.gauge('fooy', 42, 123456)
   end
@@ -303,13 +298,6 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.mode = :test
   end
 
-  def test_timeout_error_should_not_raise
-    StatsD.mode = :production
-    UDPSocket.any_instance.expects(:send).raises(Timeout::Error)
-    StatsD.measure('values.foobar', 42)
-    StatsD.mode = :test
-  end
-
   def test_system_call_error_should_not_raise
     StatsD.mode = :production
     UDPSocket.any_instance.expects(:send).raises(Errno::ETIMEDOUT)
@@ -335,5 +323,18 @@ class StatsDTest < Test::Unit::TestCase
     end
     StatsD.measure('values.foobar', 42)
     StatsD.mode = :test
+  end
+
+  def test_changing_host_should_create_new_socket
+    s1 = StatsD.send(:socket)
+    StatsD.host = 'localhost'
+    s2 = StatsD.send(:socket)
+    assert_not_equal s1, s2
+  end
+
+  def test_getting_socket_calls_connect
+    StatsD.host = 'localhost'
+    UDPSocket.any_instance.expects(:connect)
+    StatsD.send(:socket)
   end
 end
