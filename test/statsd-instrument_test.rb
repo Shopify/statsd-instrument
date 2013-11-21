@@ -334,7 +334,15 @@ class StatsDTest < Test::Unit::TestCase
 
   def test_getting_socket_calls_connect
     StatsD.host = 'localhost'
-    UDPSocket.any_instance.expects(:connect)
+    StatsD.port = 123
+    UDPSocket.any_instance.expects(:connect).with('localhost', 123)
     StatsD.send(:socket)
+  end
+
+  def test_send_uses_two_parameters
+    UDPSocket.any_instance.expects(:send).with(kind_of(String), 0)
+    StatsD.mode = :production
+    StatsD.measure('values.foobar', 42)
+    StatsD.mode = :test
   end
 end
