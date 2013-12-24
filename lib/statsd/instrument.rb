@@ -170,10 +170,7 @@ module StatsD
     end
 
     command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
-
-    if tags
-      command << "|##{tags.join(',')}"
-    end
+    command << "|##{tags.join(',')}" if tags
 
     command << "\n" if self.implementation == :statsite
 
