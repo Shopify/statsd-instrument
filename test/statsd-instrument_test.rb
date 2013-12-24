@@ -145,7 +145,7 @@ class StatsDTest < Test::Unit::TestCase
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
 
     StatsD.stubs(:mode).returns(:production)
-    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0).at_least(1)
+    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0, nil).at_least(1)
 
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
@@ -153,7 +153,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_measure
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 0.3
 
-    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms, 0.3).returns({:success => true})
+    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms, 0.3, nil).returns({:success => true})
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
 
@@ -214,6 +214,28 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.gauge('fooy', 42)
   end
 
+  def test_support_histogram_syntax
+    StatsD.unstub(:gauge)
+
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    UDPSocket.any_instance.expects(:send).with('fooh:42.4|h', 0)
+
+    StatsD.histogram('fooh', 42.4)
+  end
+
+  def test_support_tags_syntax
+    StatsD.unstub(:gauge)
+
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    UDPSocket.any_instance.expects(:send).with('fooh:3|h|@0.5|#topic:foo,bar', 0)
+
+    StatsD.histogram('fooh', 3, 0.5, ['topic:foo', 'bar'])
+  end  
+
   def test_write_supports_statsite_gauge_syntax
     StatsD.unstub(:gauge)
 
@@ -272,24 +294,30 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_measure_with_explicit_value
-    StatsD.expects(:write).with('values.foobar', 42, :ms, is_a(Numeric))
+    StatsD.expects(:write).with('values.foobar', 42, :ms, is_a(Numeric), nil)
 
     StatsD.measure('values.foobar', 42)
   end
 
   def test_statsd_measure_with_explicit_value_and_sample_rate
-    StatsD.expects(:write).with('values.foobar', 42, :ms, 0.1)
+    StatsD.expects(:write).with('values.foobar', 42, :ms, 0.1, nil)
 
     StatsD.measure('values.foobar', 42, 0.1)
   end
 
   def test_statsd_gauge
-    StatsD.expects(:write).with('values.foobar', 12, :g, 1)
+    StatsD.expects(:write).with('values.foobar', 12, :g, 1, nil)
 
     StatsD.default_sample_rate = 1
 
     StatsD.gauge('values.foobar', 12)
   end
+
+  def test_statsd_histogram
+    StatsD.expects(:write).with('values.hg', 12.33, :h, 0.2, ['tag', 'key:value'])
+    StatsD.histogram('values.hg', 12.33, 0.2, ['tag', 'key:value'])
+  end
+
 
   def test_socket_error_should_not_raise
     StatsD.mode = :production
