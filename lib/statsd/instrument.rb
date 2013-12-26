@@ -166,11 +166,12 @@ module StatsD
     when :g
       command << (self.implementation == :statsite ? '|kv' : '|g')
     when :h
+      raise "Histograms only supported on DataDog implementation." unless self.implementation == :datadog
       command << '|h'
     end
 
     command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
-    command << "|##{tags.join(',')}" if tags
+    command << "|##{tags.join(',')}" if tags && self.implementation == :datadog
 
     command << "\n" if self.implementation == :statsite
 
