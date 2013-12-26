@@ -237,16 +237,26 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.increment('fooc', 3, 1.0, ['topic:foo', 'bar'])
   end
 
-  def test_drop_tags_when_not_using_datadog
+  def test_raise_when_using_tags_and_not_using_datadog
     StatsD.unstub(:increment)
 
     StatsD.implementation = :other
     StatsD.mode = :production
     StatsD.server = 'localhost:123'
 
-    StatsD.socket.expects(:send).with("fooc:3|c", 0)
+    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['nonempty']) }
+  end
 
-    StatsD.increment('fooc', 3, 1.0, ['ignored'])
+  def test_raise_when_using_mailformed_tags
+    StatsD.unstub(:increment)
+
+    StatsD.implementation = :other
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['igno,red']) }
+    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['igno red']) }
+    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['test:test:test']) }
   end
 
 
@@ -329,8 +339,8 @@ class StatsDTest < Test::Unit::TestCase
 
   def test_statsd_histogram
     StatsD.implementation = :datadog
-    StatsD.expects(:write).with('values.hg', 12.33, :h, 0.2, ['tag', 'key:value'])
-    StatsD.histogram('values.hg', 12.33, 0.2, ['tag', 'key:value'])
+    StatsD.expects(:write).with('values.hg', 12.33, :h, 0.2, ['tag_123', 'key-name:value123'])
+    StatsD.histogram('values.hg', 12.33, 0.2, ['tag_123', 'key-name:value123'])
   end
 
 
