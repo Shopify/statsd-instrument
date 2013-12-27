@@ -3,7 +3,7 @@ require 'rake/testtask'
 
 Rake::TestTask.new('test') do |t|
   t.ruby_opts << '-rubygems'
-  t.libs << 'lib'
+  t.libs << 'lib' << 'test'
   t.test_files = FileList['test/*.rb']
 end
 
