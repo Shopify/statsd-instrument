@@ -28,6 +28,13 @@ StatsD.default_sample_rate = 0.1 # Sample 10% of events. By default all events a
 
 If you set the mode to anything besides production then the library will print its calls to the logger, rather than sending them over the wire.
 
+There are several implementations of StatsD out there, all with slight protocol variations. You can this library to use the proper protocol by informing it about what implementation you use. By default, it will use the protocol of the original Etsy implementation.
+
+```
+StatsD.implementation = :datadog  # Enable datadog extensions: tags and histograms
+StatsD.implementation = :statsite # Enable keyvalue-style gauges 
+```
+
 ## StatsD keys
 
 StatsD keys look like 'admin.logins.api.success'. Each dot in the key represents a 'folder' in the graphite interface. You can include any data you want in the keys.
@@ -148,20 +155,23 @@ GoogleBase.statsd_count :insert, lamdba{|object, args| object.class.to_s.downcas
 ```
 
 ## Reliance on DNS
+
 Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Configuring the StatsD host to be a non-ip will trigger a DNS lookup (ie synchronous round trip network call) for each metric sent. This can be particularly problematic in clouds that have a shared DNS infrastructure such as AWS.
 
 ### Common Workarounds
+
 1. Using an IP avoids the DNS lookup but generally requires an application deploy to change.
 2. Hardcoding the DNS/IP pair in /etc/hosts allows the IP to change without redeploying your application but fails to scale as the number of servers increases.
 3. Installing caching software such as nscd that uses the DNS TTL avoids most DNS lookups but makes the exact moment of change indeterminate.
 
 ## Compatibility
 
-Tested on:
+Tested on several Ruby versions using Travis CI:
 
 * Ruby 1.8.7
 * Ruby Enterprise Edition 1.8.7
 * Ruby 1.9.2
 * Ruby 1.9.3
+* Ruby 2.0.0
 
-Ruby 1.9 compatibility is planned for the long term. Your mileage may vary with other Ruby environments.
+Ruby 2.0 compatibility is planned for the long term. Your mileage may vary with other Ruby environments.
