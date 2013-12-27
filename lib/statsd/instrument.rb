@@ -30,10 +30,15 @@ module StatsD
   end
 
   module Instrument
+
+    def self.generate_metric_name(metric_name, callee, *args)
+      metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
+    end
+
     def statsd_measure(method, name, sample_rate = StatsD.default_sample_rate)
       add_to_method(method, name, :measure) do |old_method, new_method, metric_name, *args|
         define_method(new_method) do |*args, &block|
-          StatsD.measure(metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name, nil, sample_rate) { send(old_method, *args, &block) }
+          StatsD.measure(StatsD::Instrument.generate_metric_name(metric_name, self, *args), nil, sample_rate) { send(old_method, *args, &block) }
         end
       end
     end
@@ -50,10 +55,8 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            result = truthiness == false ? 'failure' : 'success'
-            key = metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name
-
-            StatsD.increment("#{key}.#{result}", sample_rate)
+            suffix = truthiness == false ? 'failure' : 'success'
+            StatsD.increment("#{StatsD::Instrument.generate_metric_name(metric_name, self, *args)}.#{suffix}", 1, sample_rate)
           end
         end
       end
@@ -71,7 +74,7 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment(metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name, sample_rate) if truthiness
+            StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), sample_rate) if truthiness
           end
         end
       end
@@ -80,13 +83,30 @@ module StatsD
     def statsd_count(method, name, sample_rate = StatsD.default_sample_rate)
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
-          StatsD.increment(metric_name.respond_to?(:call) ? metric_name.call(self, args) : metric_name, sample_rate)
+          StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), 1, sample_rate)
           send(old_method, *args, &block)
         end
       end
     end
 
+    def statsd_remove_count(method, name)
+      remove_from_method(method, name, :count)
+    end
+
+    def statsd_remove_count_if(method, name)
+      remove_from_method(method, name, :count_if)
+    end
+
+    def statsd_remove_count_success(method, name)
+      remove_from_method(method, name, :count_success)
+    end
+
+    def statsd_remove_measure(method, name)
+      remove_from_method(method, name, :measure)
+    end
+
     private
+
     def add_to_method(method, name, action, &block)
       metric_name = name
 
@@ -103,6 +123,14 @@ module StatsD
       yield method_name_without_statsd, method_name_with_statsd, metric_name
       alias_method method, method_name_with_statsd
     end
+
+    def remove_from_method(method, name, action)
+      method_name_without_statsd = :"#{method}_for_#{action}_on_#{self.name}_without_#{name}"
+      method_name_with_statsd = :"#{method}_for_#{action}_on_#{self.name}_with_#{name}"
+      send(:remove_method, method_name_with_statsd)
+      alias_method method, method_name_without_statsd
+      send(:remove_method, method_name_without_statsd)
+    end
   end
 
   # glork:320|ms
@@ -112,24 +140,24 @@ module StatsD
       result = yield
     end
 
-    write(key, ms, :ms, sample_rate, tags)
+    collect(key, ms, :ms, sample_rate, tags)
     result
   end
 
   # gorets:1|c
   def self.increment(key, delta = 1, sample_rate = default_sample_rate, tags = nil)
-    write(key, delta, :incr, sample_rate, tags)
+    collect(key, delta, :incr, sample_rate, tags)
   end
 
   # gaugor:333|g
   # guagor:1234|kv|@1339864935 (statsite)
   def self.gauge(key, value, sample_rate_or_epoch = default_sample_rate, tags = nil)
-    write(key, value, :g, sample_rate_or_epoch, tags)
+    collect(key, value, :g, sample_rate_or_epoch, tags)
   end
 
   # histogram:123.45|h
   def self.histogram(key, value, sample_rate_or_epoch = default_sample_rate, tags = nil)
-    write(key, value, :h, sample_rate_or_epoch, tags)
+    collect(key, value, :h, sample_rate_or_epoch, tags)
   end  
 
   private
@@ -146,12 +174,27 @@ module StatsD
     @socket
   end
 
-  def self.write(k,v,op, sample_rate = default_sample_rate, tags = nil)
+  def self.collect(k, v, op, sample_rate = default_sample_rate, tags = nil)
     return unless enabled
     return if sample_rate < 1 && rand > sample_rate
 
-    k =  k.gsub('::', '.')
+    command = generate_packet(k, v, op, sample_rate, tags)
+    write_packet(command)
+  end
 
+  def self.write_packet(command)
+    if mode.to_s == 'production'
+      begin
+        socket.send(command, 0)
+      rescue SocketError, IOError, SystemCallError => e
+        logger.error e
+      end 
+    else
+      logger.info "[StatsD] #{command}"
+    end
+  end
+
+  def self.generate_packet(k, v, op, sample_rate = default_sample_rate, tags = nil)
     command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
     case op
     when :incr
@@ -161,7 +204,7 @@ module StatsD
     when :g
       command << (self.implementation == :statsite ? '|kv' : '|g')
     when :h
-      raise NotImplemented, "Histograms only supported on DataDog implementation." unless self.implementation == :datadog
+      raise NotImplementedError, "Histograms only supported on DataDog implementation." unless self.implementation == :datadog
       command << '|h'
     end
 
@@ -173,17 +216,6 @@ module StatsD
     end
 
     command << "\n" if self.implementation == :statsite
-
-    if mode.to_s == 'production'
-      socket_wrapper { socket.send(command, 0) }
-    else
-      logger.info "[StatsD] #{command}"
-    end
-  end
-
-  def self.socket_wrapper(options = {})
-    yield
-  rescue SocketError, IOError, SystemCallError => e
-    logger.error e
+    return command
   end
 end
