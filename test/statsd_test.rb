@@ -197,18 +197,10 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.stubs(:mode).returns(:production)
     StatsD.server = "localhost:31798"
 
-    received_command = nil
-    t = Thread.new do 
-      server = UDPSocket.new
-      server.bind('localhost', 31798)
-
-      result = server.recvfrom(1000)
-      received_command = result.first
-    end
+    server = UDPSocket.new
+    server.bind('localhost', 31798)
 
     StatsD.increment('counter')
-    t.join
-
-    assert_equal "counter:1|c", received_command
+    assert_equal "counter:1|c", server.recvfrom(100).first
   end
 end
