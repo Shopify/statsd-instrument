@@ -111,26 +111,31 @@ module StatsD
   end
 
   # glork:320|ms
-  def self.measure(key, milli = nil, sample_rate = default_sample_rate)
+  def self.measure(key, milli = nil, sample_rate = default_sample_rate, tags = nil)
     result = nil
     ms = milli || Benchmark.ms do
       result = yield
     end
 
-    write(key, ms, :ms, sample_rate)
+    write(key, ms, :ms, sample_rate, tags)
     result
   end
 
   # gorets:1|c
-  def self.increment(key, delta = 1, sample_rate = default_sample_rate)
-    write(key, delta, :incr, sample_rate)
+  def self.increment(key, delta = 1, sample_rate = default_sample_rate, tags = nil)
+    write(key, delta, :incr, sample_rate, tags)
   end
 
   # gaugor:333|g
   # guagor:1234|kv|@1339864935 (statsite)
-  def self.gauge(key, value, sample_rate_or_epoch = default_sample_rate)
-    write(key, value, :g, sample_rate_or_epoch)
+  def self.gauge(key, value, sample_rate_or_epoch = default_sample_rate, tags = nil)
+    write(key, value, :g, sample_rate_or_epoch, tags)
   end
+
+  # histogram:123.45|h
+  def self.histogram(key, value, sample_rate_or_epoch = default_sample_rate, tags = nil)
+    write(key, value, :h, sample_rate_or_epoch, tags)
+  end  
 
   private
 
@@ -146,7 +151,7 @@ module StatsD
     @socket
   end
 
-  def self.write(k,v,op, sample_rate = default_sample_rate)
+  def self.write(k,v,op, sample_rate = default_sample_rate, tags = nil)
     return unless enabled
     return if sample_rate < 1 && rand > sample_rate
 
@@ -160,9 +165,18 @@ module StatsD
       command << '|ms'
     when :g
       command << (self.implementation == :statsite ? '|kv' : '|g')
+    when :h
+      raise NotImplemented, "Histograms only supported on DataDog implementation." unless self.implementation == :datadog
+      command << '|h'
     end
 
     command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
+    if tags
+      raise ArgumentError, "Tags are only supported on Datadog" unless self.implementation == :datadog
+      raise ArgumentError, "Tags not prperly formatted." unless tags.all? { |t| t =~ /\A([\w-]+:)?[\w-]+\z/ }
+      command << "|##{tags.join(',')}"
+    end
+
     command << "\n" if self.implementation == :statsite
 
     if mode.to_s == 'production'

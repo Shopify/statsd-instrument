@@ -1,6 +1,6 @@
 require 'statsd-instrument'
 require 'test/unit'
-require 'mocha'
+require 'mocha/setup'
 require 'logger'
 
 StatsD.logger = Logger.new('/dev/null')
@@ -145,7 +145,7 @@ class StatsDTest < Test::Unit::TestCase
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
 
     StatsD.stubs(:mode).returns(:production)
-    UDPSocket.any_instance.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0).at_least(1)
+    StatsD.socket.expects(:send).with(regexp_matches(/ActiveMerchant\.Gateway\.ssl_post:\d\.\d{2,}\|ms/), 0, nil).at_least(1)
 
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
@@ -153,7 +153,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_measure
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 0.3
 
-    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms, 0.3).returns({:success => true})
+    StatsD.expects(:write).with('ActiveMerchant.Gateway.ssl_post', is_a(Float), :ms, 0.3, nil).returns({:success => true})
     ActiveMerchant::UniqueGateway.new.purchase(true)
   end
 
@@ -209,10 +209,56 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.mode = :production
     StatsD.server = 'localhost:123'
 
-    UDPSocket.any_instance.expects(:send).with('fooy:42|g', 0)
+    StatsD.socket.expects(:send).with('fooy:42|g', 0)
 
     StatsD.gauge('fooy', 42)
   end
+
+  def test_support_histogram_syntax
+    StatsD.unstub(:histogram)
+
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    StatsD.socket.expects(:send).with('fooh:42.4|h', 0)
+
+    StatsD.histogram('fooh', 42.4)
+  end
+
+  def test_support_tags_syntax_on_datadog
+    StatsD.unstub(:increment)
+
+    StatsD.implementation = :datadog
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    StatsD.socket.expects(:send).with("fooc:3|c|#topic:foo,bar", 0)
+
+    StatsD.increment('fooc', 3, 1.0, ['topic:foo', 'bar'])
+  end
+
+  def test_raise_when_using_tags_and_not_using_datadog
+    StatsD.unstub(:increment)
+
+    StatsD.implementation = :other
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['nonempty']) }
+  end
+
+  def test_raise_when_using_mailformed_tags
+    StatsD.unstub(:increment)
+
+    StatsD.implementation = :other
+    StatsD.mode = :production
+    StatsD.server = 'localhost:123'
+
+    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['igno,red']) }
+    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['igno red']) }
+    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['test:test:test']) }
+  end
+
 
   def test_write_supports_statsite_gauge_syntax
     StatsD.unstub(:gauge)
@@ -221,7 +267,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.server = 'localhost:123'
     StatsD.implementation = :statsite
 
-    UDPSocket.any_instance.expects(:send).with("fooy:42|kv\n", 0)
+    StatsD.socket.expects(:send).with("fooy:42|kv\n", 0)
 
     StatsD.gauge('fooy', 42)
   end
@@ -233,7 +279,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.server = 'localhost:123'
     StatsD.implementation = :statsite
 
-    UDPSocket.any_instance.expects(:send).with("fooy:42|kv|@123456\n", 0)
+    StatsD.socket.expects(:send).with("fooy:42|kv|@123456\n", 0)
 
     StatsD.gauge('fooy', 42, 123456)
   end
@@ -272,49 +318,56 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_measure_with_explicit_value
-    StatsD.expects(:write).with('values.foobar', 42, :ms, is_a(Numeric))
+    StatsD.expects(:write).with('values.foobar', 42, :ms, is_a(Numeric), nil)
 
     StatsD.measure('values.foobar', 42)
   end
 
   def test_statsd_measure_with_explicit_value_and_sample_rate
-    StatsD.expects(:write).with('values.foobar', 42, :ms, 0.1)
+    StatsD.expects(:write).with('values.foobar', 42, :ms, 0.1, nil)
 
     StatsD.measure('values.foobar', 42, 0.1)
   end
 
   def test_statsd_gauge
-    StatsD.expects(:write).with('values.foobar', 12, :g, 1)
+    StatsD.expects(:write).with('values.foobar', 12, :g, 1, nil)
 
     StatsD.default_sample_rate = 1
 
     StatsD.gauge('values.foobar', 12)
   end
 
+  def test_statsd_histogram
+    StatsD.implementation = :datadog
+    StatsD.expects(:write).with('values.hg', 12.33, :h, 0.2, ['tag_123', 'key-name:value123'])
+    StatsD.histogram('values.hg', 12.33, 0.2, ['tag_123', 'key-name:value123'])
+  end
+
+
   def test_socket_error_should_not_raise
     StatsD.mode = :production
-    UDPSocket.any_instance.expects(:send).raises(SocketError)
+    StatsD.socket.expects(:send).raises(SocketError)
     StatsD.measure('values.foobar', 42)
     StatsD.mode = :test
   end
 
   def test_system_call_error_should_not_raise
     StatsD.mode = :production
-    UDPSocket.any_instance.expects(:send).raises(Errno::ETIMEDOUT)
+    StatsD.socket.expects(:send).raises(Errno::ETIMEDOUT)
     StatsD.measure('values.foobar', 42)
     StatsD.mode = :test
   end
 
   def test_io_error_should_not_raise
     StatsD.mode = :production
-    UDPSocket.any_instance.expects(:send).raises(IOError)
+    StatsD.socket.expects(:send).raises(IOError)
     StatsD.measure('values.foobar', 42)
     StatsD.mode = :test
   end
 
   def test_long_request_should_timeout
     StatsD.mode = :production
-    UDPSocket.any_instance.expects(:send).yields do
+    StatsD.socket.expects(:send).yields do
       begin
         Timeout.timeout(0.5) { sleep 1 }
       rescue Timeout::Error
@@ -340,7 +393,7 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_send_uses_two_parameters
-    UDPSocket.any_instance.expects(:send).with(kind_of(String), 0)
+    StatsD.socket.expects(:send).with(kind_of(String), 0)
     StatsD.mode = :production
     StatsD.measure('values.foobar', 42)
     StatsD.mode = :test
