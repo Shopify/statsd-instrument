@@ -1,15 +1,23 @@
-Gem::Specification.new do |s|
-  s.name        = "statsd-instrument"
-  s.version     = '1.5.0'
-  s.authors     = ["Jesse Storimer", "Tobias Lutke"]
-  s.email       = ["jesse@shopify.com"]
-  s.homepage    = "http://github.com/shopify/statsd-instrument"
+# encoding: utf-8
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'statsd/instrument/version'
 
-  s.summary     = %q{A StatsD client for Ruby apps}
-  s.description = %q{A StatsD client for Ruby apps. Provides metaprogramming methods to inject StatsD instrumentation into your code.}
+Gem::Specification.new do |spec|
+  spec.name        = "statsd-instrument"
+  spec.version     = StatsD::Instrument::VERSION
+  spec.authors     = ["Jesse Storimer", "Tobias Lutke"]
+  spec.email       = ["jesse@shopify.com"]
+  spec.homepage    = "https://github.com/Shopify/statsd-instrument"
+  spec.summary     = %q{A StatsD client for Ruby apps}
+  spec.description = %q{A StatsD client for Ruby appspec. Provides metaprogramming methods to inject StatsD instrumentation into your code.}
+  spec.license       = "MIT"
 
-  s.files         = `git ls-files`.split("\n")
-  s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
+  spec.files         = `git ls-files`.split($/)
+  spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
+  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
+  spec.require_paths = ["lib"]
 
-  s.add_development_dependency 'mocha'
+  spec.add_development_dependency 'rake'
+  spec.add_development_dependency 'mocha'
 end

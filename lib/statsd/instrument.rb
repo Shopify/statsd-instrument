@@ -1,6 +1,8 @@
 require 'socket'
 require 'benchmark'
 
+require 'statsd/instrument/version'
+
 class << Benchmark
   def ms
     1000 * realtime { yield }
@@ -192,4 +194,3 @@ module StatsD
     logger.error e
   end
 end
-
