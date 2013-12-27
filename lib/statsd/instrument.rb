@@ -3,13 +3,6 @@ require 'benchmark'
 
 require 'statsd/instrument/version'
 
-class << Benchmark
-  def ms
-    1000 * realtime { yield }
-  end
-end
-
-
 module StatsD
   class << self
     attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate,
@@ -115,7 +108,7 @@ module StatsD
   # glork:320|ms
   def self.measure(key, milli = nil, sample_rate = default_sample_rate, tags = nil)
     result = nil
-    ms = milli || Benchmark.ms do
+    ms = milli || 1000 * Benchmark.realtime do
       result = yield
     end
 
