@@ -211,7 +211,7 @@ module StatsD
     command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
     if tags
       raise ArgumentError, "Tags are only supported on Datadog" unless self.implementation == :datadog
-      raise ArgumentError, "Tags not prperly formatted." unless tags.all? { |t| t =~ /\A([\w-]+:)?[\w-]+\z/ }
+      raise ArgumentError, "Tags not properly formatted." unless tags.all? { |t| t =~ /\A[\w\.-]+(?:\:[\w\.-]+)?\z/ }
       command << "|##{tags.join(',')}"
     end
 
