@@ -194,6 +194,13 @@ module StatsD
     end
   end
 
+  def self.clean_tags(tags)
+    tags.map do |tag| 
+      components = tag.split(':', 2)
+      components.map { |c| c.gsub(/[^\w\.-]+/, '_') }.join(':')
+    end
+  end
+
   def self.generate_packet(k, v, op, sample_rate = default_sample_rate, tags = nil)
     command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
     case op
@@ -211,8 +218,7 @@ module StatsD
     command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
     if tags
       raise ArgumentError, "Tags are only supported on Datadog" unless self.implementation == :datadog
-      raise ArgumentError, "Tags not properly formatted." unless tags.all? { |t| t =~ /\A[\w\.-]+(?:\:[\w\.-]+)?\z/ }
-      command << "|##{tags.join(',')}"
+      command << "|##{clean_tags(tags).join(',')}"
     end
 
     command << "\n" if self.implementation == :statsite

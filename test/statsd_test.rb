@@ -103,12 +103,15 @@ class StatsDTest < Test::Unit::TestCase
     assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['nonempty']) }
   end
 
-  def test_raise_when_using_mailformed_tags_on_datadog
+  def test_rewrite_shitty_tags
     StatsD.stubs(:implementation).returns(:datadog)
 
-    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['igno,red']) }
-    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['igno red']) }
-    assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['test:test:test']) }
+    assert_equal ['igno_red'], StatsD.clean_tags(['igno,red'])
+    assert_equal ['igno_red'], StatsD.clean_tags(['igno  red'])
+    assert_equal ['test:test_test'], StatsD.clean_tags(['test:test:test'])
+
+    StatsD.expects(:write_packet).with("fooc:3|c|#topic:foo_foo,bar_")
+    StatsD.increment('fooc', 3, 1.0, ['topic:foo : foo', 'bar '])
   end
 
   def test_supports_gauge_syntax_on_statsite
