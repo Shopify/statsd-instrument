@@ -224,5 +224,5 @@ end
 
 StatsD.enabled = true
 StatsD.default_sample_rate = 1.0
-StatsD.implementation = ENV.has_key?('STATSD_IMPLEMENTATION') ? ENV['STATSD_IMPLEMENTATION'].to_sym : :statsd
+StatsD.implementation = ENV.fetch('STATSD_IMPLEMENTATION', 'statsd').to_sym
 StatsD.server = ENV['STATSD_ADDR'] if ENV.has_key?('STATSD_ADDR')
