@@ -156,6 +156,11 @@ module StatsD
     collect(key, value, :h, sample_rate_or_epoch, tags)
   end  
 
+  # uniques:765|s
+  def self.set(key, value, sample_rate_or_epoch = default_sample_rate, tags = nil)
+    collect(key, value, :s, sample_rate_or_epoch, tags)
+  end
+
   private
 
   def self.invalidate_socket
@@ -209,6 +214,8 @@ module StatsD
     when :h
       raise NotImplementedError, "Histograms only supported on DataDog implementation." unless self.implementation == :datadog
       command << '|h'
+    when :s
+      command << '|s'
     end
 
     command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
