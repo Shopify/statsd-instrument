@@ -8,11 +8,7 @@ module StatsD
     attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate,
                   :prefix, :implementation
   end
-  self.enabled = true
-  self.default_sample_rate = 1.0
-  self.implementation = :statsd
 
-  # StatsD.server = 'localhost:1234'
   def self.server=(conn)
     self.host, port = conn.split(':')
     self.port = port.to_i
@@ -225,3 +221,8 @@ module StatsD
     return command
   end
 end
+
+StatsD.enabled = true
+StatsD.default_sample_rate = 1.0
+StatsD.implementation = ENV.has_key?('STATSD_IMPLEMENTATION') ? ENV['STATSD_IMPLEMENTATION'].to_sym : :statsd
+StatsD.server = ENV['STATSD_ADDR'] if ENV.has_key?('STATSD_ADDR')
