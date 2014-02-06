@@ -38,6 +38,11 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.gauge('values.foobar', 12)
   end
 
+  def test_statsd_set
+    StatsD.expects(:collect).with('values.foobar', 12, :s, 1.0, nil)
+    StatsD.set('values.foobar', 12)
+  end
+
   def test_statsd_histogram_on_datadog
     StatsD.stubs(:implementation).returns(:datadog)
     StatsD.expects(:collect).with('values.hg', 12.33, :h, 0.2, ['tag_123', 'key-name:value123'])
@@ -74,6 +79,14 @@ class StatsDTest < Test::Unit::TestCase
 
     StatsD.expects(:write_packet).with('fooy:42|g|@0.01')
     StatsD.gauge('fooy', 42, 0.01)
+  end
+
+  def test_supports_set_syntax
+    StatsD.expects(:write_packet).with('unique:10.0.0.10|s')
+    StatsD.set('unique', '10.0.0.10')
+
+    StatsD.expects(:write_packet).with('unique:10.0.0.10|s|@0.01')
+    StatsD.set('unique', '10.0.0.10', 0.01)
   end
 
   def test_support_timing_syntax
