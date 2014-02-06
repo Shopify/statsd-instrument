@@ -33,6 +33,11 @@ class StatsDTest < Test::Unit::TestCase
     end
   end
 
+  def test_statsd_increment_with_hash_argument
+    StatsD.expects(:collect).with('values.foobar', 1, :incr, 1.0, ['test'])
+    StatsD.gauge('values.foobar', 12, :tags => ['test'])
+  end
+
   def test_statsd_gauge
     StatsD.expects(:collect).with('values.foobar', 12, :g, 1.0, nil)
     StatsD.gauge('values.foobar', 12)

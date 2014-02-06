@@ -9,6 +9,8 @@ module StatsD
                   :prefix, :implementation
   end
 
+  VALID_OPTIONAL_ARGUMENTS = [:sample_rate, :tags, :delta]
+
   def self.server=(conn)
     self.host, port = conn.split(':')
     self.port = port.to_i
@@ -141,27 +143,47 @@ module StatsD
   end
 
   # gorets:1|c
-  def self.increment(key, delta = 1, sample_rate = default_sample_rate, tags = nil)
-    collect(key, delta, :incr, sample_rate, tags)
+  def self.increment(key, *args)
+    collect(key, *unpack_arguments(:incr, nil, args))
   end
 
   # gaugor:333|g
   # guagor:1234|kv|@1339864935 (statsite)
-  def self.gauge(key, value, sample_rate_or_epoch = default_sample_rate, tags = nil)
-    collect(key, value, :g, sample_rate_or_epoch, tags)
+  def self.gauge(key, value, *args)
+    collect(key, *unpack_arguments(:g, value, args))
   end
 
   # histogram:123.45|h
-  def self.histogram(key, value, sample_rate_or_epoch = default_sample_rate, tags = nil)
-    collect(key, value, :h, sample_rate_or_epoch, tags)
+  def self.histogram(key, value, *args)
+    collect(key, *unpack_arguments(:h, value, args))
   end  
 
   # uniques:765|s
-  def self.set(key, value, sample_rate_or_epoch = default_sample_rate, tags = nil)
-    collect(key, value, :s, sample_rate_or_epoch, tags)
+  def self.set(key, value, *args)
+    collect(key, *unpack_arguments(:s, value, args))
   end
 
   private
+
+  def self.unpack_arguments(operation, value, optional_arguments)
+    sample_rate, tags, delta = nil
+
+    if optional_arguments.is_a?(Hash)
+      sample_rate = optional_arguments[:sample_rate] || default_sample_rate
+      tags        = optional_arguments[:tags] || nil
+      delta       = optional_arguments[:delta] || 1
+    else
+      if operation == :incr && optional_arguments.empty?
+        # sometimes we wanna pass in delta (for incr) other times we want to pass in value instead
+      end
+      delta       = optional_arguments.shift || 1
+      sample_rate = optional_arguments.first || default_sample_rate
+      tags        = optional_arguments[:tags] || nil
+    end
+
+    # yea this generic approach below won't do it like that
+    [delta || value, operation, sample_rate, tags]
+  end
 
   def self.invalidate_socket
     @socket = nil
