@@ -19,16 +19,29 @@ This is the same as what Etsy uses (mentioned in the README for http://github.co
 ## Configuration
 
 ``` ruby
-StatsD.server = 'statsd.myservice.com:8125'
-StatsD.logger = Rails.logger
+# The UDP endpoint to which you want to submit your metrics.
+# This is set to the environment variable STATSD_ADDR if it is set.
+StatsD.server = 'statsd.myservice.com:8125' 
+
+# Events are only actually submitted in production mode. For any other value, thewy are logged instead
+# This value is set by to the value of the RAILS_ENV or RACK_ENV environment variable if it is set.
 StatsD.mode = :production
-StatsD.prefix = 'my_app' # An optional prefix to be added to each stat.
-StatsD.default_sample_rate = 0.1 # Sample 10% of events. By default all events are reported.
+
+# Logger to which commands are logged when not in :production mode.
+# In  production only errors are logged to the console.
+StatsD.logger = Rails.logger
+
+# An optional prefix to be added to each stat.
+StatsD.prefix = 'my_app' 
+
+# Sample 10% of events. By default all events are reported, which may overload your network or server.
+# You can, and should vary this on a per metric basis, depending on frequency and accuracy requirements
+StatsD.default_sample_rate = 0.1 
+
+
 ```
 
-If you set the mode to anything besides production then the library will print its calls to the logger, rather than sending them over the wire.
-
-There are several implementations of StatsD out there, all with slight protocol variations. You can this library to use the proper protocol by informing it about what implementation you use. By default, it will use the protocol of the original Etsy implementation.
+There are several implementations of StatsD out there, all with slight protocol variations. You can this library to use the proper protocol by informing it about what implementation you use. By default, it will use the `STATSD_IMPLEMENTATION` environment variable, if it is not set it will use the protocol of the original Etsy implementation.
 
 ```
 StatsD.implementation = :datadog  # Enable datadog extensions: tags and histograms
@@ -41,7 +54,9 @@ StatsD keys look like 'admin.logins.api.success'. Each dot in the key represents
 
 ## Usage
 
-### StatsD.measure
+You can either use the basic methods to submit stats over StatsD, or you can use the metaprogramming methods to instrument your methods with some basic stats (call counts, successes & failures, and timings).
+
+#### StatsD.measure
 
 Lets you benchmark how long the execution of a specific method takes.
 
@@ -54,15 +69,8 @@ StatsD.measure('GoogleBase.insert') do
   GoogleBase.insert(product)
 end
 ```
-
-Rather than using this method directly it's more common to use the metaprogramming methods made available.
-
-``` ruby
-GoogleBase.extend StatsD::Instrument
-GoogleBase.statsd_measure :insert, 'GoogleBase.insert'
-```
 		
-### StatsD.increment
+#### StatsD.increment
 
 Lets you increment a key in statsd to keep a count of something. If the specified key doesn't exist it will create it for you.
 
@@ -76,9 +84,28 @@ StatsD.increment('GoogleBase.insert', 10)
 StatsD.increment('GoogleBase.insert', 1, 0.1)
 ```
 
-Again it's more common to use the metaprogramming methods.
+#### StatsD.gauge
 
-## Metaprogramming Methods
+A gauge is a single numerical value value that tells you the state of the system at a point in time. A good example would be the number of messages in a queue.
+
+``` ruby
+StatsD.gauge('GoogleBase.queued', 12, 1.0)
+```
+
+Normally, you shouldn't update this value too often, and therefore there is no need to sample this kind metric.
+
+#### StatsD.set
+
+A set keeps track of the number of unique values that have been seen. This is a good fit for keeping track of the number of unique visitors. The value can be a string.
+
+``` ruby
+# Submit the customer ID to the set. It will only be counted if it hasn't been seen before.
+StatsD.set('GoogleBase.customers', "12345", 1.0)
+```
+
+Because you are counting unique values, the results of using a sampling value less than 1.0 can lead to unexpected, hard to interpret results.
+
+### Metaprogramming Methods
 
 As mentioned, it's most common to use the provided metaprogramming methods. This lets you define all of your instrumentation in one file and not litter your code with instrumentation details. You should enable a class for instrumentation by extending it with the `StatsD::Instrument` class.
 
@@ -88,7 +115,15 @@ GoogleBase.extend StatsD::Instrument
 
 Then use the methods provided below to instrument methods in your class.
 
-### statsd\_count
+#### statsd\_measure
+
+This will measure how long a method takes to run, and submits the result to the given key.
+
+``` ruby
+GoogleBase.statsd_measure :insert, 'GoogleBase.insert'
+```
+
+#### statsd\_count
 
 This will increment the given key even if the method doesn't finish (ie. raises).
 
@@ -98,7 +133,7 @@ GoogleBase.statsd_count :insert, 'GoogleBase.insert'
 
 Note how I used the 'GoogleBase.insert' key above when measuring this method, and I reused here when counting the method calls. StatsD automatically separates these two kinds of stats into namespaces so there won't be a key collision here.
 
-### statsd\_count\_if
+#### statsd\_count\_if
 
 This will only increment the given key if the method executes successfully.
 
@@ -116,7 +151,7 @@ end
 
 In the above example we will only increment the key in statsd if the result of the block returns true. So the method is returning a Net::HTTP response and we're checking the status code.
 
-### statsd\_count\_success
+#### statsd\_count\_success
 
 Similar to statsd_count_if, except this will increment one key in the case of success and another key in the case of failure.
 
@@ -170,8 +205,16 @@ Tested on several Ruby versions using Travis CI:
 
 * Ruby 1.8.7
 * Ruby Enterprise Edition 1.8.7
-* Ruby 1.9.2
 * Ruby 1.9.3
 * Ruby 2.0.0
+* Ruby 2.1.0
 
-Ruby 2.0 compatibility is planned for the long term. Your mileage may vary with other Ruby environments.
+## Contributing
+
+This project is MIT licensed and welcomes outside contributions.
+
+1. Fork the repository, and create a feature branch.
+2. Implement the feature, and add tests that cover the new changes functionality.
+3. Update the README.
+4. Create a pull request. Make sure that you get a CI pass on it.
+5. Ping @jstorimer and/or @wvanbergen for review.
