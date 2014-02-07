@@ -9,8 +9,6 @@ module StatsD
                   :prefix, :implementation
   end
 
-  VALID_OPTIONAL_ARGUMENTS = [:sample_rate, :tags, :delta]
-
   def self.server=(conn)
     self.host, port = conn.split(':')
     self.port = port.to_i
