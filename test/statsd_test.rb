@@ -66,7 +66,12 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.stubs(:implementation).returns(:datadog)
     StatsD.expects(:collect).with(:h, 'values.hg', 12.33, :sample_rate => 0.2, :tags => ['tag_123', 'key-name:value123'])
     StatsD.histogram('values.hg', 12.33, :sample_rate => 0.2, :tags => ['tag_123', 'key-name:value123'])
-  end  
+  end
+
+  def test_raise_when_using_histograms_and_not_on_datadog
+    StatsD.stubs(:implementation).returns(:other)
+    assert_raises(NotImplementedError) { StatsD.histogram('foohg', 3.33) }
+  end
 
   def test_collect_respects_enabled
     StatsD.stubs(:enabled).returns(false)
@@ -146,18 +151,23 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.increment('fooc', 3, 1.0, ['topic:foo : foo', 'bar '])
   end
 
-  def test_supports_gauge_syntax_on_statsite
+  def test_supports_key_value_syntax_on_statsite
     StatsD.stubs(:implementation).returns(:statsite)
 
     StatsD.expects(:write_packet).with("fooy:42|kv\n")
-    StatsD.gauge('fooy', 42)
+    StatsD.key_value('fooy', 42)
   end
 
-  def test_supports_gauge_timestamp_on_statsite
+  def test_supports_key_value_with_timestamp_on_statsite
     StatsD.stubs(:implementation).returns(:statsite)
 
     StatsD.expects(:write_packet).with("fooy:42|kv|@123456\n")
-    StatsD.gauge('fooy', 42, 123456)
+    StatsD.key_value('fooy', 42, 123456)
+  end
+
+  def test_raise_when_using_key_value_and_not_on_statsite
+    StatsD.stubs(:implementation).returns(:other)
+    assert_raises(NotImplementedError) { StatsD.key_value('fookv', 3.33) }
   end
 
   def test_support_key_prefix

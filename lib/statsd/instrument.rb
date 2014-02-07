@@ -171,10 +171,12 @@ module StatsD
 
     # histogram:123.45|h
     def histogram(key, value, *metric_options)
+      raise NotImplementedError, "StatsD.histogram only supported on :datadog implementation." unless self.implementation == :datadog
       collect(:h, key, value, hash_argument(metric_options))
     end
 
     def key_value(key, value, *metric_options)
+      raise NotImplementedError, "StatsD.key_value only supported on :statsite implementation." unless self.implementation == :statsite
       collect(:kv, key, value, hash_argument(metric_options))
     end
 
@@ -235,24 +237,11 @@ module StatsD
     end
 
     def generate_packet(type, k, v, sample_rate = default_sample_rate, tags = nil)
-      command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
-      case type
-      when :c
-        command << '|c'
-      when :ms
-        command << '|ms'
-      when :g
-        command << (self.implementation == :statsite ? '|kv' : '|g')
-      when :h
-        raise NotImplementedError, "Histograms only supported on DataDog implementation." unless self.implementation == :datadog
-        command << '|h'
-      when :s
-        command << '|s'
-      end
-
+      command = self.prefix ? self.prefix + '.' : ''
+      command << "#{k}:#{v}|#{type}"
       command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
       if tags
-        raise ArgumentError, "Tags are only supported on Datadog" unless self.implementation == :datadog
+        raise ArgumentError, "Tags are only supported on :datadog implementation" unless self.implementation == :datadog
         command << "|##{clean_tags(tags).join(',')}"
       end
 
