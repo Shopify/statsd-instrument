@@ -4,31 +4,6 @@ require 'benchmark'
 require 'statsd/instrument/version'
 
 module StatsD
-  class << self
-    attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate,
-                  :prefix, :implementation
-  end
-
-  def self.server=(conn)
-    self.host, port = conn.split(':')
-    self.port = port.to_i
-    invalidate_socket
-  end
-
-  def self.host=(host)
-    @host = host
-    invalidate_socket
-  end
-
-  def self.port=(port)
-    @port = port
-    invalidate_socket
-  end
-
-  def self.invalidate_socket
-    @socket = nil
-  end
-
   module Instrument
 
     def self.generate_metric_name(metric_name, callee, *args)
@@ -134,6 +109,27 @@ module StatsD
   end
 
   class << self
+    attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate, :prefix, :implementation
+
+    def server=(conn)
+      self.host, port = conn.split(':')
+      self.port = port.to_i
+      invalidate_socket
+    end
+
+    def host=(host)
+      @host = host
+      invalidate_socket
+    end
+
+    def port=(port)
+      @port = port
+      invalidate_socket
+    end
+
+    def invalidate_socket
+      @socket = nil
+    end
 
     # glork:320|ms
     def measure(key, value = nil, *metric_options)
