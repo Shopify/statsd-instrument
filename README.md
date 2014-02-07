@@ -81,7 +81,7 @@ StatsD.increment('GoogleBase.insert')
 StatsD.increment('GoogleBase.insert', 10)
 # you can also specify a sample rate, so only 1/10 of events
 # actually get to statsd. Useful for very high volume data
-StatsD.increment('GoogleBase.insert', 1, 0.1)
+StatsD.increment('GoogleBase.insert', 1, sample_rate: 0.1)
 ```
 
 #### StatsD.gauge
@@ -89,7 +89,7 @@ StatsD.increment('GoogleBase.insert', 1, 0.1)
 A gauge is a single numerical value value that tells you the state of the system at a point in time. A good example would be the number of messages in a queue.
 
 ``` ruby
-StatsD.gauge('GoogleBase.queued', 12, 1.0)
+StatsD.gauge('GoogleBase.queued', 12, sample_rate: 1.0)
 ```
 
 Normally, you shouldn't update this value too often, and therefore there is no need to sample this kind metric.
@@ -100,7 +100,7 @@ A set keeps track of the number of unique values that have been seen. This is a 
 
 ``` ruby
 # Submit the customer ID to the set. It will only be counted if it hasn't been seen before.
-StatsD.set('GoogleBase.customers', "12345", 1.0)
+StatsD.set('GoogleBase.customers', "12345", sample_rate: 1.0)
 ```
 
 Because you are counting unique values, the results of using a sampling value less than 1.0 can lead to unexpected, hard to interpret results.
@@ -174,7 +174,6 @@ end
 You can instrument class methods, just like instance methods, using the metaprogramming methods. You simply have to configure the instrumentation on the singleton class of the Class you want to instrument.
 
 ```ruby
-AWS::S3::Base.singleton_class.extend StatsD::Instrument
 AWS::S3::Base.singleton_class.statsd_measure :request, 'S3.request'
 ```
 
@@ -187,6 +186,15 @@ passed.
 
 ```ruby
 GoogleBase.statsd_count :insert, lamdba{|object, args| object.class.to_s.downcase + "." + args.first.to_s + ".insert" }
+```
+
+### Tags
+
+The Datadog implementation support tags, which you can use to slice and dice metrics in their UI. You can specify a list of tags as an option, either standalone tag (e.g. `"mytag"`), or key value based, separated by a colon: `"env:production"`.
+
+``` ruby
+StatsD.increment('my.counter', tags: ['env:production', 'unicorn'])
+GoogleBase.statsd_count :insert, 'GoogleBase.insert', tags: ['env:production']
 ```
 
 ## Reliance on DNS
