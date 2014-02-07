@@ -132,9 +132,14 @@ module StatsD
   end
 
   # glork:320|ms
-  def self.measure(key, milli = nil, *metric_options)
+  def self.measure(key, value = nil, *metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = nil
+    end
+
     result = nil
-    ms = milli || 1000 * Benchmark.realtime do
+    ms = value || 1000 * Benchmark.realtime do
       result = yield
     end
 

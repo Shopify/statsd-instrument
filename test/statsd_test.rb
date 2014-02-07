@@ -28,7 +28,16 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_measure_with_benchmarked_value
     Benchmark.stubs(:realtime).returns(1.12)
     StatsD.expects(:collect).with(:ms, 'values.foobar', 1120.0, {})
-    StatsD.measure('values.foobar', nil) do
+    StatsD.measure('values.foobar') do
+      #noop
+    end
+  end
+
+
+  def test_statsd_measure_with_benchmarked_value_and_options
+    Benchmark.stubs(:realtime).returns(1.12)
+    StatsD.expects(:collect).with(:ms, 'values.foobar', 1120.0, :sample_rate => 1.0)
+    StatsD.measure('values.foobar', :sample_rate => 1.0) do
       #noop
     end
   end
