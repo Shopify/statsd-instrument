@@ -138,9 +138,9 @@ class StatsDTest < Test::Unit::TestCase
   def test_rewrite_shitty_tags
     StatsD.stubs(:implementation).returns(:datadog)
 
-    assert_equal ['igno_red'], StatsD.clean_tags(['igno,red'])
-    assert_equal ['igno_red'], StatsD.clean_tags(['igno  red'])
-    assert_equal ['test:test_test'], StatsD.clean_tags(['test:test:test'])
+    assert_equal ['igno_red'], StatsD.send(:clean_tags, ['igno,red'])
+    assert_equal ['igno_red'], StatsD.send(:clean_tags, ['igno  red'])
+    assert_equal ['test:test_test'], StatsD.send(:clean_tags, ['test:test:test'])
 
     StatsD.expects(:write_packet).with("fooc:3|c|#topic:foo_foo,bar_")
     StatsD.increment('fooc', 3, 1.0, ['topic:foo : foo', 'bar '])

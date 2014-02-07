@@ -25,6 +25,10 @@ module StatsD
     invalidate_socket
   end
 
+  def self.invalidate_socket
+    @socket = nil
+  end
+
   module Instrument
 
     def self.generate_metric_name(metric_name, callee, *args)
@@ -129,127 +133,132 @@ module StatsD
     end
   end
 
-  # glork:320|ms
-  def self.measure(key, value = nil, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = nil
+  class << self
+
+    # glork:320|ms
+    def measure(key, value = nil, *metric_options)
+      if value.is_a?(Hash) && metric_options.empty?
+        metric_options = [value]
+        value = nil
+      end
+
+      result = nil
+      ms = value || 1000 * Benchmark.realtime do
+        result = yield
+      end
+
+      collect(:ms, key, ms, hash_argument(metric_options))
+      result
     end
 
-    result = nil
-    ms = value || 1000 * Benchmark.realtime do
-      result = yield
+    # gorets:1|c
+    def counter(key, value = 1, *metric_options)
+      if value.is_a?(Hash) && metric_options.empty?
+        metric_options = [value]
+        value = 1
+      end
+
+      collect(:incr, key, value, hash_argument(metric_options))
     end
 
-    collect(:ms, key, ms, hash_argument(metric_options))
-    result
-  end
+    alias_method :increment, :counter
 
-  # gorets:1|c
-  def self.increment(key, value = 1, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = 1
+    # gaugor:333|g
+    # guagor:1234|kv|@1339864935 (statsite)
+    def gauge(key, value, *metric_options)
+      collect(:g, key, value, hash_argument(metric_options))
     end
 
-    collect(:incr, key, value, hash_argument(metric_options))
-  end
-
-  # gaugor:333|g
-  # guagor:1234|kv|@1339864935 (statsite)
-  def self.gauge(key, value, *metric_options)
-    collect(:g, key, value, hash_argument(metric_options))
-  end
-
-  # histogram:123.45|h
-  def self.histogram(key, value, *metric_options)
-    collect(:h, key, value, hash_argument(metric_options))
-  end  
-
-  # uniques:765|s
-  def self.set(key, value, *metric_options)
-    collect(:s, key, value, hash_argument(metric_options))
-  end
-
-  private
-
-  def self.hash_argument(args)
-    return {} if args.length == 0
-    return args.first if args.length == 1 && args.first.is_a?(Hash)
-
-    order = [:sample_rate, :tags]
-    hash = {}
-    args.each_with_index do |value, index|
-      hash[order[index]] = value
-    end    
-    
-    return hash
-  end
-
-  def self.invalidate_socket
-    @socket = nil
-  end
-
-  def self.socket
-    if @socket.nil?
-      @socket = UDPSocket.new
-      @socket.connect(host, port)
-    end
-    @socket
-  end
-
-  def self.collect(type, k, v, options = {})
-    return unless enabled
-    sample_rate = options[:sample_rate] || StatsD.default_sample_rate
-    return if sample_rate < 1 && rand > sample_rate
-
-    packet = generate_packet(type, k, v, sample_rate, options[:tags])
-    write_packet(packet)
-  end
-
-  def self.write_packet(command)
-    if mode.to_s == 'production'
-      begin
-        socket.send(command, 0)
-      rescue SocketError, IOError, SystemCallError => e
-        logger.error e
-      end 
-    else
-      logger.info "[StatsD] #{command}"
-    end
-  end
-
-  def self.clean_tags(tags)
-    tags.map do |tag| 
-      components = tag.split(':', 2)
-      components.map { |c| c.gsub(/[^\w\.-]+/, '_') }.join(':')
-    end
-  end
-
-  def self.generate_packet(type, k, v, sample_rate = default_sample_rate, tags = nil)
-    command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
-    case type
-    when :incr
-      command << '|c'
-    when :ms
-      command << '|ms'
-    when :g
-      command << (self.implementation == :statsite ? '|kv' : '|g')
-    when :h
-      raise NotImplementedError, "Histograms only supported on DataDog implementation." unless self.implementation == :datadog
-      command << '|h'
-    when :s
-      command << '|s'
+    # histogram:123.45|h
+    def histogram(key, value, *metric_options)
+      collect(:h, key, value, hash_argument(metric_options))
     end
 
-    command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
-    if tags
-      raise ArgumentError, "Tags are only supported on Datadog" unless self.implementation == :datadog
-      command << "|##{clean_tags(tags).join(',')}"
+    def key_value(key, value, *metric_options)
+      collect(:kv, key, value, hash_argument(metric_options))
     end
 
-    command << "\n" if self.implementation == :statsite
-    return command
+    # uniques:765|s
+    def set(key, value, *metric_options)
+      collect(:s, key, value, hash_argument(metric_options))
+    end
+
+    private
+
+    def hash_argument(args)
+      return {} if args.length == 0
+      return args.first if args.length == 1 && args.first.is_a?(Hash)
+
+      order = [:sample_rate, :tags]
+      hash = {}
+      args.each_with_index do |value, index|
+        hash[order[index]] = value
+      end    
+      
+      return hash
+    end
+
+    def socket
+      if @socket.nil?
+        @socket = UDPSocket.new
+        @socket.connect(host, port)
+      end
+      @socket
+    end
+
+    def collect(type, k, v, options = {})
+      return unless enabled
+      sample_rate = options[:sample_rate] || StatsD.default_sample_rate
+      return if sample_rate < 1 && rand > sample_rate
+
+      packet = generate_packet(type, k, v, sample_rate, options[:tags])
+      write_packet(packet)
+    end
+
+    def write_packet(command)
+      if mode.to_s == 'production'
+        begin
+          socket.send(command, 0)
+        rescue SocketError, IOError, SystemCallError => e
+          logger.error e
+        end 
+      else
+        logger.info "[StatsD] #{command}"
+      end
+    end
+
+    def clean_tags(tags)
+      tags.map do |tag| 
+        components = tag.split(':', 2)
+        components.map { |c| c.gsub(/[^\w\.-]+/, '_') }.join(':')
+      end
+    end
+
+    def generate_packet(type, k, v, sample_rate = default_sample_rate, tags = nil)
+      command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
+      case type
+      when :incr
+        command << '|c'
+      when :ms
+        command << '|ms'
+      when :g
+        command << (self.implementation == :statsite ? '|kv' : '|g')
+      when :h
+        raise NotImplementedError, "Histograms only supported on DataDog implementation." unless self.implementation == :datadog
+        command << '|h'
+      when :s
+        command << '|s'
+      end
+
+      command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
+      if tags
+        raise ArgumentError, "Tags are only supported on Datadog" unless self.implementation == :datadog
+        command << "|##{clean_tags(tags).join(',')}"
+      end
+
+      command << "\n" if self.implementation == :statsite
+      return command
+    end
   end
 end
 
