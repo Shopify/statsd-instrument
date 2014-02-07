@@ -147,8 +147,10 @@ module StatsD
       result
     end
 
+    alias_method :timer, :measure
+
     # gorets:1|c
-    def counter(key, value = 1, *metric_options)
+    def increment(key, value = 1, *metric_options)
       if value.is_a?(Hash) && metric_options.empty?
         metric_options = [value]
         value = 1
@@ -157,7 +159,7 @@ module StatsD
       collect(:c, key, value, hash_argument(metric_options))
     end
 
-    alias_method :increment, :counter
+    alias_method :counter, :increment
 
     # gaugor:333|g
     # guagor:1234|kv|@1339864935 (statsite)
