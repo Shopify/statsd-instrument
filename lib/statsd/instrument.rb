@@ -144,6 +144,11 @@ module StatsD
 
   # gorets:1|c
   def self.increment(key, value = 1, *metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = 1
+    end
+
     collect(:incr, key, value, hash_argument(metric_options))
   end
 

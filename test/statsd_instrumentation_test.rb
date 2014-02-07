@@ -186,4 +186,14 @@ class StatsDInstrumentationTest < Test::Unit::TestCase
 
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
   end
+
+  def test_statsd_count_with_tags
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync', :tags => ['t']
+
+    StatsD.expects(:increment).with('ActiveMerchant.Gateway.sync', 1, :tags => ['t'])
+    ActiveMerchant::Gateway.sync
+
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+  end
 end
