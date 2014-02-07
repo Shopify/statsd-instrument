@@ -33,15 +33,15 @@ module StatsD
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
     end
 
-    def statsd_measure(method, name, sample_rate = StatsD.default_sample_rate)
+    def statsd_measure(method, name, *metric_options)
       add_to_method(method, name, :measure) do |old_method, new_method, metric_name, *args|
         define_method(new_method) do |*args, &block|
-          StatsD.measure(StatsD::Instrument.generate_metric_name(metric_name, self, *args), nil, sample_rate) { send(old_method, *args, &block) }
+          StatsD.measure(StatsD::Instrument.generate_metric_name(metric_name, self, *args), nil, *metric_options) { send(old_method, *args, &block) }
         end
       end
     end
 
-    def statsd_count_success(method, name, sample_rate = StatsD.default_sample_rate)
+    def statsd_count_success(method, name, *metric_options)
       add_to_method(method, name, :count_success) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
           begin
@@ -54,13 +54,13 @@ module StatsD
             result
           ensure
             suffix = truthiness == false ? 'failure' : 'success'
-            StatsD.increment("#{StatsD::Instrument.generate_metric_name(metric_name, self, *args)}.#{suffix}", 1, sample_rate)
+            StatsD.increment("#{StatsD::Instrument.generate_metric_name(metric_name, self, *args)}.#{suffix}", 1, *metric_options)
           end
         end
       end
     end
 
-    def statsd_count_if(method, name, sample_rate = StatsD.default_sample_rate)
+    def statsd_count_if(method, name, *metric_options)
       add_to_method(method, name, :count_if) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
           begin
@@ -72,16 +72,16 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), sample_rate) if truthiness
+            StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), *metric_options) if truthiness
           end
         end
       end
     end
 
-    def statsd_count(method, name, sample_rate = StatsD.default_sample_rate)
+    def statsd_count(method, name, *metric_options)
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
-          StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), 1, sample_rate)
+          StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), 1, *metric_options)
           send(old_method, *args, &block)
         end
       end
@@ -132,57 +132,50 @@ module StatsD
   end
 
   # glork:320|ms
-  def self.measure(key, milli = nil, sample_rate = default_sample_rate, tags = nil)
+  def self.measure(key, milli = nil, *metric_options)
     result = nil
     ms = milli || 1000 * Benchmark.realtime do
       result = yield
     end
 
-    collect(key, ms, :ms, sample_rate, tags)
+    collect(:ms, key, ms, hash_argument(metric_options))
     result
   end
 
   # gorets:1|c
-  def self.increment(key, *args)
-    collect(key, *unpack_arguments(:incr, nil, args))
+  def self.increment(key, value = 1, *metric_options)
+    collect(:incr, key, value, hash_argument(metric_options))
   end
 
   # gaugor:333|g
   # guagor:1234|kv|@1339864935 (statsite)
-  def self.gauge(key, value, *args)
-    collect(key, *unpack_arguments(:g, value, args))
+  def self.gauge(key, value, *metric_options)
+    collect(:g, key, value, hash_argument(metric_options))
   end
 
   # histogram:123.45|h
-  def self.histogram(key, value, *args)
-    collect(key, *unpack_arguments(:h, value, args))
+  def self.histogram(key, value, *metric_options)
+    collect(:h, key, value, hash_argument(metric_options))
   end  
 
   # uniques:765|s
-  def self.set(key, value, *args)
-    collect(key, *unpack_arguments(:s, value, args))
+  def self.set(key, value, *metric_options)
+    collect(:s, key, value, hash_argument(metric_options))
   end
 
   private
 
-  def self.unpack_arguments(operation, value, optional_arguments)
-    sample_rate, tags, delta = nil
+  def self.hash_argument(args)
+    return {} if args.length == 0
+    return args.first if args.length == 1 && args.first.is_a?(Hash)
 
-    if optional_arguments.is_a?(Hash)
-      sample_rate = optional_arguments[:sample_rate] || default_sample_rate
-      tags        = optional_arguments[:tags] || nil
-      delta       = optional_arguments[:delta] || 1
-    else
-      if operation == :incr && optional_arguments.empty?
-        # sometimes we wanna pass in delta (for incr) other times we want to pass in value instead
-      end
-      delta       = optional_arguments.shift || 1
-      sample_rate = optional_arguments.first || default_sample_rate
-      tags        = optional_arguments[:tags] || nil
-    end
-
-    # yea this generic approach below won't do it like that
-    [delta || value, operation, sample_rate, tags]
+    order = [:sample_rate, :tags]
+    hash = {}
+    args.each_with_index do |value, index|
+      hash[order[index]] = value
+    end    
+    
+    return hash
   end
 
   def self.invalidate_socket
@@ -197,12 +190,13 @@ module StatsD
     @socket
   end
 
-  def self.collect(k, v, op, sample_rate = default_sample_rate, tags = nil)
+  def self.collect(type, k, v, options = {})
     return unless enabled
+    sample_rate = options[:sample_rate] || StatsD.default_sample_rate
     return if sample_rate < 1 && rand > sample_rate
 
-    command = generate_packet(k, v, op, sample_rate, tags)
-    write_packet(command)
+    packet = generate_packet(type, k, v, sample_rate, options[:tags])
+    write_packet(packet)
   end
 
   def self.write_packet(command)
@@ -224,9 +218,9 @@ module StatsD
     end
   end
 
-  def self.generate_packet(k, v, op, sample_rate = default_sample_rate, tags = nil)
+  def self.generate_packet(type, k, v, sample_rate = default_sample_rate, tags = nil)
     command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
-    case op
+    case type
     when :incr
       command << '|c'
     when :ms

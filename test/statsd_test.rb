@@ -16,42 +16,47 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_measure_with_explicit_value
-    StatsD.expects(:collect).with('values.foobar', 42, :ms, 1.0, nil)
+    StatsD.expects(:collect).with(:ms, 'values.foobar', 42, {})
     StatsD.measure('values.foobar', 42)
   end
 
   def test_statsd_measure_with_explicit_value_and_sample_rate
-    StatsD.expects(:collect).with('values.foobar', 42, :ms, 0.1, nil)
-    StatsD.measure('values.foobar', 42, 0.1)
+    StatsD.expects(:collect).with(:ms, 'values.foobar', 42, :sample_rate => 0.1)
+    StatsD.measure('values.foobar', 42, :sample_rate => 0.1)
   end
 
   def test_statsd_measure_with_benchmarked_value
     Benchmark.stubs(:realtime).returns(1.12)
-    StatsD.expects(:collect).with('values.foobar', 1120.0, :ms, 1.0, nil)
+    StatsD.expects(:collect).with(:ms, 'values.foobar', 1120.0, {})
     StatsD.measure('values.foobar', nil) do
       #noop
     end
   end
 
   def test_statsd_increment_with_hash_argument
-    StatsD.expects(:collect).with('values.foobar', 1, :incr, 1.0, ['test'])
+    StatsD.expects(:collect).with(:g, 'values.foobar', 12, :tags => ['test'])
     StatsD.gauge('values.foobar', 12, :tags => ['test'])
   end
 
+  def test_statsd_increment_with_multiple_arguments
+    StatsD.expects(:collect).with(:g, 'values.foobar', 12, :sample_rate => nil, :tags => ['test'])
+    StatsD.gauge('values.foobar', 12, nil, ['test'])
+  end
+
   def test_statsd_gauge
-    StatsD.expects(:collect).with('values.foobar', 12, :g, 1.0, nil)
+    StatsD.expects(:collect).with(:g, 'values.foobar', 12, {})
     StatsD.gauge('values.foobar', 12)
   end
 
   def test_statsd_set
-    StatsD.expects(:collect).with('values.foobar', 12, :s, 1.0, nil)
+    StatsD.expects(:collect).with(:s, 'values.foobar', 12, {})
     StatsD.set('values.foobar', 12)
   end
 
   def test_statsd_histogram_on_datadog
     StatsD.stubs(:implementation).returns(:datadog)
-    StatsD.expects(:collect).with('values.hg', 12.33, :h, 0.2, ['tag_123', 'key-name:value123'])
-    StatsD.histogram('values.hg', 12.33, 0.2, ['tag_123', 'key-name:value123'])
+    StatsD.expects(:collect).with(:h, 'values.hg', 12.33, :sample_rate => 0.2, :tags => ['tag_123', 'key-name:value123'])
+    StatsD.histogram('values.hg', 12.33, :sample_rate => 0.2, :tags => ['tag_123', 'key-name:value123'])
   end  
 
   def test_collect_respects_enabled
