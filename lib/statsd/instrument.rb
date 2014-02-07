@@ -158,7 +158,7 @@ module StatsD
         value = 1
       end
 
-      collect(:incr, key, value, hash_argument(metric_options))
+      collect(:c, key, value, hash_argument(metric_options))
     end
 
     alias_method :increment, :counter
@@ -237,7 +237,7 @@ module StatsD
     def generate_packet(type, k, v, sample_rate = default_sample_rate, tags = nil)
       command = "#{self.prefix + '.' if self.prefix}#{k}:#{v}"
       case type
-      when :incr
+      when :c
         command << '|c'
       when :ms
         command << '|ms'

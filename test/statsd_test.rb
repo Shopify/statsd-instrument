@@ -43,12 +43,12 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_increment_with_hash_argument
-    StatsD.expects(:collect).with(:incr, 'values.foobar', 1, :tags => ['test'])
+    StatsD.expects(:collect).with(:c, 'values.foobar', 1, :tags => ['test'])
     StatsD.increment('values.foobar', :tags => ['test'])
   end
 
   def test_statsd_increment_with_multiple_arguments
-    StatsD.expects(:collect).with(:incr, 'values.foobar', 12, :sample_rate => nil, :tags => ['test'])
+    StatsD.expects(:collect).with(:c, 'values.foobar', 12, :sample_rate => nil, :tags => ['test'])
     StatsD.increment('values.foobar', 12, nil, ['test'])
   end
 
