@@ -217,14 +217,12 @@ module StatsD
 
     def write_packet(command)
       if mode.to_s == 'production'
-        begin
-          socket.send(command, 0)
-        rescue SocketError, IOError, SystemCallError => e
-          logger.error e
-        end 
+        socket.send(command, 0)
       else
         logger.info "[StatsD] #{command}"
       end
+    rescue SocketError, IOError, SystemCallError => e
+      logger.error e
     end
 
     def clean_tags(tags)
