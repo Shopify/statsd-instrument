@@ -41,11 +41,6 @@ class StatsDTest < Test::Unit::TestCase
     end
   end
 
-  def test_statsd_timer_as_alias_for_measure
-    StatsD.expects(:collect).with(:ms, 'values.foobar', 42, {})
-    StatsD.timer('values.foobar', 42)
-  end  
-
   def test_statsd_increment_with_hash_argument
     StatsD.expects(:collect).with(:c, 'values.foobar', 1, :tags => ['test'])
     StatsD.increment('values.foobar', :tags => ['test'])
@@ -54,11 +49,6 @@ class StatsDTest < Test::Unit::TestCase
   def test_statsd_increment_with_multiple_arguments
     StatsD.expects(:collect).with(:c, 'values.foobar', 12, :sample_rate => nil, :tags => ['test'])
     StatsD.increment('values.foobar', 12, nil, ['test'])
-  end
-
-  def test_statsd_counter_as_alias_for_increment
-    StatsD.expects(:collect).with(:c, 'values.foobar', 12, :sample_rate => nil, :tags => ['test'])
-    StatsD.counter('values.foobar', 12, nil, ['test'])
   end
 
   def test_statsd_gauge
