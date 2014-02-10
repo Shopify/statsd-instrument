@@ -33,7 +33,6 @@ class StatsDTest < Test::Unit::TestCase
     end
   end
 
-
   def test_statsd_measure_with_benchmarked_value_and_options
     Benchmark.stubs(:realtime).returns(1.12)
     StatsD.expects(:collect).with(:ms, 'values.foobar', 1120.0, :sample_rate => 1.0)
@@ -43,12 +42,12 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_increment_with_hash_argument
-    StatsD.expects(:collect).with(:incr, 'values.foobar', 1, :tags => ['test'])
+    StatsD.expects(:collect).with(:c, 'values.foobar', 1, :tags => ['test'])
     StatsD.increment('values.foobar', :tags => ['test'])
   end
 
   def test_statsd_increment_with_multiple_arguments
-    StatsD.expects(:collect).with(:incr, 'values.foobar', 12, :sample_rate => nil, :tags => ['test'])
+    StatsD.expects(:collect).with(:c, 'values.foobar', 12, :sample_rate => nil, :tags => ['test'])
     StatsD.increment('values.foobar', 12, nil, ['test'])
   end
 
@@ -66,7 +65,12 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.stubs(:implementation).returns(:datadog)
     StatsD.expects(:collect).with(:h, 'values.hg', 12.33, :sample_rate => 0.2, :tags => ['tag_123', 'key-name:value123'])
     StatsD.histogram('values.hg', 12.33, :sample_rate => 0.2, :tags => ['tag_123', 'key-name:value123'])
-  end  
+  end
+
+  def test_raise_when_using_histograms_and_not_on_datadog
+    StatsD.stubs(:implementation).returns(:other)
+    assert_raises(NotImplementedError) { StatsD.histogram('foohg', 3.33) }
+  end
 
   def test_collect_respects_enabled
     StatsD.stubs(:enabled).returns(false)
@@ -138,26 +142,31 @@ class StatsDTest < Test::Unit::TestCase
   def test_rewrite_shitty_tags
     StatsD.stubs(:implementation).returns(:datadog)
 
-    assert_equal ['igno_red'], StatsD.clean_tags(['igno,red'])
-    assert_equal ['igno_red'], StatsD.clean_tags(['igno  red'])
-    assert_equal ['test:test_test'], StatsD.clean_tags(['test:test:test'])
+    assert_equal ['igno_red'], StatsD.send(:clean_tags, ['igno,red'])
+    assert_equal ['igno_red'], StatsD.send(:clean_tags, ['igno  red'])
+    assert_equal ['test:test_test'], StatsD.send(:clean_tags, ['test:test:test'])
 
     StatsD.expects(:write_packet).with("fooc:3|c|#topic:foo_foo,bar_")
     StatsD.increment('fooc', 3, 1.0, ['topic:foo : foo', 'bar '])
   end
 
-  def test_supports_gauge_syntax_on_statsite
+  def test_supports_key_value_syntax_on_statsite
     StatsD.stubs(:implementation).returns(:statsite)
 
     StatsD.expects(:write_packet).with("fooy:42|kv\n")
-    StatsD.gauge('fooy', 42)
+    StatsD.key_value('fooy', 42)
   end
 
-  def test_supports_gauge_timestamp_on_statsite
+  def test_supports_key_value_with_timestamp_on_statsite
     StatsD.stubs(:implementation).returns(:statsite)
 
     StatsD.expects(:write_packet).with("fooy:42|kv|@123456\n")
-    StatsD.gauge('fooy', 42, 123456)
+    StatsD.key_value('fooy', 42, 123456)
+  end
+
+  def test_raise_when_using_key_value_and_not_on_statsite
+    StatsD.stubs(:implementation).returns(:other)
+    assert_raises(NotImplementedError) { StatsD.key_value('fookv', 3.33) }
   end
 
   def test_support_key_prefix

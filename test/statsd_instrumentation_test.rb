@@ -63,7 +63,7 @@ class StatsDInstrumentationTest < Test::Unit::TestCase
       result == 'true'
     end
 
-    StatsD.expects(:collect).with(:incr, 'ActiveMerchant.Base.post_with_block', 1, {}).once
+    StatsD.expects(:collect).with(:c, 'ActiveMerchant.Base.post_with_block', 1, {}).once
     assert_equal 'true',  ActiveMerchant::Base.new.post_with_block { 'true' }
     assert_equal 'false', ActiveMerchant::Base.new.post_with_block { 'false' }
 
@@ -99,8 +99,8 @@ class StatsDInstrumentationTest < Test::Unit::TestCase
       result == 'successful'
     end
 
-    StatsD.expects(:collect).with(:incr, 'ActiveMerchant.Base.post_with_block.success', 1, {}).once
-    StatsD.expects(:collect).with(:incr, 'ActiveMerchant.Base.post_with_block.failure', 1, {}).once
+    StatsD.expects(:collect).with(:c, 'ActiveMerchant.Base.post_with_block.success', 1, {}).once
+    StatsD.expects(:collect).with(:c, 'ActiveMerchant.Base.post_with_block.failure', 1, {}).once
     
     assert_equal 'successful', ActiveMerchant::Base.new.post_with_block { 'successful' }
     assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
@@ -144,7 +144,7 @@ class StatsDInstrumentationTest < Test::Unit::TestCase
   def test_statsd_count_with_method_receiving_block
     ActiveMerchant::Base.statsd_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
 
-    StatsD.expects(:collect).with(:incr, 'ActiveMerchant.Base.post_with_block', 1, {})
+    StatsD.expects(:collect).with(:c, 'ActiveMerchant.Base.post_with_block', 1, {})
     assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
 
     ActiveMerchant::Base.statsd_remove_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
