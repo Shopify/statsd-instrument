@@ -244,7 +244,7 @@ module StatsD
       end
 
       command << "\n" if self.implementation == :statsite
-      return command
+      command
     end
   end
 end
