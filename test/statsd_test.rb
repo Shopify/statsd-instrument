@@ -85,7 +85,7 @@ class StatsDTest < Test::Unit::TestCase
     StatsD.increment('counter', 1, 0.5)
 
     StatsD.stubs(:rand).returns(0.4)
-    StatsD.increment('counter', 1, 0.5)    
+    StatsD.increment('counter', 1, 0.5)
   end
 
   def test_support_counter_syntax
@@ -184,7 +184,7 @@ class StatsDTest < Test::Unit::TestCase
 
     @logger.expects(:info).with(regexp_matches(/\A\[StatsD\] /))
     StatsD.increment('counter')
-  end  
+  end
 
   def test_production_mode_uses_udp_socket
     StatsD.stubs(:mode).returns(:production)
@@ -203,7 +203,7 @@ class StatsDTest < Test::Unit::TestCase
 
     StatsD.server = "localhost:1234"
     StatsD.send(:socket)
-    
+
     StatsD.port = 2345
     StatsD.send(:socket)
 
@@ -214,7 +214,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_socket_error_should_not_raise_but_log
     StatsD.stubs(:mode).returns(:production)
     @socket.stubs(:connect).raises(SocketError)
-    
+
     @logger.expects(:error).with(instance_of(SocketError))
     StatsD.measure('values.foobar', 42)
   end
@@ -222,7 +222,7 @@ class StatsDTest < Test::Unit::TestCase
   def test_system_call_error_should_not_raise_but_log
     StatsD.stubs(:mode).returns(:production)
     @socket.stubs(:send).raises(Errno::ETIMEDOUT)
-    
+
     @logger.expects(:error).with(instance_of(Errno::ETIMEDOUT))
     StatsD.measure('values.foobar', 42)
   end
@@ -233,6 +233,13 @@ class StatsDTest < Test::Unit::TestCase
 
     @logger.expects(:error).with(instance_of(IOError))
     StatsD.measure('values.foobar', 42)
+  end
+
+  def test_io_error_should_log_only_if_logger_available
+    StatsD.stubs(:mode).returns(:production)
+    @socket.stubs(:send).raises(IOError)
+    StatsD.stubs(:logger).returns nil
+    assert_nothing_raised(NoMethodError) { StatsD.measure('values.foobar', 42) }
   end
 
   def test_live_local_udp_socket

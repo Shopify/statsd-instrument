@@ -189,8 +189,8 @@ module StatsD
       hash = {}
       args.each_with_index do |value, index|
         hash[order[index]] = value
-      end    
-      
+      end
+
       return hash
     end
 
@@ -215,14 +215,14 @@ module StatsD
       if mode.to_s == 'production'
         socket.send(command, 0)
       else
-        logger.info "[StatsD] #{command}"
+        logger.info "[StatsD] #{command}" if logger
       end
     rescue SocketError, IOError, SystemCallError => e
-      logger.error e
+      logger.error e if logger
     end
 
     def clean_tags(tags)
-      tags.map do |tag| 
+      tags.map do |tag|
         components = tag.split(':', 2)
         components.map { |c| c.gsub(/[^\w\.-]+/, '_') }.join(':')
       end
