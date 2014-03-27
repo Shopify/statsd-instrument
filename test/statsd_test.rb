@@ -147,7 +147,7 @@ class StatsDTest < Test::Unit::TestCase
     assert_equal ['test:test_test'], StatsD.send(:clean_tags, ['test:test:test'])
 
     assert_equal ['tag:value'], StatsD.send(:clean_tags, { :tag => 'value' })
-    assert_equal ['tag:value', 'tag2:value2'], StatsD.send(:clean_tags, { :tag => 'value', :tag2 => 'value2' })
+    assert_equal Set['tag:value', 'tag2:value2'], Set.new(StatsD.send(:clean_tags, { :tag => 'value', :tag2 => 'value2' }))
 
     StatsD.expects(:write_packet).with("fooc:3|c|#topic:foo_foo,bar_")
     StatsD.increment('fooc', 3, 1.0, ['topic:foo : foo', 'bar '])
