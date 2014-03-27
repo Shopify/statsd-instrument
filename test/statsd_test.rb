@@ -146,8 +146,14 @@ class StatsDTest < Test::Unit::TestCase
     assert_equal ['igno_red'], StatsD.send(:clean_tags, ['igno  red'])
     assert_equal ['test:test_test'], StatsD.send(:clean_tags, ['test:test:test'])
 
+    assert_equal ['tag:value'], StatsD.send(:clean_tags, { :tag => 'value' })
+    assert_equal ['tag:value', 'tag2:value2'], StatsD.send(:clean_tags, { :tag => 'value', :tag2 => 'value2' })
+
     StatsD.expects(:write_packet).with("fooc:3|c|#topic:foo_foo,bar_")
     StatsD.increment('fooc', 3, 1.0, ['topic:foo : foo', 'bar '])
+
+    StatsD.expects(:write_packet).with("foot:1|c|#foo:bar")
+    StatsD.increment('foot', :tags => { :foo => 'bar' })
   end
 
   def test_supports_key_value_syntax_on_statsite
