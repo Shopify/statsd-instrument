@@ -133,15 +133,17 @@ module StatsD
     end
 
     # glork:320|ms
-    def measure(key, value = nil, *metric_options)
+    def measure(key, value = nil, *metric_options, &block)
       if value.is_a?(Hash) && metric_options.empty?
         metric_options = [value]
         value = nil
       end
 
       result = nil
-      ms = value || 1000 * Benchmark.realtime do
-        result = yield
+      ms = if value.nil?
+        1000 * Benchmark.realtime { result = yield }
+      else
+        value
       end
 
       collect(:ms, key, ms, hash_argument(metric_options))

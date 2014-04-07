@@ -33,6 +33,15 @@ class StatsDTest < Test::Unit::TestCase
     end
   end
 
+  def test_statsd_measure_executes_and_returns_block
+    StatsD.expects(:collect).with(:ms, 'values.foobar', instance_of(Float), sample_rate: 1.0)
+    return_value = StatsD.measure('values.foobar', sample_rate: 1.0) do
+      'foo'
+    end
+
+    assert_equal 'foo', return_value
+  end
+
   def test_statsd_measure_with_benchmarked_value_and_options
     Benchmark.stubs(:realtime).returns(1.12)
     StatsD.expects(:collect).with(:ms, 'values.foobar', 1120.0, :sample_rate => 1.0)
