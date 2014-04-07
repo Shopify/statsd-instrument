@@ -34,7 +34,7 @@ class StatsDTest < Test::Unit::TestCase
   end
 
   def test_statsd_measure_executes_and_returns_block
-    StatsD.expects(:collect).with(:ms, 'values.foobar', instance_of(Float), sample_rate: 1.0)
+    StatsD.expects(:collect).with(:ms, 'values.foobar', instance_of(Float), :sample_rate => 1.0)
     return_value = StatsD.measure('values.foobar', sample_rate: 1.0) do
       'foo'
     end
