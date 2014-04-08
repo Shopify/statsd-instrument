@@ -2,8 +2,6 @@ require 'socket'
 require 'benchmark'
 require 'logger'
 
-require 'statsd/instrument/version'
-
 module StatsD
   module Instrument
 
@@ -111,6 +109,8 @@ module StatsD
 
   class << self
     attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate, :prefix, :implementation
+
+    attr_accessor :instance
 
     def server=(conn)
       self.host, port = conn.split(':')
@@ -246,6 +246,10 @@ module StatsD
     end
   end
 end
+
+require 'statsd/instrument/metric'
+require 'statsd/instrument/backend'
+require 'statsd/instrument/version'
 
 StatsD.enabled = true
 StatsD.default_sample_rate = 1.0
