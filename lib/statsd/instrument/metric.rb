@@ -4,14 +4,10 @@ class StatsD::Instrument::Metric
 
   def initialize(options = {})
     @type = options[:type] or raise ArgumentError, "Metric :type is required."
-    
-    @name = if options[:name]
-    else
-      raise ArgumentError, "Metric :name is required."
-    end
-
-    @value = options[:value] || default_value
-    @tags  = normalize_tags(options[:tags])
+    @name = options[:name] or raise ArgumentError, "Metric :name is required."
+    @value       = options[:value] || default_value
+    @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
+    @tags        = StatsD::Instrument::Metric.normalize_tags(options[:tags])
   end
 
   def default_value
@@ -21,7 +17,12 @@ class StatsD::Instrument::Metric
     end
   end
 
-  def normalize_tags(raw_tags)
-
+  def self.normalize_tags(tags)
+    return if tags.nil?
+    tags = tags.map { |k, v| "#{k}:#{v}" } if tags.is_a?(Hash)
+    tags.map do |tag| 
+      components = tag.split(':', 2)
+      components.map { |c| c.gsub(/[^\w\.-]+/, '_') }.join(':')
+    end
   end
 end

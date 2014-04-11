@@ -6,7 +6,7 @@ module StatsD::Instrument::Backends
       @collected_metrics = []
     end
 
-    def collect(metric)
+    def collect_metric(metric)
       @collected_metrics << metric
     end
   end

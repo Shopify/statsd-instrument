@@ -108,28 +108,11 @@ module StatsD
   end
 
   class << self
-    attr_accessor :host, :port, :mode, :logger, :enabled, :default_sample_rate, :prefix, :implementation
+    attr_accessor :logger, :default_sample_rate, :prefix
+    attr_writer :backend
 
-    attr_accessor :instance
-
-    def server=(conn)
-      self.host, port = conn.split(':')
-      self.port = port.to_i
-      invalidate_socket
-    end
-
-    def host=(host)
-      @host = host
-      invalidate_socket
-    end
-
-    def port=(port)
-      @port = port
-      invalidate_socket
-    end
-
-    def invalidate_socket
-      @socket = nil
+    def backend
+      @backend ||= StatsD::Instrument::Environment.default_backend
     end
 
     # glork:320|ms
@@ -141,12 +124,18 @@ module StatsD
 
       result = nil
       ms = if value.nil?
-        1000 * Benchmark.realtime { result = yield }
+        p 'yieding'
+        1000 * Benchmark.realtime do 
+          result = block.call 
+          p result
+          result
+        end
       else
+        p 'using given value'
         value
       end
-
-      collect(:ms, key, ms, hash_argument(metric_options))
+      p 'debugging result', result, 'duration', ms
+      collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: ms))
       result
     end
 
@@ -157,29 +146,27 @@ module StatsD
         value = 1
       end
 
-      collect(:c, key, value, hash_argument(metric_options))
+      collect_metric(hash_argument(metric_options).merge(type: :c, name: key, value: value))
     end
 
     # gaugor:333|g
     # guagor:1234|kv|@1339864935 (statsite)
     def gauge(key, value, *metric_options)
-      collect(:g, key, value, hash_argument(metric_options))
+      collect_metric(hash_argument(metric_options).merge(type: :g, name: key, value: value))
     end
 
     # histogram:123.45|h
     def histogram(key, value, *metric_options)
-      raise NotImplementedError, "StatsD.histogram only supported on :datadog implementation." unless self.implementation == :datadog
-      collect(:h, key, value, hash_argument(metric_options))
+      collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
     end
 
     def key_value(key, value, *metric_options)
-      raise NotImplementedError, "StatsD.key_value only supported on :statsite implementation." unless self.implementation == :statsite
-      collect(:kv, key, value, hash_argument(metric_options))
+      collect_metric(hash_argument(metric_options).merge(type: :kv, name: key, value: value))
     end
 
     # uniques:765|s
     def set(key, value, *metric_options)
-      collect(:s, key, value, hash_argument(metric_options))
+      collect_metric(:s, key, value, hash_argument(metric_options))
     end
 
     private
@@ -197,63 +184,14 @@ module StatsD
       return hash
     end
 
-    def socket
-      if @socket.nil?
-        @socket = UDPSocket.new
-        @socket.connect(host, port)
-      end
-      @socket
-    end
-
-    def collect(type, k, v, options = {})
-      return unless enabled
-      sample_rate = options[:sample_rate] || StatsD.default_sample_rate
-      return if sample_rate < 1 && rand > sample_rate
-
-      packet = generate_packet(type, k, v, sample_rate, options[:tags])
-      write_packet(packet)
-    end
-
-    def write_packet(command)
-      if mode.to_s == 'production'
-        socket.send(command, 0)
-      else
-        logger.info "[StatsD] #{command}"
-      end
-    rescue SocketError, IOError, SystemCallError => e
-      logger.error e
-    end
-
-    def clean_tags(tags)
-      tags = tags.map { |k, v| "#{k}:#{v}" } if tags.is_a?(Hash)
-      tags.map do |tag| 
-        components = tag.split(':', 2)
-        components.map { |c| c.gsub(/[^\w\.-]+/, '_') }.join(':')
-      end
-    end
-
-    def generate_packet(type, k, v, sample_rate = default_sample_rate, tags = nil)
-      command = self.prefix ? self.prefix + '.' : ''
-      command << "#{k}:#{v}|#{type}"
-      command << "|@#{sample_rate}" if sample_rate < 1 || (self.implementation == :statsite && sample_rate > 1)
-      if tags
-        raise ArgumentError, "Tags are only supported on :datadog implementation" unless self.implementation == :datadog
-        command << "|##{clean_tags(tags).join(',')}"
-      end
-
-      command << "\n" if self.implementation == :statsite
-      command
+    def collect_metric(options)
+      backend.collect_metric(StatsD::Instrument::Metric.new(options))
     end
   end
 end
 
 require 'statsd/instrument/metric'
 require 'statsd/instrument/backend'
+require 'statsd/instrument/assertions'
+require 'statsd/instrument/environment'
 require 'statsd/instrument/version'
-
-StatsD.enabled = true
-StatsD.default_sample_rate = 1.0
-StatsD.implementation = ENV.fetch('STATSD_IMPLEMENTATION', 'statsd').to_sym
-StatsD.server = ENV['STATSD_ADDR'] if ENV.has_key?('STATSD_ADDR')
-StatsD.mode = ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
-StatsD.logger = Logger.new($stderr)
