@@ -123,18 +123,7 @@ module StatsD
       end
 
       result = nil
-      ms = if value.nil?
-        p 'yieding'
-        1000 * Benchmark.realtime do 
-          result = block.call 
-          p result
-          result
-        end
-      else
-        p 'using given value'
-        value
-      end
-      p 'debugging result', result, 'duration', ms
+      ms = value || 1000 * Benchmark.realtime { result = block.call }
       collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: ms))
       result
     end
@@ -166,7 +155,7 @@ module StatsD
 
     # uniques:765|s
     def set(key, value, *metric_options)
-      collect_metric(:s, key, value, hash_argument(metric_options))
+      collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
     end
 
     private

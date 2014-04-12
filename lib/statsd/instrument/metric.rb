@@ -17,6 +17,26 @@ class StatsD::Instrument::Metric
     end
   end
 
+  def to_s
+    str = "#{TYPES[type]} #{name}:#{value}"
+    str << " @#{sample_rate}" if sample_rate != 1.0
+    str << " " << tags.map { |t| "##{t}"}.join(' ') if tags
+    str
+  end
+
+  def inspect
+    "#<StatsD::Instrument::Metric #{self.to_s}>"
+  end
+
+  TYPES = {
+    c:  'increment',
+    ms: 'measure',
+    g:  'gauge',
+    h:  'histogram',
+    kv: 'key/value',
+    s:  'set',
+  }
+
   def self.normalize_tags(tags)
     return if tags.nil?
     tags = tags.map { |k, v| "#{k}:#{v}" } if tags.is_a?(Hash)

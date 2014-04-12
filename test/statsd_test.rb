@@ -1,13 +1,7 @@
 require 'test_helper'
 
-class StatsDTest < Test::Unit::TestCase
+class StatsDTest < Minitest::Test
   include StatsD::Instrument::Assertions
-
-  def collect_metric(&block)
-    metrics = collect_metrics(&block)
-    assert_equal 1, metrics.length
-    metrics.first
-  end
 
   def setup
     # StatsD.stubs(:logger).returns(@logger = mock('logger'))
@@ -15,77 +9,84 @@ class StatsDTest < Test::Unit::TestCase
     # @logger.stubs(:error)
   end
 
-  # def test_statsd_passed_collections_to_backend
-  #   StatsD.backend.expects(:collect_metric).with(instance_of(StatsD::Instrument::Metric))
-  #   StatsD.increment('test')
-  # end
+  def test_statsd_passed_collections_to_backend
+    StatsD.backend.expects(:collect_metric).with(instance_of(StatsD::Instrument::Metric))
+    StatsD.increment('test')
+  end
 
-  # def test_statsd_measure_with_explicit_value
-  #   metric = collect_metric { StatsD.measure('values.foobar', 42) }
-  #   assert_equal 'values.foobar', metric.name
-  #   assert_equal 42, metric.value
-  #   assert_equal :ms, metric.type
-  # end
+  def test_statsd_measure_with_explicit_value
+    metric = collect_metric { StatsD.measure('values.foobar', 42) }
+    assert_equal 'values.foobar', metric.name
+    assert_equal 42, metric.value
+    assert_equal :ms, metric.type
+  end
 
-  # def test_statsd_measure_with_explicit_value_and_sample_rate
-  #   metric = collect_metric { StatsD.measure('values.foobar', 42, :sample_rate => 0.1) }
-  #   assert_equal 0.1, metric.sample_rate    
-  # end
+  def test_statsd_measure_with_explicit_value_and_sample_rate
+    metric = collect_metric { StatsD.measure('values.foobar', 42, :sample_rate => 0.1) }
+    assert_equal 0.1, metric.sample_rate    
+  end
 
-  def test_statsd_measure_with_benchmarked_duration_and_return_value
+  def test_statsd_measure_with_benchmarked_duration
     Benchmark.stubs(:realtime).returns(1.12)
-    metric = collect_metric do
-      return_value = StatsD.measure('values.foobar') { return 'foo' }
-      assert_equal 'foo', return_value
+    metric = collect_metric do 
+      StatsD.measure('values.foobar') { 'foo' }
     end
-
     assert_equal 1120.0, metric.value
   end
 
-  # def test_statsd_measure_with_benchmarked_value_and_options
-  #   Benchmark.stubs(:realtime).returns(1.12)
-  #   StatsD.expects(:collect).with(:ms, 'values.foobar', 1120.0, :sample_rate => 1.0)
-  #   StatsD.measure('values.foobar', :sample_rate => 1.0) do
-  #     #noop
-  #   end
-  # end
+  def test_statsd_measure_returns_return_value_of_block
+    return_value = StatsD.measure('values.foobar') { 'sarah' }
+    assert_equal 'sarah', return_value
+  end
 
-  # def test_statsd_increment_with_hash_argument
-  #   StatsD.expects(:collect).with(:c, 'values.foobar', 1, :tags => ['test'])
-  #   StatsD.increment('values.foobar', :tags => ['test'])
-  # end
+  def test_statsd_increment
+    metric = collect_metric { StatsD.increment('values.foobar', 3) }
+    assert_equal :c, metric.type
+    assert_equal 'values.foobar', metric.name
+    assert_equal 3, metric.value
+  end
 
-  # def test_statsd_increment_with_multiple_arguments
-  #   StatsD.expects(:collect).with(:c, 'values.foobar', 12, :sample_rate => nil, :tags => ['test'])
-  #   StatsD.increment('values.foobar', 12, nil, ['test'])
-  # end
+  def test_statsd_increment_with_hash_argument
+    metric = collect_metric { StatsD.increment('values.foobar', :tags => ['test']) }
+    assert_equal StatsD.default_sample_rate, metric.sample_rate
+    assert_equal ['test'], metric.tags
+    assert_equal 1, metric.value
+  end
 
-  # def test_statsd_gauge
-  #   StatsD.expects(:collect).with(:g, 'values.foobar', 12, {})
-  #   StatsD.gauge('values.foobar', 12)
-  # end
+  def test_statsd_increment_with_multiple_arguments
+    metric = collect_metric { StatsD.increment('values.foobar', 12, nil, ['test']) }
+    assert_equal StatsD.default_sample_rate, metric.sample_rate
+    assert_equal ['test'], metric.tags
+    assert_equal 12, metric.value
+  end
 
-  # def test_statsd_set
-  #   StatsD.expects(:collect).with(:s, 'values.foobar', 12, {})
-  #   StatsD.set('values.foobar', 12)
-  # end
+  def test_statsd_gauge
+    metric = collect_metric { StatsD.gauge('values.foobar', 12) }
+    assert_equal :g, metric.type
+    assert_equal 'values.foobar', metric.name
+    assert_equal 12, metric.value
+  end
 
-  # def test_statsd_histogram_on_datadog
-  #   StatsD.stubs(:implementation).returns(:datadog)
-  #   StatsD.expects(:collect).with(:h, 'values.hg', 12.33, :sample_rate => 0.2, :tags => ['tag_123', 'key-name:value123'])
-  #   StatsD.histogram('values.hg', 12.33, :sample_rate => 0.2, :tags => ['tag_123', 'key-name:value123'])
-  # end
+  def test_statsd_set
+    metric = collect_metric { StatsD.set('values.foobar', 'unique_identifier') }
+    assert_equal :s, metric.type
+    assert_equal 'values.foobar', metric.name
+    assert_equal 'unique_identifier', metric.value
+  end
 
-  # def test_raise_when_using_histograms_and_not_on_datadog
-  #   StatsD.stubs(:implementation).returns(:other)
-  #   assert_raises(NotImplementedError) { StatsD.histogram('foohg', 3.33) }
-  # end
+  def test_statsd_histogram
+    metric = collect_metric { StatsD.histogram('values.foobar', 42) }
+    assert_equal :h, metric.type
+    assert_equal 'values.foobar', metric.name
+    assert_equal 42, metric.value
+  end
 
-  # def test_collect_respects_enabled
-  #   StatsD.stubs(:enabled).returns(false)
-  #   StatsD.expects(:write_packet).never
-  #   StatsD.increment('counter')
-  # end
+  def test_statsd_key_value
+    metric = collect_metric { StatsD.key_value('values.foobar', 42) }
+    assert_equal :kv, metric.type
+    assert_equal 'values.foobar', metric.name
+    assert_equal 42, metric.value
+  end
 
   # def test_collect_respects_sampling_rate
   #   StatsD.expects(:write_packet).once
@@ -146,23 +147,6 @@ class StatsDTest < Test::Unit::TestCase
   # def test_raise_when_using_tags_and_not_on_datadog
   #   StatsD.stubs(:implementation).returns(:other)
   #   assert_raises(ArgumentError) { StatsD.increment('fooc', 3, 1.0, ['nonempty']) }
-  # end
-
-  # def test_rewrite_shitty_tags
-  #   StatsD.stubs(:implementation).returns(:datadog)
-
-  #   assert_equal ['igno_red'], StatsD.send(:clean_tags, ['igno,red'])
-  #   assert_equal ['igno_red'], StatsD.send(:clean_tags, ['igno  red'])
-  #   assert_equal ['test:test_test'], StatsD.send(:clean_tags, ['test:test:test'])
-
-  #   assert_equal ['tag:value'], StatsD.send(:clean_tags, { :tag => 'value' })
-  #   assert_equal Set['tag:value', 'tag2:value2'], Set.new(StatsD.send(:clean_tags, { :tag => 'value', :tag2 => 'value2' }))
-
-  #   StatsD.expects(:write_packet).with("fooc:3|c|#topic:foo_foo,bar_")
-  #   StatsD.increment('fooc', 3, 1.0, ['topic:foo : foo', 'bar '])
-
-  #   StatsD.expects(:write_packet).with("foot:1|c|#foo:bar")
-  #   StatsD.increment('foot', :tags => { :foo => 'bar' })
   # end
 
   # def test_supports_key_value_syntax_on_statsite
@@ -262,4 +246,12 @@ class StatsDTest < Test::Unit::TestCase
   #   StatsD.increment('counter')
   #   assert_equal "counter:1|c", server.recvfrom(100).first
   # end
+
+  protected
+
+  def collect_metric(&block)
+    metrics = collect_metrics(&block)
+    assert_equal 1, metrics.length
+    metrics.first
+  end
 end
