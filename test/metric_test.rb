@@ -9,8 +9,8 @@ class MetricTest < Minitest::Test
     assert_equal ['topic:foo_foo', 'bar_'], StatsD::Instrument::Metric.normalize_tags(['topic:foo : foo', 'bar '])
   end
   
-  def 
+  def test_rewrite_tags_as_hash
     assert_equal ['tag:value'], StatsD::Instrument::Metric.normalize_tags(:tag => 'value')
-    assert_equal ['tag:value', 'tag2:value2'], StatsD::Instrument::Metric.normalize_tags(:tag => 'value', :tag2 => 'value2'))
+    assert_equal ['tag:value', 'tag2:value2'], StatsD::Instrument::Metric.normalize_tags(:tag => 'value', :tag2 => 'value2')
   end
 end

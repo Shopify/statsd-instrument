@@ -1,199 +1,222 @@
-# require 'test_helper'
+require 'test_helper'
 
-# module ActiveMerchant; end
-# class ActiveMerchant::Base
-#   def ssl_post(arg)
-#     if arg
-#       'OK'
-#     else
-#       raise 'Not OK'
-#     end
-#   end
+module ActiveMerchant; end
+class ActiveMerchant::Base
+  def ssl_post(arg)
+    if arg
+      'OK'
+    else
+      raise 'Not OK'
+    end
+  end
 
-#   def post_with_block(&block)
-#     yield if block_given?
-#   end
-# end
+  def post_with_block(&block)
+    yield if block_given?
+  end
+end
 
-# class ActiveMerchant::Gateway < ActiveMerchant::Base
-#   def purchase(arg)
-#     ssl_post(arg)
-#     true
-#   rescue
-#     false
-#   end
+class ActiveMerchant::Gateway < ActiveMerchant::Base
+  def purchase(arg)
+    ssl_post(arg)
+    true
+  rescue
+    false
+  end
 
-#   def self.sync
-#     true
-#   end
+  def self.sync
+    true
+  end
 
-#   def self.singleton_class
-#     class << self; self; end
-#   end
-# end
+  def self.singleton_class
+    class << self; self; end
+  end
+end
 
-# class ActiveMerchant::UniqueGateway < ActiveMerchant::Base
-#   def ssl_post(arg)
-#     {:success => arg}
-#   end
+class ActiveMerchant::UniqueGateway < ActiveMerchant::Base
+  def ssl_post(arg)
+    {:success => arg}
+  end
 
-#   def purchase(arg)
-#     ssl_post(arg)
-#   end
-# end
+  def purchase(arg)
+    ssl_post(arg)
+  end
+end
 
-# class GatewaySubClass < ActiveMerchant::Gateway
-# end
+class GatewaySubClass < ActiveMerchant::Gateway
+end
 
-# ActiveMerchant::Base.extend StatsD::Instrument
+ActiveMerchant::Base.extend StatsD::Instrument
 
-# class StatsDInstrumentationTest < Test::Unit::TestCase
-#   def test_statsd_count_if
-#     ActiveMerchant::Gateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
+class StatsDInstrumentationTest < Minitest::Test
+  include StatsD::Instrument::Assertions
 
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.if').once
-#     ActiveMerchant::Gateway.new.purchase(true)
-#     ActiveMerchant::Gateway.new.purchase(false)
+  def test_statsd_count_if
+    ActiveMerchant::Gateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
 
-#     ActiveMerchant::Gateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
-#   end
+    assert_statsd_increment('ActiveMerchant.Gateway.if') do
+      ActiveMerchant::Gateway.new.purchase(true)
+      ActiveMerchant::Gateway.new.purchase(false)
+    end
 
-#   def test_statsd_count_if_with_method_receiving_block
-#     ActiveMerchant::Base.statsd_count_if :post_with_block, 'ActiveMerchant.Base.post_with_block' do |result|
-#       result == 'true'
-#     end
+    ActiveMerchant::Gateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
+  end
 
-#     StatsD.expects(:collect).with(:c, 'ActiveMerchant.Base.post_with_block', 1, {}).once
-#     assert_equal 'true',  ActiveMerchant::Base.new.post_with_block { 'true' }
-#     assert_equal 'false', ActiveMerchant::Base.new.post_with_block { 'false' }
+  def test_statsd_count_if_with_method_receiving_block
+    ActiveMerchant::Base.statsd_count_if :post_with_block, 'ActiveMerchant.Base.post_with_block' do |result|
+      result == 'true'
+    end
 
-#     ActiveMerchant::Base.statsd_remove_count_if :post_with_block, 'ActiveMerchant.Base.post_with_block'
-#   end
+    assert_statsd_increment('ActiveMerchant.Base.post_with_block') do
+      assert_equal 'true',  ActiveMerchant::Base.new.post_with_block { 'true' }
+      assert_equal 'false', ActiveMerchant::Base.new.post_with_block { 'false' }
+    end
 
-#   def test_statsd_count_if_with_block
-#     ActiveMerchant::UniqueGateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.block' do |result|
-#       result[:success]
-#     end
+    ActiveMerchant::Base.statsd_remove_count_if :post_with_block, 'ActiveMerchant.Base.post_with_block'
+  end
 
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.block').once
-#     ActiveMerchant::UniqueGateway.new.purchase(true)
-#     ActiveMerchant::UniqueGateway.new.purchase(false)
+  def test_statsd_count_if_with_block
+    ActiveMerchant::UniqueGateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.block' do |result|
+      result[:success]
+    end
 
-#     ActiveMerchant::UniqueGateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.block'
-#   end
+    assert_statsd_increment('ActiveMerchant.Gateway.block', times: 1) do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+      ActiveMerchant::UniqueGateway.new.purchase(false)
+    end
 
-#   def test_statsd_count_success
-#     ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', 0.5
+    ActiveMerchant::UniqueGateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.block'
+  end
 
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.success', 1, 0.5).once
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.failure', 1, 0.5).once
+  def test_statsd_count_success
+    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', 0.5
 
-#     ActiveMerchant::Gateway.new.purchase(true)
-#     ActiveMerchant::Gateway.new.purchase(false)
+    assert_statsd_increment('ActiveMerchant.Gateway.success', sample_rate: 0.5, times: 1) do
+      ActiveMerchant::Gateway.new.purchase(true)
+      ActiveMerchant::Gateway.new.purchase(false)
+    end
 
-#     ActiveMerchant::Gateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
-#   end
+    assert_statsd_increment('ActiveMerchant.Gateway.failure', sample_rate: 0.5, times: 1) do
+      ActiveMerchant::Gateway.new.purchase(false)
+      ActiveMerchant::Gateway.new.purchase(true)
+    end
 
-#   def test_statsd_count_success_with_method_receiving_block
-#     ActiveMerchant::Base.statsd_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block' do |result|
-#       result == 'successful'
-#     end
+    ActiveMerchant::Gateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
+  end
 
-#     StatsD.expects(:collect).with(:c, 'ActiveMerchant.Base.post_with_block.success', 1, {}).once
-#     StatsD.expects(:collect).with(:c, 'ActiveMerchant.Base.post_with_block.failure', 1, {}).once
-    
-#     assert_equal 'successful', ActiveMerchant::Base.new.post_with_block { 'successful' }
-#     assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
+  def test_statsd_count_success_with_method_receiving_block
+    ActiveMerchant::Base.statsd_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block' do |result|
+      result == 'successful'
+    end
 
-#     ActiveMerchant::Base.statsd_remove_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block'
-#   end
+    assert_statsd_increment('ActiveMerchant.Base.post_with_block.success', times: 1) do
+      assert_equal 'successful', ActiveMerchant::Base.new.post_with_block { 'successful' }
+      assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
+    end
 
-#   def test_statsd_count_success_with_block
-#     ActiveMerchant::UniqueGateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway' do |result|
-#       result[:success]
-#     end
+    assert_statsd_increment('ActiveMerchant.Base.post_with_block.failure', times: 1) do
+      assert_equal 'successful', ActiveMerchant::Base.new.post_with_block { 'successful' }
+      assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
+    end    
 
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.success', 1)
-#     ActiveMerchant::UniqueGateway.new.purchase(true)
+    ActiveMerchant::Base.statsd_remove_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block'
+  end
 
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.failure', 1)
-#     ActiveMerchant::UniqueGateway.new.purchase(false)
+  def test_statsd_count_success_with_block
+    ActiveMerchant::UniqueGateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway' do |result|
+      result[:success]
+    end
 
-#     ActiveMerchant::UniqueGateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
-#   end
+    assert_statsd_increment('ActiveMerchant.Gateway.success') do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
 
-#   def test_statsd_count
-#     ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    assert_statsd_increment('ActiveMerchant.Gateway.failure') do
+      ActiveMerchant::UniqueGateway.new.purchase(false)
+    end
 
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.ssl_post', 1)
-#     ActiveMerchant::Gateway.new.purchase(true)
+    ActiveMerchant::UniqueGateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
+  end
 
-#     ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
-#   end
+  def test_statsd_count
+    ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
 
-#   def test_statsd_count_with_name_as_lambda
-#     metric_namer = lambda { |object, args| object.class.to_s.downcase + ".insert." + args.first.to_s }
-#     ActiveMerchant::Gateway.statsd_count(:ssl_post, metric_namer)
+    assert_statsd_increment('ActiveMerchant.Gateway.ssl_post') do
+      ActiveMerchant::Gateway.new.purchase(true)
+    end
 
-#     StatsD.expects(:increment).with('gatewaysubclass.insert.true', 1)
-#     GatewaySubClass.new.purchase(true)
+    ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  end
 
-#     ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
-#   end
+  def test_statsd_count_with_name_as_lambda
+    metric_namer = lambda { |object, args| object.class.to_s.downcase + ".insert." + args.first.to_s }
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, metric_namer)
 
-#   def test_statsd_count_with_method_receiving_block
-#     ActiveMerchant::Base.statsd_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    assert_statsd_increment('gatewaysubclass.insert.true') do
+      GatewaySubClass.new.purchase(true)
+    end
 
-#     StatsD.expects(:collect).with(:c, 'ActiveMerchant.Base.post_with_block', 1, {})
-#     assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
+    ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
+  end
 
-#     ActiveMerchant::Base.statsd_remove_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
-#   end
+  def test_statsd_count_with_method_receiving_block
+    ActiveMerchant::Base.statsd_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
 
-#   def test_statsd_measure_with_nested_modules
-#     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+    assert_statsd_increment('ActiveMerchant.Base.post_with_block') do
+      assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
+    end
 
-#     StatsD.expects(:measure).with('ActiveMerchant.Gateway.ssl_post', nil)
-#     ActiveMerchant::UniqueGateway.new.purchase(true)
+    ActiveMerchant::Base.statsd_remove_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
+  end
 
-#     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
-#   end
+  def test_statsd_measure
+    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3
 
-#   def test_statsd_measure
-#     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 0.3
+    assert_statsd_measure('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3) do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
 
-#     StatsD.expects(:measure).with('ActiveMerchant.Gateway.ssl_post', nil, 0.3)
-#     ActiveMerchant::UniqueGateway.new.purchase(true)
+    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  end
 
-#     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
-#   end
+  def test_statsd_measure_uses_normalized_metric_name
+    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
 
-#   def test_statsd_measure_with_method_receiving_block
-#     ActiveMerchant::Base.statsd_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    assert_statsd_measure('ActiveMerchant.Gateway.ssl_post') do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
 
-#     StatsD.expects(:collect).with(:ms, 'ActiveMerchant.Base.post_with_block', is_a(Float), {})
-#     assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
+    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+  end
 
-#     ActiveMerchant::Base.statsd_remove_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
-#   end
+  def test_statsd_measure_with_method_receiving_block
+    ActiveMerchant::Base.statsd_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
 
-#   def test_instrumenting_class_method
-#     ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
-#     ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
+    assert_statsd_measure('ActiveMerchant.Base.post_with_block') do
+      assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
+    end
 
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.sync', 1)
-#     ActiveMerchant::Gateway.sync
+    ActiveMerchant::Base.statsd_remove_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
+  end
 
-#     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
-#   end
+  def test_instrumenting_class_method
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
 
-#   def test_statsd_count_with_tags
-#     ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
-#     ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync', :tags => ['t']
+    assert_statsd_increment('ActiveMerchant.Gateway.sync') do
+      ActiveMerchant::Gateway.sync
+    end
 
-#     StatsD.expects(:increment).with('ActiveMerchant.Gateway.sync', 1, :tags => ['t'])
-#     ActiveMerchant::Gateway.sync
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+  end
 
-#     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
-#   end
-# end
+  def test_statsd_count_with_tags
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync', tags: { key: 'value' }
+
+    assert_statsd_increment('ActiveMerchant.Gateway.sync', tags: ['key:value']) do
+      ActiveMerchant::Gateway.sync
+    end
+
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+  end
+end

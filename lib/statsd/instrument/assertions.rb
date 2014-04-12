@@ -8,4 +8,38 @@ module StatsD::Instrument::Assertions
   ensure
     StatsD.backend = old_backend
   end
+
+  def assert_no_statsd_calls(metric_name, &block)
+    metrics = collect_metrics(&block).select { |m| m.name == metric_name }
+    assert metrics.empty?, "No StatsD calls for metric #{metric_name} expected."
+  end
+
+  def assert_statsd_increment(metric_name, options = {}, &block)
+    assert_statsd_metric(:c, metric_name, options, &block)
+  end
+
+  def assert_statsd_measure(metric_name, options = {}, &block)
+    assert_statsd_metric(:ms, metric_name, options, &block)
+  end
+
+  def assert_statsd_gauge(metric_name, options = {}, &block)
+    assert_statsd_metric(:g, metric_name, options, &block)
+  end
+
+  private
+
+  def assert_statsd_metric(metric_type, metric_name, options = {}, &block)
+    options[:times] ||= 1
+    metrics = collect_metrics(&block)
+    metrics = metrics.select { |m| m.type == metric_type && m.name == metric_name }
+    assert metrics.length > 0, "No StatsD calls for metric #{metric_name} were made."
+    assert_equal options[:times], metrics.length, "The amount of StatsD calls for metric #{metric_name} was unexpected"
+    metric = metrics.first
+
+    assert_equal options[:sample_rate], metric.sample_rate, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:sample_rate]
+    assert_equal options[:value], metric.value, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:value]
+    assert_equal Set.new(options[:tags]), Set.new(metric.tags), "Unexpected StatsD tags for metric #{metric_name}" if options[:tags]
+
+    metric
+  end
 end
