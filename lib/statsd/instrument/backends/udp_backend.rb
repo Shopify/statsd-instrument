@@ -1,7 +1,7 @@
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
 
-    attr_reader :host, :port, :implementation\
+    attr_reader :host, :port, :implementation
 
     def initialize(server = nil, implementation = nil)
       self.server = server unless server.nil?
@@ -14,8 +14,8 @@ module StatsD::Instrument::Backends
       write_packet(generate_packet(metric))
     end
 
-    def server=(conn)
-      self.host, port = conn.split(':')
+    def server=(connection_string)
+      self.host, port = connection_string.split(':', 2)
       self.port = port.to_i
       invalidate_socket
     end
@@ -38,15 +38,15 @@ module StatsD::Instrument::Backends
       @socket
     end
 
-    def generate_packet(type, k, v, sample_rate = default_sample_rate, tags = nil)
-      command = self.prefix ? self.prefix + '.' : ''
-      command << "#{k}:#{v}|#{type}"
-      command << "|@#{sample_rate}" if sample_rate < 1 || (implementation == :statsite && sample_rate > 1)
-      if tags && implementation == :datadog
-        command << "|##{clean_tags(tags).join(',')}"
+    def generate_packet(metric)
+      command = StatsD.prefix ? StatsD.prefix + '.' : ''
+      command << "#{metric.name}:#{metric.value}|#{metric.type}"
+      command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
+      if metric.tags && implementation == :datadog
+        command << "|##{metric.tags.join(',')}"
       end
 
-      command << "\n" if@implementation == :statsite
+      command << "\n" if implementation == :statsite
       command
     end
 
