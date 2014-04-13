@@ -6,9 +6,9 @@ module StatsD::Instrument::Environment
   def default_backend
     case environment
     when 'production'
-      server = ENV['STATSD_ADDR']
+      connection_string = ENV['STATSD_ADDR']
       implementation = ENV.fetch('STATSD_IMPLEMENTATION', 'statsd').to_sym
-      StatsD::Instrument::Backends::UDPBackend.new(server, implementation)
+      StatsD::Instrument::Backends::UDPBackend.new(connection_string, implementation)
     when 'test'
       StatsD::Instrument::Backends::MockBackend.new
     else
