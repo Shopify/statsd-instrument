@@ -9,8 +9,9 @@ module StatsD::Instrument::Assertions
     StatsD.backend = old_backend
   end
 
-  def assert_no_statsd_calls(metric_name, &block)
-    metrics = capture_statsd_metrics(&block).select { |m| m.name == metric_name }
+  def assert_no_statsd_calls(metric_name = nil, &block)
+    metrics = capture_statsd_metrics(&block)
+    metrics.select! { |m| m.name == metric_name } if metric_name
     assert metrics.empty?, "No StatsD calls for metric #{metric_name} expected."
   end
 

@@ -40,6 +40,12 @@ class AssertionsTest < Minitest::Test
         StatsD.increment('counter')
       end
     end
+
+    assert_assertion_triggered do
+      @test_case.assert_no_statsd_calls do
+        StatsD.increment('other')
+      end
+    end    
   end
 
   def test_assert_statsd_call
