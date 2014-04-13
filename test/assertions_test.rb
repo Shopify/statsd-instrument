@@ -10,7 +10,7 @@ class AssertionsTest < Minitest::Test
 
   def test_capture_metrics_inside_block_only
     StatsD.increment('counter')
-    metrics = @test_case.capture_statsd_metrics do
+    metrics = @test_case.capture_statsd_calls do
       StatsD.increment('counter')
       StatsD.gauge('gauge', 12)
     end

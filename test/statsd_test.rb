@@ -9,20 +9,20 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_explicit_value
-    metric = capture_statsd_metric { StatsD.measure('values.foobar', 42) }
+    metric = capture_statsd_call { StatsD.measure('values.foobar', 42) }
     assert_equal 'values.foobar', metric.name
     assert_equal 42, metric.value
     assert_equal :ms, metric.type
   end
 
   def test_statsd_measure_with_explicit_value_and_sample_rate
-    metric = capture_statsd_metric { StatsD.measure('values.foobar', 42, :sample_rate => 0.1) }
+    metric = capture_statsd_call { StatsD.measure('values.foobar', 42, :sample_rate => 0.1) }
     assert_equal 0.1, metric.sample_rate    
   end
 
   def test_statsd_measure_with_benchmarked_duration
     Benchmark.stubs(:realtime).returns(1.12)
-    metric = capture_statsd_metric do 
+    metric = capture_statsd_call do 
       StatsD.measure('values.foobar') { 'foo' }
     end
     assert_equal 1120.0, metric.value
@@ -34,49 +34,49 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_increment
-    metric = capture_statsd_metric { StatsD.increment('values.foobar', 3) }
+    metric = capture_statsd_call { StatsD.increment('values.foobar', 3) }
     assert_equal :c, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 3, metric.value
   end
 
   def test_statsd_increment_with_hash_argument
-    metric = capture_statsd_metric { StatsD.increment('values.foobar', :tags => ['test']) }
+    metric = capture_statsd_call { StatsD.increment('values.foobar', :tags => ['test']) }
     assert_equal StatsD.default_sample_rate, metric.sample_rate
     assert_equal ['test'], metric.tags
     assert_equal 1, metric.value
   end
 
   def test_statsd_increment_with_multiple_arguments
-    metric = capture_statsd_metric { StatsD.increment('values.foobar', 12, nil, ['test']) }
+    metric = capture_statsd_call { StatsD.increment('values.foobar', 12, nil, ['test']) }
     assert_equal StatsD.default_sample_rate, metric.sample_rate
     assert_equal ['test'], metric.tags
     assert_equal 12, metric.value
   end
 
   def test_statsd_gauge
-    metric = capture_statsd_metric { StatsD.gauge('values.foobar', 12) }
+    metric = capture_statsd_call { StatsD.gauge('values.foobar', 12) }
     assert_equal :g, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 12, metric.value
   end
 
   def test_statsd_set
-    metric = capture_statsd_metric { StatsD.set('values.foobar', 'unique_identifier') }
+    metric = capture_statsd_call { StatsD.set('values.foobar', 'unique_identifier') }
     assert_equal :s, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 'unique_identifier', metric.value
   end
 
   def test_statsd_histogram
-    metric = capture_statsd_metric { StatsD.histogram('values.foobar', 42) }
+    metric = capture_statsd_call { StatsD.histogram('values.foobar', 42) }
     assert_equal :h, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 42, metric.value
   end
 
   def test_statsd_key_value
-    metric = capture_statsd_metric { StatsD.key_value('values.foobar', 42) }
+    metric = capture_statsd_call { StatsD.key_value('values.foobar', 42) }
     assert_equal :kv, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 42, metric.value
@@ -84,8 +84,8 @@ class StatsDTest < Minitest::Test
 
   protected
 
-  def capture_statsd_metric(&block)
-    metrics = capture_statsd_metrics(&block)
+  def capture_statsd_call(&block)
+    metrics = capture_statsd_calls(&block)
     assert_equal 1, metrics.length
     metrics.first
   end

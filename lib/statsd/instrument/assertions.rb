@@ -1,6 +1,6 @@
 module StatsD::Instrument::Assertions
 
-  def capture_statsd_metrics(&block)
+  def capture_statsd_calls(&block)
     mock_backend = StatsD::Instrument::Backends::CaptureBackend.new
     old_backend, StatsD.backend = StatsD.backend, mock_backend
     block.call
@@ -10,7 +10,7 @@ module StatsD::Instrument::Assertions
   end
 
   def assert_no_statsd_calls(metric_name = nil, &block)
-    metrics = capture_statsd_metrics(&block)
+    metrics = capture_statsd_calls(&block)
     metrics.select! { |m| m.name == metric_name } if metric_name
     assert metrics.empty?, "No StatsD calls for metric #{metric_name} expected."
   end
@@ -31,7 +31,7 @@ module StatsD::Instrument::Assertions
 
   def assert_statsd_call(metric_type, metric_name, options = {}, &block)
     options[:times] ||= 1
-    metrics = capture_statsd_metrics(&block)
+    metrics = capture_statsd_calls(&block)
     metrics = metrics.select { |m| m.type == metric_type && m.name == metric_name }
     assert metrics.length > 0, "No StatsD calls for metric #{metric_name} were made."
     assert options[:times] === metrics.length, "The amount of StatsD calls for metric #{metric_name} was unexpected"
