@@ -15,6 +15,12 @@ class MetricTest < Minitest::Test
     assert m.tags.nil?
   end
 
+  def test_name_prefix
+    StatsD.stubs(:prefix).returns('prefix')
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter')
+    assert_equal 'prefix.counter', m.name
+  end
+
   def test_rewrite_shitty_tags
     assert_equal ['igno_red'], StatsD::Instrument::Metric.normalize_tags(['igno,red'])
     assert_equal ['igno_red'], StatsD::Instrument::Metric.normalize_tags(['igno  red'])

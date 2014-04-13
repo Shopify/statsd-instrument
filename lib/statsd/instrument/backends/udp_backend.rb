@@ -39,8 +39,7 @@ module StatsD::Instrument::Backends
     end
 
     def generate_packet(metric)
-      command = StatsD.prefix ? StatsD.prefix + '.' : ''
-      command << "#{metric.name}:#{metric.value}|#{metric.type}"
+      command = "#{metric.name}:#{metric.value}|#{metric.type}"
       command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
       if metric.tags && implementation == :datadog
         command << "|##{metric.tags.join(',')}"
