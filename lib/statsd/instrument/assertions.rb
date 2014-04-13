@@ -1,7 +1,7 @@
 module StatsD::Instrument::Assertions
 
   def capture_statsd_metrics(&block)
-    mock_backend = StatsD::Instrument::Backends::MockBackend.new
+    mock_backend = StatsD::Instrument::Backends::CaptureBackend.new
     old_backend, StatsD.backend = StatsD.backend, mock_backend
     block.call
     mock_backend.collected_metrics

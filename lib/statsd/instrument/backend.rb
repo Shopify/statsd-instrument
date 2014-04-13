@@ -5,5 +5,6 @@ class StatsD::Instrument::Backend
 end
 
 require 'statsd/instrument/backends/logger_backend'
-require 'statsd/instrument/backends/mock_backend'
+require 'statsd/instrument/backends/null_backend'
+require 'statsd/instrument/backends/capture_backend'
 require 'statsd/instrument/backends/udp_backend'

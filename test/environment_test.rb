@@ -14,7 +14,7 @@ class EnvironmentTest < Minitest::Test
 
   def test_uses_mock_backend_in_test_environment
     StatsD::Instrument::Environment.stubs(:environment).returns('test')
-    assert_instance_of StatsD::Instrument::Backends::MockBackend, StatsD::Instrument::Environment.default_backend
+    assert_instance_of StatsD::Instrument::Backends::NullBackend, StatsD::Instrument::Environment.default_backend
   end
 
   def test_uses_mock_backend_in_test_environment

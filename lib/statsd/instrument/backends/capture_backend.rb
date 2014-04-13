@@ -1,5 +1,5 @@
 module StatsD::Instrument::Backends
-  class MockBackend < StatsD::Instrument::Backend
+  class CaptureBackend < StatsD::Instrument::Backend
     attr_reader :collected_metrics
 
     def initialize
