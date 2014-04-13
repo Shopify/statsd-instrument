@@ -185,7 +185,7 @@ the object the function is being called on and the array of arguments
 passed.
 
 ```ruby
-GoogleBase.statsd_count :insert, lamdba{|object, args| object.class.to_s.downcase + "." + args.first.to_s + ".insert" }
+GoogleBase.statsd_count :insert, lambda{|object, args| object.class.to_s.downcase + "." + args.first.to_s + ".insert" }
 ```
 
 ### Tags
