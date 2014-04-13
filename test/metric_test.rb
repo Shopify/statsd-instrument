@@ -19,6 +19,9 @@ class MetricTest < Minitest::Test
     StatsD.stubs(:prefix).returns('prefix')
     m = StatsD::Instrument::Metric.new(type: :c, name: 'counter')
     assert_equal 'prefix.counter', m.name
+
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', no_prefix: true)
+    assert_equal 'counter', m.name
   end
 
   def test_rewrite_shitty_tags
