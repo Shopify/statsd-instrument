@@ -3,11 +3,15 @@ module StatsD::Instrument::Backends
     attr_reader :collected_metrics
 
     def initialize
-      @collected_metrics = []
+      reset
     end
 
     def collect_metric(metric)
       @collected_metrics << metric
+    end
+
+    def reset
+      @collected_metrics = []
     end
   end
 end
