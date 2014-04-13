@@ -3,12 +3,6 @@ require 'test_helper'
 class StatsDTest < Minitest::Test
   include StatsD::Instrument::Assertions
 
-  def setup
-    # StatsD.stubs(:logger).returns(@logger = mock('logger'))
-    # @logger.stubs(:info)
-    # @logger.stubs(:error)
-  end
-
   def test_statsd_passed_collections_to_backend
     StatsD.backend.expects(:collect_metric).with(instance_of(StatsD::Instrument::Metric))
     StatsD.increment('test')

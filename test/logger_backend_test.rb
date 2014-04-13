@@ -1,0 +1,20 @@
+require 'test_helper'
+
+class LoggerBackendTest < Minitest::Test
+  def setup
+    logger = Logger.new(@io = StringIO.new)
+    logger.formatter = lambda { |_,_,_, msg| "#{msg}\n" }
+    @backend = StatsD::Instrument::Backends::LoggerBackend.new(logger)
+    @metric1 = StatsD::Instrument::Metric::new(type: :c, name: 'mock.counter', tags: { a: 'b', c: 'd'})
+    @metric2 = StatsD::Instrument::Metric::new(type: :ms, name: 'mock.measure', value: 123, sample_rate: 0.3)
+  end
+
+  def test_logs_metrics
+    @backend.collect_metric(@metric1)
+    assert_equal @io.string, "[StatsD] increment mock.counter:1 #a:b #c:d\n"
+    @io.string = ""
+
+    @backend.collect_metric(@metric2)
+    assert_equal @io.string, "[StatsD] measure mock.measure:123 @0.3\n"
+  end
+end
