@@ -1,17 +1,33 @@
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
 
-    attr_reader :host, :port, :implementation
+    attr_reader :host, :port
+    attr_accessor :implementation
 
     def initialize(server = nil, implementation = nil)
       self.server = server unless server.nil?
       @implementation = implementation || :statsd
     end
 
-
     def collect_metric(metric)
-      return if metric.sample_rate < 1.0 && rand > metric.sample_rate
+      unless implementation_supports_metric_type?(metric.type)
+        StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} not supported on #{implementation} implementation.")
+        return false
+      end
+
+      if metric.sample_rate < 1.0 && rand > metric.sample_rate
+        return false
+      end
+
       write_packet(generate_packet(metric))
+    end
+
+    def implementation_supports_metric_type?(type)
+      case type
+        when :h;  implementation == :datadog
+        when :kv; implementation == :statsite
+        else true
+      end
     end
 
     def server=(connection_string)
@@ -41,16 +57,24 @@ module StatsD::Instrument::Backends
     def generate_packet(metric)
       command = "#{metric.name}:#{metric.value}|#{metric.type}"
       command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
-      if metric.tags && implementation == :datadog
-        command << "|##{metric.tags.join(',')}"
+      if metric.tags 
+        if tags_supported?
+          command << "|##{metric.tags.join(',')}"
+        else
+          StatsD.logger.warn("[StatsD] Tags are only supported on Datadog implementation.")
+        end
       end
 
       command << "\n" if implementation == :statsite
       command
     end
 
+    def tags_supported?
+      implementation == :datadog
+    end
+
     def write_packet(command)
-      socket.send(command, 0)
+      socket.send(command, 0) > 0
     rescue SocketError, IOError, SystemCallError => e
       StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
     end
