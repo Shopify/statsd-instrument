@@ -1,6 +1,6 @@
 module StatsD::Instrument::Assertions
 
-  def collect_metrics(&block)
+  def capture_statsd_metrics(&block)
     mock_backend = StatsD::Instrument::Backends::MockBackend.new
     old_backend, StatsD.backend = StatsD.backend, mock_backend
     block.call
@@ -10,30 +10,30 @@ module StatsD::Instrument::Assertions
   end
 
   def assert_no_statsd_calls(metric_name, &block)
-    metrics = collect_metrics(&block).select { |m| m.name == metric_name }
+    metrics = capture_statsd_metrics(&block).select { |m| m.name == metric_name }
     assert metrics.empty?, "No StatsD calls for metric #{metric_name} expected."
   end
 
   def assert_statsd_increment(metric_name, options = {}, &block)
-    assert_statsd_metric(:c, metric_name, options, &block)
+    assert_statsd_call(:c, metric_name, options, &block)
   end
 
   def assert_statsd_measure(metric_name, options = {}, &block)
-    assert_statsd_metric(:ms, metric_name, options, &block)
+    assert_statsd_call(:ms, metric_name, options, &block)
   end
 
   def assert_statsd_gauge(metric_name, options = {}, &block)
-    assert_statsd_metric(:g, metric_name, options, &block)
+    assert_statsd_call(:g, metric_name, options, &block)
   end
 
   private
 
-  def assert_statsd_metric(metric_type, metric_name, options = {}, &block)
+  def assert_statsd_call(metric_type, metric_name, options = {}, &block)
     options[:times] ||= 1
-    metrics = collect_metrics(&block)
+    metrics = capture_statsd_metrics(&block)
     metrics = metrics.select { |m| m.type == metric_type && m.name == metric_name }
     assert metrics.length > 0, "No StatsD calls for metric #{metric_name} were made."
-    assert_equal options[:times], metrics.length, "The amount of StatsD calls for metric #{metric_name} was unexpected"
+    assert options[:times] === metrics.length, "The amount of StatsD calls for metric #{metric_name} was unexpected"
     metric = metrics.first
 
     assert_equal options[:sample_rate], metric.sample_rate, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:sample_rate]
