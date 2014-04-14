@@ -10,8 +10,7 @@ module StatsD::Instrument::Environment
     when 'test'
       StatsD::Instrument::Backends::NullBackend.new
     else
-      logger = defined?(Rails) ? Rails.logger : Logger.new($stdout)
-      StatsD::Instrument::Backends::LoggerBackend.new(logger)
+      StatsD::Instrument::Backends::LoggerBackend.new(StatsD.logger)
     end
   end
 
