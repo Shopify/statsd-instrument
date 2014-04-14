@@ -12,12 +12,12 @@ class EnvironmentTest < Minitest::Test
     assert_instance_of StatsD::Instrument::Backends::LoggerBackend, StatsD::Instrument::Environment.default_backend
   end
 
-  def test_uses_mock_backend_in_test_environment
+  def test_uses_null_backend_in_test_environment
     StatsD::Instrument::Environment.stubs(:environment).returns('test')
     assert_instance_of StatsD::Instrument::Backends::NullBackend, StatsD::Instrument::Environment.default_backend
   end
 
-  def test_uses_mock_backend_in_test_environment
+  def test_uses_udp_backend_in_production_environment
     StatsD::Instrument::Environment.stubs(:environment).returns('production')
     assert_instance_of StatsD::Instrument::Backends::UDPBackend, StatsD::Instrument::Environment.default_backend
   end
@@ -31,6 +31,5 @@ class EnvironmentTest < Minitest::Test
     assert_equal '127.0.0.1', backend.host
     assert_equal 1234, backend.port
     assert_equal :datadog, backend.implementation
-
   end
 end
