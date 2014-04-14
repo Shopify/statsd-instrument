@@ -8,7 +8,7 @@ module StatsD::Instrument::Backends
     end
 
     def collect_metric(metric)
-      logger.debug "[StatsD] #{metric}"
+      logger.info "[StatsD] #{metric}"
     end
   end
 end
