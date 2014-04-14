@@ -1,12 +1,14 @@
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
 
+    DEFAULT_IMPLEMENTATION = :statsd
+
     attr_reader :host, :port
     attr_accessor :implementation
 
     def initialize(server = nil, implementation = nil)
       self.server = server unless server.nil?
-      @implementation = implementation || :statsd
+      @implementation = (implementation || DEFAULT_IMPLEMENTATION).to_sym
     end
 
     def collect_metric(metric)

@@ -6,9 +6,7 @@ module StatsD::Instrument::Environment
   def default_backend
     case environment
     when 'production'
-      connection_string = ENV['STATSD_ADDR']
-      implementation = ENV.fetch('STATSD_IMPLEMENTATION', 'statsd').to_sym
-      StatsD::Instrument::Backends::UDPBackend.new(connection_string, implementation)
+      StatsD::Instrument::Backends::UDPBackend.new(ENV['STATSD_ADDR'], ENV['STATSD_IMPLEMENTATION'])
     when 'test'
       StatsD::Instrument::Backends::NullBackend.new
     else
@@ -26,5 +24,5 @@ module StatsD::Instrument::Environment
   end  
 end
 
-StatsD.default_sample_rate = 1.0
+StatsD.default_sample_rate = ENV.fetch('STATSD_SAMPLE_RATE', 1.0).to_f
 StatsD.logger = defined?(Rails) ? Rails.logger : Logger.new($stderr)
