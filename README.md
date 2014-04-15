@@ -18,39 +18,48 @@ This is the same as what Etsy uses (mentioned in the README for http://github.co
 
 ## Configuration
 
+The library comes with different backends. Based on your environment (detected using environment 
+variables), it will select one of the following backends by default:
+
+- **Production** environment: `StatsD::Instrument::Backend::UDPBackend` will actually send UDP packets. 
+  It will configure itself using environment variables: it uses `STATSD_ADDR` for the address to connect 
+  to (default `"localhost:8125"`), and `STATSD_IMPLEMENTATION` to set the protocol variant. (See below)
+- **Test** environment: `StatsD::Instrument::Backend::NullBackend` will swallow all calls. See below for 
+  notes on writing tests.
+- **Development**, and all other, environments: `StatsD::Instrument::Backend::LoggerBackend` will log all
+  calls to stdout.
+
+You can override the currently active backend by setting `StatsD.backend`:
+
 ``` ruby
-# The UDP endpoint to which you want to submit your metrics.
-# This is set to the environment variable STATSD_ADDR if it is set.
-StatsD.server = 'statsd.myservice.com:8125' 
+# Sets up a UDP backend. First argument is the UDP address to send StatsD packets to, 
+# second argument specifies the protocol variant (i.e. `:statsd`, `:statsite`, or `:datadog`).
+StatsD.backend = StatsD::Instrument::Backend::UDPBackend.new("1.2.3.4:8125", :statsite)
 
-# Events are only actually submitted in production mode. For any other value, thewy are logged instead
-# This value is set by to the value of the RAILS_ENV or RACK_ENV environment variable if it is set.
-StatsD.mode = :production
+# Sets up a logger backend
+StatsD.backend = StatsD::Instrument::Backend::LoggerBackend.new(Rails.logger)
+```
 
-# Logger to which commands are logged when not in :production mode.
-# In  production only errors are logged to the console.
-StatsD.logger = Rails.logger
+The other available settings, with their default, are
 
-# An optional prefix to be added to each stat.
-StatsD.prefix = 'my_app' 
+``` ruby
+# Logger to which commands are logged when using the LoggerBackend, which is
+# the default in development environment. Also, any errors or warnings will 
+# be logged here.
+StatsD.logger = defiend?(Rails) : Rails.logger ? Logger.new($stderr)
+
+# An optional prefix to be added to each metric.
+StatsD.prefix = nil # but can be set to any string
 
 # Sample 10% of events. By default all events are reported, which may overload your network or server.
 # You can, and should vary this on a per metric basis, depending on frequency and accuracy requirements
-StatsD.default_sample_rate = 0.1 
-
-
-```
-
-There are several implementations of StatsD out there, all with slight protocol variations. You can this library to use the proper protocol by informing it about what implementation you use. By default, it will use the `STATSD_IMPLEMENTATION` environment variable, if it is not set it will use the protocol of the original Etsy implementation.
-
-```
-StatsD.implementation = :datadog  # Enable datadog extensions: tags and histograms
-StatsD.implementation = :statsite # Enable keyvalue-style gauges 
+StatsD.default_sample_rate = (ENV['STATSD_SAMPLE_RATE'] || 0.1 ).to_f
 ```
 
 ## StatsD keys
 
-StatsD keys look like 'admin.logins.api.success'. Each dot in the key represents a 'folder' in the graphite interface. You can include any data you want in the keys.
+StatsD keys look like 'admin.logins.api.success'. Dots are used as namespace separators.
+In Graphite, they will show up as folders.
 
 ## Usage
 
@@ -197,9 +206,70 @@ StatsD.increment('my.counter', tags: ['env:production', 'unicorn'])
 GoogleBase.statsd_count :insert, 'GoogleBase.insert', tags: ['env:production']
 ```
 
+If implementation is not set to `:datadog`, tags will not be included in the UDP packets, and a 
+warning is logged to `StatsD.logger`.
+
+## Testing
+
+This library come swith a module called `StatsD::Instrument::Assertions` to help you write tests
+to verify StatsD is called properly.
+
+``` ruby
+class MyTestcase < Minitest::Test
+  include StatsD::Instrument::Assertions
+
+  def test_some_metrics
+    # This will pass if there is exactly one matching StatsD call
+    # it will ignore any other, non matching calls.
+    assert_statsd_increment('counter.name', sample_rate: 1.0) do
+      StatsD.increment('unrelated') # doesn't match
+      StatsD.increment('counter.name', sample_rate: 1.0) # matches
+      StatsD.increment('counter.name', sample_rate: 0.1) # doesn't match
+    end
+
+    # Set `times` if there will be multiple matches:
+    assert_statsd_increment('counter.name', times: 2) do
+      StatsD.increment('unrelated') # doesn't match
+      StatsD.increment('counter.name', sample_rate: 1.0) # matches
+      StatsD.increment('counter.name', sample_rate: 0.1) # matches too
+    end    
+  end
+
+  def test_no_udp_traffic
+    # Verifies no StatsD calls occured at all.
+    assert_no_statsd_calls do
+      do_some_work  
+    end
+
+    # Verifies no StatsD calls occured for the given metric.
+    assert_no_statsd_calls('metric_name') do
+      do_some_work
+    end    
+  end
+
+  def test_more_complicated_stuff
+    # capture_statsd_calls will capture all the StatsD calls in the
+    # given block, and returns them as an array. You can then run your 
+    # own assertions on it.
+    metrics = capture_statsd_calls do
+      StatsD.increment('mycounter', sample_rate: 0.01)
+    end
+
+    assert_equal 1, metrics.length
+    assert_equal 'mycounter', metrics[0].name
+    assert_equal :c, metrics[0].type
+    assert_equal 1, metrics[0].value
+    assert_equal 0.01, metrics[0].sample_rate
+  end
+end
+
+```
+
 ## Reliance on DNS
 
-Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Configuring the StatsD host to be a non-ip will trigger a DNS lookup (ie synchronous round trip network call) for each metric sent. This can be particularly problematic in clouds that have a shared DNS infrastructure such as AWS.
+Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Configuring 
+the StatsD host to be a non-ip will trigger a DNS lookup (i.e. a synchronous TCP round trip). 
+This can be particularly problematic in clouds that have a shared DNS infrastructure such as AWS.
 
 ### Common Workarounds
 
@@ -211,11 +281,9 @@ Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. C
 
 Tested on several Ruby versions using Travis CI:
 
-* Ruby 1.8.7
-* Ruby Enterprise Edition 1.8.7
 * Ruby 1.9.3
 * Ruby 2.0.0
-* Ruby 2.1.0
+* Ruby 2.1.1
 
 ## Contributing
 
@@ -224,5 +292,5 @@ This project is MIT licensed and welcomes outside contributions.
 1. Fork the repository, and create a feature branch.
 2. Implement the feature, and add tests that cover the new changes functionality.
 3. Update the README.
-4. Create a pull request. Make sure that you get a CI pass on it.
+4. Create a pull request. Make sure that you get a Travis CI pass on it.
 5. Ping @jstorimer and/or @wvanbergen for review.

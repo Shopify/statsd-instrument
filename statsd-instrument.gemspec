@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.homepage    = "https://github.com/Shopify/statsd-instrument"
   spec.summary     = %q{A StatsD client for Ruby apps}
   spec.description = %q{A StatsD client for Ruby appspec. Provides metaprogramming methods to inject StatsD instrumentation into your code.}
-  spec.license       = "MIT"
+  spec.license     = "MIT"
 
   spec.files         = `git ls-files`.split($/)
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
@@ -19,5 +19,6 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_development_dependency 'rake'
+  spec.add_development_dependency 'minitest'
   spec.add_development_dependency 'mocha'
 end
