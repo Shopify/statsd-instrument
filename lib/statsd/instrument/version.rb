@@ -1,5 +1,5 @@
 module StatsD
   module Instrument
-    VERSION = "1.7.2"
+    VERSION = "2.0.0beta"
   end
 end
