@@ -214,7 +214,7 @@ warning is logged to `StatsD.logger`.
 This library come swith a module called `StatsD::Instrument::Assertions` to help you write tests
 to verify StatsD is called properly.
 
-```
+``` ruby
 class MyTestcase < Minitest::Test
   include StatsD::Instrument::Assertions
 
@@ -236,12 +236,12 @@ class MyTestcase < Minitest::Test
   end
 
   def test_no_udp_traffic
-    # Verifies so StatsD calls at all.
+    # Verifies no StatsD calls occured at all.
     assert_no_statsd_calls do
       do_some_work  
     end
 
-    # Verifies so StatsD calls for the given metric.
+    # Verifies no StatsD calls occured for the given metric.
     assert_no_statsd_calls('metric_name') do
       do_some_work
     end    
@@ -292,5 +292,5 @@ This project is MIT licensed and welcomes outside contributions.
 1. Fork the repository, and create a feature branch.
 2. Implement the feature, and add tests that cover the new changes functionality.
 3. Update the README.
-4. Create a pull request. Make sure that you get a CI pass on it.
+4. Create a pull request. Make sure that you get a Travis CI pass on it.
 5. Ping @jstorimer and/or @wvanbergen for review.
