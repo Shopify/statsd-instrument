@@ -123,8 +123,9 @@ module StatsD
       end
 
       result = nil
-      ms = value || 1000 * Benchmark.realtime { result = block.call }
-      collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: ms))
+      value = 1000 * Benchmark.realtime { result = block.call } if block_given?
+      metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
+      result = metric unless block_given?
       result
     end
 
@@ -174,7 +175,8 @@ module StatsD
     end
 
     def collect_metric(options)
-      backend.collect_metric(StatsD::Instrument::Metric.new(options))
+      backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
+      metric
     end
   end
 end

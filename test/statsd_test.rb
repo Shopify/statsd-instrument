@@ -9,7 +9,9 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_explicit_value
-    metric = capture_statsd_call { StatsD.measure('values.foobar', 42) }
+    result = nil
+    metric = capture_statsd_call { result = StatsD.measure('values.foobar', 42) }
+    assert_equal metric, result
     assert_equal 'values.foobar', metric.name
     assert_equal 42, metric.value
     assert_equal :ms, metric.type
@@ -34,7 +36,9 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_increment
-    metric = capture_statsd_call { StatsD.increment('values.foobar', 3) }
+    result = nil
+    metric = capture_statsd_call { result = StatsD.increment('values.foobar', 3) }
+    assert_equal metric, result
     assert_equal :c, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 3, metric.value
@@ -55,28 +59,36 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_gauge
-    metric = capture_statsd_call { StatsD.gauge('values.foobar', 12) }
+    result = nil
+    metric = capture_statsd_call { result = StatsD.gauge('values.foobar', 12) }
+    assert_equal metric, result
     assert_equal :g, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 12, metric.value
   end
 
   def test_statsd_set
-    metric = capture_statsd_call { StatsD.set('values.foobar', 'unique_identifier') }
+    result = nil
+    metric = capture_statsd_call { result = StatsD.set('values.foobar', 'unique_identifier') }
+    assert_equal metric, result
     assert_equal :s, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 'unique_identifier', metric.value
   end
 
   def test_statsd_histogram
-    metric = capture_statsd_call { StatsD.histogram('values.foobar', 42) }
+    result = nil
+    metric = capture_statsd_call { result = StatsD.histogram('values.foobar', 42) }
+    assert_equal metric, result
     assert_equal :h, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 42, metric.value
   end
 
   def test_statsd_key_value
-    metric = capture_statsd_call { StatsD.key_value('values.foobar', 42) }
+    result = nil
+    metric = capture_statsd_call { result = StatsD.key_value('values.foobar', 42) }
+    assert_equal metric, result
     assert_equal :kv, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 42, metric.value
