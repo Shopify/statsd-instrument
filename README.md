@@ -211,7 +211,7 @@ warning is logged to `StatsD.logger`.
 
 ## Testing
 
-This library come swith a module called `StatsD::Instrument::Assertions` to help you write tests
+This library comes with a module called `StatsD::Instrument::Assertions` to help you write tests
 to verify StatsD is called properly.
 
 ``` ruby
