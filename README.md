@@ -46,7 +46,7 @@ The other available settings, with their default, are
 # Logger to which commands are logged when using the LoggerBackend, which is
 # the default in development environment. Also, any errors or warnings will 
 # be logged here.
-StatsD.logger = defiend?(Rails) : Rails.logger ? Logger.new($stderr)
+StatsD.logger = defined?(Rails) : Rails.logger ? Logger.new($stderr)
 
 # An optional prefix to be added to each metric.
 StatsD.prefix = nil # but can be set to any string
