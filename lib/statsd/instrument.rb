@@ -1,5 +1,4 @@
 require 'socket'
-require 'benchmark'
 require 'logger'
 
 module StatsD
@@ -7,6 +6,12 @@ module StatsD
 
     def self.generate_metric_name(metric_name, callee, *args)
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
+    end
+
+    def self.time
+      start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      yield
+      Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
     end
 
     def statsd_measure(method, name, *metric_options)
@@ -123,7 +128,7 @@ module StatsD
       end
 
       result = nil
-      value = 1000 * Benchmark.realtime { result = block.call } if block_given?
+      value  = 1000 * StatsD::Instrument.time { result = block.call } if block_given?
       metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
       result = metric unless block_given?
       result
@@ -169,8 +174,8 @@ module StatsD
       hash = {}
       args.each_with_index do |value, index|
         hash[order[index]] = value
-      end    
-      
+      end
+
       return hash
     end
 
