@@ -8,10 +8,18 @@ module StatsD
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
     end
 
-    def self.time
-      start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      yield
-      Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+    if Process.respond_to?(:clock_gettime)
+      def self.time
+        start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        yield
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+      end
+    else
+      def self.time
+        start = Time.now
+        yield
+        Time.now - start
+      end
     end
 
     def statsd_measure(method, name, *metric_options)
