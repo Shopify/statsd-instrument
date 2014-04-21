@@ -19,12 +19,12 @@ class StatsDTest < Minitest::Test
 
   def test_statsd_measure_with_explicit_value_and_sample_rate
     metric = capture_statsd_call { StatsD.measure('values.foobar', 42, :sample_rate => 0.1) }
-    assert_equal 0.1, metric.sample_rate    
+    assert_equal 0.1, metric.sample_rate
   end
 
   def test_statsd_measure_with_benchmarked_duration
-    Benchmark.stubs(:realtime).returns(1.12)
-    metric = capture_statsd_call do 
+    StatsD::Instrument.stubs(:time).returns(1.12)
+    metric = capture_statsd_call do
       StatsD.measure('values.foobar') { 'foo' }
     end
     assert_equal 1120.0, metric.value
