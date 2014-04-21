@@ -23,7 +23,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_benchmarked_duration
-    StatsD::Instrument.stubs(:time).returns(1.12)
+    StatsD::Instrument.stubs(:duration).returns(1.12)
     metric = capture_statsd_call do
       StatsD.measure('values.foobar') { 'foo' }
     end

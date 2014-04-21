@@ -9,13 +9,13 @@ module StatsD
     end
 
     if Process.respond_to?(:clock_gettime)
-      def self.time
+      def self.duration
         start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         yield
         Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
       end
     else
-      def self.time
+      def self.duration
         start = Time.now
         yield
         Time.now - start
@@ -136,7 +136,7 @@ module StatsD
       end
 
       result = nil
-      value  = 1000 * StatsD::Instrument.time { result = block.call } if block_given?
+      value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
       metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
       result = metric unless block_given?
       result
