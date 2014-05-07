@@ -27,6 +27,18 @@ module StatsD::Instrument::Assertions
     assert_statsd_call(:g, metric_name, options, &block)
   end
 
+  def assert_statsd_histogram(metric_name, options = {}, &block)
+    assert_statsd_call(:h, metric_name, options, &block)
+  end
+
+  def assert_statsd_set(metric_name, options = {}, &block)
+    assert_statsd_call(:s, metric_name, options, &block)
+  end
+
+  def assert_statsd_key_value(metric_name, options = {}, &block)
+    assert_statsd_call(:kv, metric_name, options, &block)
+  end
+
   private
 
   def assert_statsd_call(metric_type, metric_name, options = {}, &block)
