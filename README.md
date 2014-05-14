@@ -21,12 +21,12 @@ This is the same as what Etsy uses (mentioned in the README for http://github.co
 The library comes with different backends. Based on your environment (detected using environment 
 variables), it will select one of the following backends by default:
 
-- **Production** environment: `StatsD::Instrument::Backend::UDPBackend` will actually send UDP packets. 
+- **Production** environment: `StatsD::Instrument::Backends::UDPBackend` will actually send UDP packets. 
   It will configure itself using environment variables: it uses `STATSD_ADDR` for the address to connect 
   to (default `"localhost:8125"`), and `STATSD_IMPLEMENTATION` to set the protocol variant. (See below)
-- **Test** environment: `StatsD::Instrument::Backend::NullBackend` will swallow all calls. See below for 
+- **Test** environment: `StatsD::Instrument::Backends::NullBackend` will swallow all calls. See below for 
   notes on writing tests.
-- **Development**, and all other, environments: `StatsD::Instrument::Backend::LoggerBackend` will log all
+- **Development**, and all other, environments: `StatsD::Instrument::Backends::LoggerBackend` will log all
   calls to stdout.
 
 You can override the currently active backend by setting `StatsD.backend`:
@@ -34,10 +34,10 @@ You can override the currently active backend by setting `StatsD.backend`:
 ``` ruby
 # Sets up a UDP backend. First argument is the UDP address to send StatsD packets to, 
 # second argument specifies the protocol variant (i.e. `:statsd`, `:statsite`, or `:datadog`).
-StatsD.backend = StatsD::Instrument::Backend::UDPBackend.new("1.2.3.4:8125", :statsite)
+StatsD.backend = StatsD::Instrument::Backends::UDPBackend.new("1.2.3.4:8125", :statsite)
 
 # Sets up a logger backend
-StatsD.backend = StatsD::Instrument::Backend::LoggerBackend.new(Rails.logger)
+StatsD.backend = StatsD::Instrument::Backends::LoggerBackend.new(Rails.logger)
 ```
 
 The other available settings, with their default, are
