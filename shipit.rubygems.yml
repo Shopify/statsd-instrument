@@ -1,3 +1,7 @@
+dependencies:
+  override:
+    - bundle install --path=./data/bundler
+
 deploy:
   override:
     - |
