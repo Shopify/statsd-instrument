@@ -101,6 +101,20 @@ class AssertionsTest < Minitest::Test
     end
   end
 
+  def test_assert_statsd_call_with_tags
+    assert_no_assertion_triggered do
+      @test_case.assert_statsd_increment('counter', tags: ['a:b', 'c:d']) do
+        StatsD.increment('counter', tags: { a: 'b', c: 'd' })
+      end
+    end
+
+    assert_no_assertion_triggered do
+      @test_case.assert_statsd_increment('counter', tags: { a: 'b', c: 'd' }) do
+        StatsD.increment('counter', tags: ['a:b', 'c:d'])
+      end
+    end
+  end  
+
   private
 
   def assert_no_assertion_triggered(&block)
