@@ -24,4 +24,4 @@ module StatsD::Instrument::Environment
 end
 
 StatsD.default_sample_rate = ENV.fetch('STATSD_SAMPLE_RATE', 1.0).to_f
-StatsD.logger = defined?(Rails) ? Rails.logger : Logger.new($stderr)
+StatsD.logger = Logger.new($stderr)

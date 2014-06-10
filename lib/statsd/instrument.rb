@@ -199,3 +199,4 @@ require 'statsd/instrument/backend'
 require 'statsd/instrument/assertions'
 require 'statsd/instrument/environment'
 require 'statsd/instrument/version'
+require 'statsd/instrument/railtie' if defined?(Rails)
