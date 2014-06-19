@@ -1,3 +1,7 @@
+---
+layout: index
+---
+
 # StatsD client for Ruby apps
 
 [![Built on Travis](https://secure.travis-ci.org/Shopify/statsd-instrument.png?branch=master)](https://secure.travis-ci.org/Shopify/statsd-instrument)
