@@ -2,8 +2,6 @@
 layout: index
 ---
 
-# StatsD client for Ruby apps
-
 [![Built on Travis](https://secure.travis-ci.org/Shopify/statsd-instrument.png?branch=master)](https://secure.travis-ci.org/Shopify/statsd-instrument)
 
 This is a ruby client for statsd (http://github.com/etsy/statsd). It provides a lightweight way to track and measure metrics in your application. 
@@ -280,4 +278,4 @@ This project welcomes outside contributions.
 
 ## License
 
-Copyright (c) 2013 Shopify. Released under the [MIT-LICENSE](http://opensource.org/licenses/MIT).
+Copyright (c) 2011 Shopify. Released under the [MIT-LICENSE](http://opensource.org/licenses/MIT).
