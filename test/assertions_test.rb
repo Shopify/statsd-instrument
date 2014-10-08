@@ -113,7 +113,44 @@ class AssertionsTest < Minitest::Test
         StatsD.increment('counter', tags: ['a:b', 'c:d'])
       end
     end
-  end  
+  end
+
+  def test_nested_assertions
+    assert_no_assertion_triggered do
+      @test_case.assert_statsd_increment('counter1') do
+        @test_case.assert_statsd_increment('counter2') do
+          StatsD.increment('counter1')
+          StatsD.increment('counter2')
+        end
+      end
+    end
+
+    assert_no_assertion_triggered do
+      @test_case.assert_statsd_increment('counter1') do
+        StatsD.increment('counter1')
+        @test_case.assert_statsd_increment('counter2') do
+          StatsD.increment('counter2')
+        end
+      end
+    end    
+
+    assert_assertion_triggered do
+      @test_case.assert_statsd_increment('counter1') do
+        @test_case.assert_statsd_increment('counter2') do
+          StatsD.increment('counter2')
+        end
+      end
+    end
+
+    assert_assertion_triggered do
+      @test_case.assert_statsd_increment('counter1') do
+        @test_case.assert_statsd_increment('counter2') do
+          StatsD.increment('counter1')
+        end
+        StatsD.increment('counter2')
+      end
+    end
+  end
 
   private
 
