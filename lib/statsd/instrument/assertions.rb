@@ -6,6 +6,10 @@ module StatsD::Instrument::Assertions
     block.call
     mock_backend.collected_metrics
   ensure
+    if old_backend.kind_of?(StatsD::Instrument::Backends::CaptureBackend)
+      old_backend.collected_metrics.concat(mock_backend.collected_metrics)
+    end
+
     StatsD.backend = old_backend
   end
 
