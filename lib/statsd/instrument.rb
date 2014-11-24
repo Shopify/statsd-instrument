@@ -1,20 +1,57 @@
 require 'socket'
 require 'logger'
 
+# StatsD
+#
+# @!attribute backend
+#   The backend that is being used to emit the metrics.
+#   @return [StatsD::Instrument::Backend] the currently active backend. If there is no active backend
+#     yet, it will call {StatsD::Instrument::Environment#default_backend} to obtain a
+#     default backend for the environment.
+#   @see StatsD::Instrument::Environment#default_backend
+#
+# @!attribute prefix
+#   The prefix to apply to metric names. This can be useful to group all the metrics
+#   for an application in a shared StatsD server.
+#
+#   When using a prefix a dot will be included automatically to separate the prefix
+#   from the metric name.
+#
+#   @return [String, nil] The prefix, or <tt>nil</tt> when no prefix is used
+#   @see StatsD::Instrument::Metric#name
+#
+# @!attribute default_sample_rate
+#   The sample rate to use if the sample rate is unspecified for a metric call.
+#   @return [Float] Default is 1.0.
+#
+# @!attribute logger
+#   The logger to use in case of any errors. The logger is also used as default logger for
+#   the LoggerBackend (although this can be overwritten).
+#
+#   @see StatsD::Instrument::Backends::LoggerBackend
+#   @return [Logger]
 module StatsD
+  extend self
+
+  # The StatsD::Instrument module provides metaprogramming methods to instrument your methods with
+  # StatsD metrics. E.g., yopu can create counters on how often a method is called, how often it is
+  # successful, the duration of the methods call, etc.
   module Instrument
 
+    # @private
     def self.generate_metric_name(metric_name, callee, *args)
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
     end
 
     if Process.respond_to?(:clock_gettime)
+      # @private
       def self.duration
         start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         yield
         Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
       end
     else
+      # @private
       def self.duration
         start = Time.now
         yield
@@ -22,6 +59,12 @@ module StatsD
       end
     end
 
+    # Adds counter instrumentation to a method.
+    # @param method [Symbol] The name of the method to instrument.
+    # @param name [String, #call] The name of the metric to use. You can also pass in a
+    #    callable to dynamically generate a metric name
+    # @param metric_options (see StatsD#measure)
+    # @return [void]
     def statsd_measure(method, name, *metric_options)
       add_to_method(method, name, :measure) do |old_method, new_method, metric_name, *args|
         define_method(new_method) do |*args, &block|
@@ -76,18 +119,38 @@ module StatsD
       end
     end
 
+    # Removes StatsD counter instrumentation from a method
+    # @param method [Symbol] The method to remove instrumentation from.
+    # @param name [String] The name of the metric that was used.
+    # @return [void]
+    # @see #statsd_count
     def statsd_remove_count(method, name)
       remove_from_method(method, name, :count)
     end
 
+    # Removes StatsD conditional counter instrumentation from a method
+    # @param method (see #statsd_remove_count)
+    # @param name (see #statsd_remove_count)
+    # @return [void]
+    # @see #statsd_count_if
     def statsd_remove_count_if(method, name)
       remove_from_method(method, name, :count_if)
     end
 
+    # Removes StatsD success counter instrumentation from a method
+    # @param method (see #statsd_remove_count)
+    # @param name (see #statsd_remove_count)
+    # @return [void]
+    # @see #statsd_count_success
     def statsd_remove_count_success(method, name)
       remove_from_method(method, name, :count_success)
     end
 
+    # Removes StatsD measure instrumentation from a method
+    # @param method (see #statsd_remove_count)
+    # @param name (see #statsd_remove_count)
+    # @return [void]
+    # @see #statsd_measure
     def statsd_remove_measure(method, name)
       remove_from_method(method, name, :measure)
     end
@@ -120,77 +183,113 @@ module StatsD
     end
   end
 
-  class << self
-    attr_accessor :logger, :default_sample_rate, :prefix
-    attr_writer :backend
+  attr_accessor :logger, :default_sample_rate, :prefix
+  attr_writer :backend
 
-    def backend
-      @backend ||= StatsD::Instrument::Environment.default_backend
+  def backend
+    @backend ||= StatsD::Instrument::Environment.default_backend
+  end
+
+  # @overload measure(key, value, metric_options = {})
+  #   Emits a measure metric, by providing a duration in milliseconds.
+  #   @param key [String] The name of the metric.
+  #   @param value [Float] The measured duration in milliseconds
+  #   @param metric_options [Hash] Options for the metric
+  #   @return [StatsD::Instrument::Metric]
+  #
+  # @overload measure(key, metric_options = {}, &block)
+  #   Emits a measure metric, after measuring the execution duration of the
+  #   block passed to this method.
+  #   @param key [String] The name of the metric.
+  #   @param metric_options [Hash] Options for the metric
+  #   @yield The method will yield the block that was passed to this emthod to measure its duration.
+  #   @return The value that was returns by the block passed to this method.
+  #
+  #   @example
+  #      http_response = StatsD.measure('HTTP.call.duration') do
+  #        HTTP.get(url)
+  #      end
+  def measure(key, value = nil, *metric_options, &block)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = nil
     end
 
-    # glork:320|ms
-    def measure(key, value = nil, *metric_options, &block)
-      if value.is_a?(Hash) && metric_options.empty?
-        metric_options = [value]
-        value = nil
-      end
+    result = nil
+    value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
+    metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
+    result = metric unless block_given?
+    result
+  end
 
-      result = nil
-      value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
-      metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
-      result = metric unless block_given?
-      result
+  # Emits a counter metric.
+  # @param key [String] The name of the metric.
+  # @param value [Integer] The value to increment the counter by.
+  #
+  #   You should not compensate for the sample rate using the counter increment. E.g., if
+  #   your sample rate is 0.01, you should <b>not</b> use 100 as increment to compensate for it.
+  #   The sample rate is part of the packet that is being sent to the server, and the server
+  #   should know how to handle it.
+  # @param metric_options [Hash] (default: {}) Metric options
+  # @return [StatsD::Instrument::Metric]
+  def increment(key, value = 1, *metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = 1
     end
 
-    # gorets:1|c
-    def increment(key, value = 1, *metric_options)
-      if value.is_a?(Hash) && metric_options.empty?
-        metric_options = [value]
-        value = 1
-      end
+    collect_metric(hash_argument(metric_options).merge(type: :c, name: key, value: value))
+  end
 
-      collect_metric(hash_argument(metric_options).merge(type: :c, name: key, value: value))
+  # Emits a gauge metric.
+  # @return [StatsD::Instrument::Metric]
+  def gauge(key, value, *metric_options)
+    collect_metric(hash_argument(metric_options).merge(type: :g, name: key, value: value))
+  end
+
+  # Emits a histogram metric (datadog only.
+    # @return [StatsD::Instrument::Metric]
+  def histogram(key, value, *metric_options)
+    collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
+  end
+
+  # Emits a key/value metric (statsite only).
+  # @return [StatsD::Instrument::Metric]
+  def key_value(key, value, *metric_options)
+    collect_metric(hash_argument(metric_options).merge(type: :kv, name: key, value: value))
+  end
+
+  # Emits a set metric. (Datadog only)
+  # @return [StatsD::Instrument::Metric]
+  def set(key, value, *metric_options)
+    collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
+  end
+
+  private
+
+  # Converts old-style ordered arguments in an argument hash for backwards compatibility.
+  # @param args [Array] The list of non-required arguments.
+  # @return [Hash] The hash of optional arguments.
+  # @private
+  def hash_argument(args)
+    return {} if args.length == 0
+    return args.first if args.length == 1 && args.first.is_a?(Hash)
+
+    order = [:sample_rate, :tags]
+    hash = {}
+    args.each_with_index do |value, index|
+      hash[order[index]] = value
     end
 
-    # gaugor:333|g
-    # guagor:1234|kv|@1339864935 (statsite)
-    def gauge(key, value, *metric_options)
-      collect_metric(hash_argument(metric_options).merge(type: :g, name: key, value: value))
-    end
+    return hash
+  end
 
-    # histogram:123.45|h
-    def histogram(key, value, *metric_options)
-      collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
-    end
-
-    def key_value(key, value, *metric_options)
-      collect_metric(hash_argument(metric_options).merge(type: :kv, name: key, value: value))
-    end
-
-    # uniques:765|s
-    def set(key, value, *metric_options)
-      collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
-    end
-
-    private
-
-    def hash_argument(args)
-      return {} if args.length == 0
-      return args.first if args.length == 1 && args.first.is_a?(Hash)
-
-      order = [:sample_rate, :tags]
-      hash = {}
-      args.each_with_index do |value, index|
-        hash[order[index]] = value
-      end
-
-      return hash
-    end
-
-    def collect_metric(options)
-      backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
-      metric
-    end
+  # Instantiates a metric, and sends it to the backend for further processing.
+  # @param options (see StatsD::Instrument::Metric#initialize)
+  # @return [StatsD::Instrument::Metric] The meric thatw as sent to the backend.
+  def collect_metric(options)
+    backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
+    metric
   end
 end
 

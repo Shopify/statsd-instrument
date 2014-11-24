@@ -6,7 +6,7 @@ require 'statsd/instrument/version'
 Gem::Specification.new do |spec|
   spec.name        = "statsd-instrument"
   spec.version     = StatsD::Instrument::VERSION
-  spec.authors     = ["Jesse Storimer", "Tobias Lutke"]
+  spec.authors     = ["Jesse Storimer", "Tobias Lutke", "Willem van Bergen"]
   spec.email       = ["jesse@shopify.com"]
   spec.homepage    = "https://github.com/Shopify/statsd-instrument"
   spec.summary     = %q{A StatsD client for Ruby apps}
@@ -21,4 +21,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake'
   spec.add_development_dependency 'minitest'
   spec.add_development_dependency 'mocha'
+  spec.add_development_dependency 'yardoc'
 end
