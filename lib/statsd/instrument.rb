@@ -194,9 +194,9 @@ module StatsD
   end
 end
 
+require 'statsd/instrument/version'
 require 'statsd/instrument/metric'
 require 'statsd/instrument/backend'
 require 'statsd/instrument/assertions'
 require 'statsd/instrument/environment'
-require 'statsd/instrument/version'
 require 'statsd/instrument/railtie' if defined?(Rails)

@@ -5,7 +5,7 @@ module StatsD::Instrument::Environment
 
   def default_backend
     case environment
-    when 'production'
+    when 'production', 'staging'
       StatsD::Instrument::Backends::UDPBackend.new(ENV['STATSD_ADDR'], ENV['STATSD_IMPLEMENTATION'])
     when 'test'
       StatsD::Instrument::Backends::NullBackend.new
@@ -20,8 +20,12 @@ module StatsD::Instrument::Environment
     else
       ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['ENV'] || 'development'
     end
-  end  
+  end
+
+  def setup
+    StatsD.default_sample_rate = ENV.fetch('STATSD_SAMPLE_RATE', 1.0).to_f
+    StatsD.logger = Logger.new($stderr)
+  end
 end
 
-StatsD.default_sample_rate = ENV.fetch('STATSD_SAMPLE_RATE', 1.0).to_f
-StatsD.logger = Logger.new($stderr)
+StatsD::Instrument::Environment.setup
