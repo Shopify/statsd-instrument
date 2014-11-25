@@ -4,7 +4,11 @@ rvm:
   - 2.0.0
   - 2.1.1
   - ruby-head
+  - jruby-19mode
   - rbx-2
+
 matrix:
   allow_failures:
     - rvm: ruby-head
+
+sudo: false
