@@ -2,29 +2,21 @@
 
 [![Built on Travis](https://secure.travis-ci.org/Shopify/statsd-instrument.png?branch=master)](https://secure.travis-ci.org/Shopify/statsd-instrument)
 
-This is a ruby client for statsd (http://github.com/etsy/statsd). It provides a lightweight way to track and measure metrics in your application. 
+This is a ruby client for statsd (http://github.com/etsy/statsd). It provides a lightweight way to track and measure metrics in your application.
 
 We call out to statsd by sending data over a UDP socket. UDP sockets are fast, but unreliable, there is no guarantee that your data will ever arrive at its location. In other words, fire and forget. This is perfect for this use case because it means your code doesn't get bogged down trying to log statistics. We send data to statsd several times per request and haven't noticed a performance hit.
 
-The fact that all of your stats data may not make it into statsd is no issue. Graphite (the graph database that statsd is built on) will only show you trends in your data. Internally it only keeps enough data to satisfy the levels of granularity we specify. As well as satisfying its requirement as a fixed size database. We can throw as much data at it as we want it and it will do its best to show us the trends over time and get rid of the fluff.
-
-For Shopify, our retention periods are:
-
-1. 10 seconds of granularity for the last 6 hours
-2. 60 seconds of granularity for the last week
-3. 10 minutes of granularity for the last 5 years
-
-This is the same as what Etsy uses (mentioned in the README for http://github.com/etsy/statsd).
+For more information about StatsD, see the [README of the Etsy project](http://github.com/etsy/statsd).
 
 ## Configuration
 
-The library comes with different backends. Based on your environment (detected using environment 
+The library comes with different backends. Based on your environment (detected using environment
 variables), it will select one of the following backends by default:
 
-- **Production** environment: `StatsD::Instrument::Backends::UDPBackend` will actually send UDP packets. 
-  It will configure itself using environment variables: it uses `STATSD_ADDR` for the address to connect 
+- **Production** and **staging** environment: `StatsD::Instrument::Backends::UDPBackend` will actually send UDP packets.
+  It will configure itself using environment variables: it uses `STATSD_ADDR` for the address to connect
   to (default `"localhost:8125"`), and `STATSD_IMPLEMENTATION` to set the protocol variant. (See below)
-- **Test** environment: `StatsD::Instrument::Backends::NullBackend` will swallow all calls. See below for 
+- **Test** environment: `StatsD::Instrument::Backends::NullBackend` will swallow all calls. See below for
   notes on writing tests.
 - **Development**, and all other, environments: `StatsD::Instrument::Backends::LoggerBackend` will log all
   calls to stdout.
@@ -32,7 +24,7 @@ variables), it will select one of the following backends by default:
 You can override the currently active backend by setting `StatsD.backend`:
 
 ``` ruby
-# Sets up a UDP backend. First argument is the UDP address to send StatsD packets to, 
+# Sets up a UDP backend. First argument is the UDP address to send StatsD packets to,
 # second argument specifies the protocol variant (i.e. `:statsd`, `:statsite`, or `:datadog`).
 StatsD.backend = StatsD::Instrument::Backends::UDPBackend.new("1.2.3.4:8125", :statsite)
 
@@ -44,7 +36,7 @@ The other available settings, with their default, are
 
 ``` ruby
 # Logger to which commands are logged when using the LoggerBackend, which is
-# the default in development environment. Also, any errors or warnings will 
+# the default in development environment. Also, any errors or warnings will
 # be logged here.
 StatsD.logger = defined?(Rails) ? Rails.logger : Logger.new($stderr)
 
@@ -78,7 +70,7 @@ StatsD.measure('GoogleBase.insert') do
   GoogleBase.insert(product)
 end
 ```
-		
+
 #### StatsD.increment
 
 Lets you increment a key in statsd to keep a count of something. If the specified key doesn't exist it will create it for you.
@@ -206,7 +198,7 @@ StatsD.increment('my.counter', tags: ['env:production', 'unicorn'])
 GoogleBase.statsd_count :insert, 'GoogleBase.insert', tags: ['env:production']
 ```
 
-If implementation is not set to `:datadog`, tags will not be included in the UDP packets, and a 
+If implementation is not set to `:datadog`, tags will not be included in the UDP packets, and a
 warning is logged to `StatsD.logger`.
 
 ## Testing
@@ -232,24 +224,24 @@ class MyTestcase < Minitest::Test
       StatsD.increment('unrelated') # doesn't match
       StatsD.increment('counter.name', sample_rate: 1.0) # matches
       StatsD.increment('counter.name', sample_rate: 0.1) # matches too
-    end    
+    end
   end
 
   def test_no_udp_traffic
     # Verifies no StatsD calls occured at all.
     assert_no_statsd_calls do
-      do_some_work  
+      do_some_work
     end
 
     # Verifies no StatsD calls occured for the given metric.
     assert_no_statsd_calls('metric_name') do
       do_some_work
-    end    
+    end
   end
 
   def test_more_complicated_stuff
     # capture_statsd_calls will capture all the StatsD calls in the
-    # given block, and returns them as an array. You can then run your 
+    # given block, and returns them as an array. You can then run your
     # own assertions on it.
     metrics = capture_statsd_calls do
       StatsD.increment('mycounter', sample_rate: 0.01)
@@ -265,32 +257,27 @@ end
 
 ```
 
-## Reliance on DNS
+## Notes
 
-Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Configuring 
-the StatsD host to be a non-ip will trigger a DNS lookup (i.e. a synchronous TCP round trip). 
+### Compatibility
+
+Tested using Travis CI against Ruby 1.9.3, Ruby 2.0.0, Ruby 2.1.1, Rubinius, and JRuby
+
+### Reliance on DNS
+
+Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Configuring
+the StatsD host to be a non-ip will trigger a DNS lookup (i.e. a synchronous TCP round trip).
 This can be particularly problematic in clouds that have a shared DNS infrastructure such as AWS.
 
-### Common Workarounds
-
-1. Using an IP avoids the DNS lookup but generally requires an application deploy to change.
+1. Using a hardcoded IP avoids the DNS lookup but generally requires an application deploy to change.
 2. Hardcoding the DNS/IP pair in /etc/hosts allows the IP to change without redeploying your application but fails to scale as the number of servers increases.
 3. Installing caching software such as nscd that uses the DNS TTL avoids most DNS lookups but makes the exact moment of change indeterminate.
 
-## Compatibility
 
-Tested on several Ruby versions using Travis CI:
+## Links
 
-* Ruby 1.9.3
-* Ruby 2.0.0
-* Ruby 2.1.1
+This library was developed for shopify.com and is MIT licensed.
 
-## Contributing
-
-This project is MIT licensed and welcomes outside contributions.
-
-1. Fork the repository, and create a feature branch.
-2. Implement the feature, and add tests that cover the new changes functionality.
-3. Update the README.
-4. Create a pull request. Make sure that you get a Travis CI pass on it.
-5. Ping @jstorimer and/or @wvanbergen for review.
+- [API documentation](http://www.rubydoc.info/gems/statsd-instrument/frames)
+- [The changelog](./CHANGELOG.md) covers the changes between releases.
+- [Contributing notes](./CONTRIBUTING.md) if you are interested in contributing to this library.
