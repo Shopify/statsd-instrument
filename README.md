@@ -257,29 +257,24 @@ end
 
 ```
 
-## Reliance on DNS
+## Notes
+
+### Compatibility
+
+Tested using Travis CI against Ruby 1.9.3, Ruby 2.0.0, Ruby 2.1.1, Rubinius, and JRuby
+
+### Reliance on DNS
 
 Out of the box StatsD is set up to be unidirectional fire-and-forget over UDP. Configuring
 the StatsD host to be a non-ip will trigger a DNS lookup (i.e. a synchronous TCP round trip).
 This can be particularly problematic in clouds that have a shared DNS infrastructure such as AWS.
 
-### Common Workarounds
-
-1. Using an IP avoids the DNS lookup but generally requires an application deploy to change.
+1. Using a hardcoded IP avoids the DNS lookup but generally requires an application deploy to change.
 2. Hardcoding the DNS/IP pair in /etc/hosts allows the IP to change without redeploying your application but fails to scale as the number of servers increases.
 3. Installing caching software such as nscd that uses the DNS TTL avoids most DNS lookups but makes the exact moment of change indeterminate.
 
-## Compatibility
 
-Tested on several Ruby versions using Travis CI:
-
-* Ruby 1.9.3
-* Ruby 2.0.0
-* Ruby 2.1.1
-* Rubinius
-* JRuby
-
-## Other info
+## Links
 
 This library was developed for shopify.com and is MIT licensed.
 
