@@ -1,7 +1,7 @@
 require 'socket'
 require 'logger'
 
-# StatsD
+# The StatsD module contains low-level metrics for collecting metrics and sending them to the backend.
 #
 # @!attribute backend
 #   The backend that is being used to emit the metrics.
@@ -25,11 +25,14 @@ require 'logger'
 #   @return [Float] Default is 1.0.
 #
 # @!attribute logger
-#   The logger to use in case of any errors. The logger is also used as default logger for
-#   the LoggerBackend (although this can be overwritten).
+#   The logger to use in case of any errors. The logger is also used as default logger
+#   for the LoggerBackend (although this can be overwritten).
 #
 #   @see StatsD::Instrument::Backends::LoggerBackend
 #   @return [Logger]
+#
+# @see StatsD::Instrument <tt>StatsD::Instrument</tt> contains module to instrument
+#    existing methods with StatsD metrics.
 module StatsD
   extend self
 
@@ -59,7 +62,8 @@ module StatsD
       end
     end
 
-    # Adds counter instrumentation to a method.
+    # Adds execution duration instrumentation to a method.
+    #
     # @param method [Symbol] The name of the method to instrument.
     # @param name [String, #call] The name of the metric to use. You can also pass in a
     #    callable to dynamically generate a metric name
@@ -73,6 +77,21 @@ module StatsD
       end
     end
 
+    # Adds success and failure counter instrumentation to a method.
+    #
+    # A method call will be considered successful if it does not raise an exception, and the result is true-y.
+    # For successful calls, the metric <tt>[name].success</tt> will be incremented; for failed calls, the metric
+    # name is <tt>[name].failure</tt>.
+    #
+    # @param method (see #statsd_measure)
+    # @param name (see #statsd_measure)
+    # @param metric_options (see #statsd_measure)
+    # @yield You can pass a block to this method if you want to define yourself what is a successful call
+    #   based on the return value of the method.
+    # @yieldparam result The return value of the instrumented method.
+    # @yieldreturn [Boolean] Return true iff the return value is consisered a success, false otherwise.
+    # @return [void]
+    # @see #statsd_count_if
     def statsd_count_success(method, name, *metric_options)
       add_to_method(method, name, :count_success) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
@@ -92,6 +111,19 @@ module StatsD
       end
     end
 
+    # Adds success and failure counter instrumentation to a method.
+    #
+    # A method call will be considered successful if it does not raise an exception, and the result is true-y.
+    # Only for successful calls, the metric will be icnremented
+    #
+    # @param method (see #statsd_measure)
+    # @param name (see #statsd_measure)
+    # @param metric_options (see #statsd_measure)
+    # @yield (see #statsd_count_success)
+    # @yieldparam result (see #statsd_count_success)
+    # @yieldreturn (see #statsd_count_success)
+    # @return [void]
+    # @see #statsd_count_success
     def statsd_count_if(method, name, *metric_options)
       add_to_method(method, name, :count_if) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
@@ -110,6 +142,15 @@ module StatsD
       end
     end
 
+    # Adds counter instrumentation to a method.
+    #
+    # The metric will be incremented for every call of the instrumented method, no matter
+    # whether what the method returns, or whether it raises an exception.
+    #
+    # @param method (see #statsd_measure)
+    # @param name (see #statsd_measure)
+    # @param metric_options (see #statsd_measure)
+    # @return [void]
     def statsd_count(method, name, *metric_options)
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
@@ -190,12 +231,14 @@ module StatsD
     @backend ||= StatsD::Instrument::Environment.default_backend
   end
 
+  # Emits a duration metric.
+  #
   # @overload measure(key, value, metric_options = {})
   #   Emits a measure metric, by providing a duration in milliseconds.
   #   @param key [String] The name of the metric.
   #   @param value [Float] The measured duration in milliseconds
   #   @param metric_options [Hash] Options for the metric
-  #   @return [StatsD::Instrument::Metric]
+  #   @return [StatsD::Instrument::Metric] The metric that was sent to the backend.
   #
   # @overload measure(key, metric_options = {}, &block)
   #   Emits a measure metric, after measuring the execution duration of the
@@ -230,8 +273,9 @@ module StatsD
   #   your sample rate is 0.01, you should <b>not</b> use 100 as increment to compensate for it.
   #   The sample rate is part of the packet that is being sent to the server, and the server
   #   should know how to handle it.
+  #
   # @param metric_options [Hash] (default: {}) Metric options
-  # @return [StatsD::Instrument::Metric]
+  # @return (see #collect_metric)
   def increment(key, value = 1, *metric_options)
     if value.is_a?(Hash) && metric_options.empty?
       metric_options = [value]
@@ -242,25 +286,40 @@ module StatsD
   end
 
   # Emits a gauge metric.
-  # @return [StatsD::Instrument::Metric]
+  # @param key [String] The name of the metric.
+  # @param value [Numeric] The current value to record.
+  # @param metric_options [Hash] (default: {}) Metric options
+  # @return (see #collect_metric)
   def gauge(key, value, *metric_options)
     collect_metric(hash_argument(metric_options).merge(type: :g, name: key, value: value))
   end
 
-  # Emits a histogram metric (datadog only.
-    # @return [StatsD::Instrument::Metric]
+  # Emits a histogram metric.
+  # @param key [String] The name of the metric.
+  # @param value [Numeric] The value to record.
+  # @param metric_options [Hash] (default: {}) Metric options
+  # @return (see #collect_metric)
+  # @note Supported by the datadog implementation only.
   def histogram(key, value, *metric_options)
     collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
   end
 
-  # Emits a key/value metric (statsite only).
-  # @return [StatsD::Instrument::Metric]
+  # Emits a key/value metric.
+  # @param key [String] The name of the metric.
+  # @param value [Numeric] The value to record.
+  # @param metric_options [Hash] (default: {}) Metric options
+  # @return (see #collect_metric)
+  # @note Supported by the statsite implementation only.
   def key_value(key, value, *metric_options)
     collect_metric(hash_argument(metric_options).merge(type: :kv, name: key, value: value))
   end
 
-  # Emits a set metric. (Datadog only)
-  # @return [StatsD::Instrument::Metric]
+  # Emits a set metric.
+  # @param key [String] The name of the metric.
+  # @param value [Numeric] The value to record.
+  # @param metric_options [Hash] (default: {}) Metric options
+  # @return (see #collect_metric)
+  # @note Supported by the datadog implementation only.
   def set(key, value, *metric_options)
     collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
   end
@@ -270,7 +329,6 @@ module StatsD
   # Converts old-style ordered arguments in an argument hash for backwards compatibility.
   # @param args [Array] The list of non-required arguments.
   # @return [Hash] The hash of optional arguments.
-  # @private
   def hash_argument(args)
     return {} if args.length == 0
     return args.first if args.length == 1 && args.first.is_a?(Hash)
@@ -286,7 +344,7 @@ module StatsD
 
   # Instantiates a metric, and sends it to the backend for further processing.
   # @param options (see StatsD::Instrument::Metric#initialize)
-  # @return [StatsD::Instrument::Metric] The meric thatw as sent to the backend.
+  # @return [StatsD::Instrument::Metric] The meric that was sent to the backend.
   def collect_metric(options)
     backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
     metric
