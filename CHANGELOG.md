@@ -5,11 +5,16 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+- Nothing yet!
+
+---
+
+### Version 2.0.6
+
 - Fix some loading order issues in Rails environments.
 - Default behavior: in a **staging** environment, the defaults are now the same as in a **production environment**.
 - Documentation overhaul
 
----
 
 ### Version 2.0.5
 
