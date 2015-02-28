@@ -5,9 +5,8 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
-- Nothing yet!
-
----
+- Drop support for Ruby 1.9.3.
+- Add support for Ruby 2.2.
 
 ### Version 2.0.6
 

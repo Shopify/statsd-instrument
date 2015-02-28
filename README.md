@@ -261,7 +261,7 @@ end
 
 ### Compatibility
 
-Tested using Travis CI against Ruby 1.9.3, Ruby 2.0.0, Ruby 2.1.1, Rubinius, and JRuby
+Tested using Travis CI against Ruby 2.0, 2.1, 2.2, Rubinius, and JRuby.
 
 ### Reliance on DNS
 
