@@ -103,9 +103,6 @@ class StatsD::Instrument::Metric
   def self.normalize_tags(tags)
     return if tags.nil?
     tags = tags.map { |k, v| "#{k}:#{v}" } if tags.is_a?(Hash)
-    tags.map do |tag|
-      components = tag.split(':', 2)
-      components.map { |c| c.gsub(/[^\w\.-]+/, '_') }.join(':')
-    end
+    tags.map { |tag| tag.tr('|'.freeze, ''.freeze) }
   end
 end
