@@ -102,10 +102,7 @@ class StatsD::Instrument::Metric
   # @return [Array<String>, nil] the list of tags in canonical form.
   def self.normalize_tags(tags)
     return if tags.nil?
-    tags = tags.map { |k, v| "#{k}:#{v}" } if tags.is_a?(Hash)
-    tags.map do |tag|
-      components = tag.split(':', 2)
-      components.map { |c| c.gsub(/[^\w\.-]+/, '_') }.join(':')
-    end
+    tags = tags.map { |k, v| "#{k.to_s.tr(':', '')}:#{v.to_s.tr(':', '')}" } if tags.is_a?(Hash)
+    tags.map { |tag| tag.tr('|,'.freeze, ''.freeze) }
   end
 end

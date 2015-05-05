@@ -4,3 +4,4 @@ doc
 .bundle
 Gemfile.lock
 pkg/*
+vendor/
