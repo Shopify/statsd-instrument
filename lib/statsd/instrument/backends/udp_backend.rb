@@ -2,6 +2,7 @@ module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
 
     DEFAULT_IMPLEMENTATION = :statsd
+    DEFAULT_OPENTSDB_TAG_PREFIX = '_t_'.freeze
 
     attr_reader :host, :port
     attr_accessor :implementation
@@ -63,7 +64,7 @@ module StatsD::Instrument::Backends
 
       command = metric.name
       if metric.tags && implementation == :opentsdb
-        command << metric.tags.map { |t| "._t_#{t.gsub(':', '.')}" }.join
+        command << metric.tags.map { |t| ".#{DEFAULT_OPENTSDB_TAG_PREFIX}#{t.tr(':'.freeze, '.'.freeze)}" }.join
       end
 
       command << ":#{metric.value}|#{metric.type}"
