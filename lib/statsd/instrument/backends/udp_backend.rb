@@ -57,22 +57,24 @@ module StatsD::Instrument::Backends
     end
 
     def generate_packet(metric)
-      command = "#{metric.name}:#{metric.value}|#{metric.type}"
+      if metric.tags && ![:opentsdb, :datadog].include?(implementation)
+        StatsD.logger.warn("[StatsD] Tags are only supported on Datadog implementation.")
+      end
+
+      command = metric.name
+      if metric.tags && implementation == :opentsdb
+        command << metric.tags.map { |t| "._t_#{t.gsub(':', '.')}" }.join
+      end
+
+      command << ":#{metric.value}|#{metric.type}"
       command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
-      if metric.tags 
-        if tags_supported?
-          command << "|##{metric.tags.join(',')}"
-        else
-          StatsD.logger.warn("[StatsD] Tags are only supported on Datadog implementation.")
-        end
+
+      if metric.tags && implementation == :datadog
+        command << "|##{metric.tags.join(',')}"
       end
 
       command << "\n" if implementation == :statsite
       command
-    end
-
-    def tags_supported?
-      implementation == :datadog
     end
 
     def write_packet(command)

@@ -25,7 +25,7 @@ You can override the currently active backend by setting `StatsD.backend`:
 
 ``` ruby
 # Sets up a UDP backend. First argument is the UDP address to send StatsD packets to,
-# second argument specifies the protocol variant (i.e. `:statsd`, `:statsite`, or `:datadog`).
+# second argument specifies the protocol variant (i.e. `:statsd`, `:statsite`, `:opentsdb`, or `:datadog`).
 StatsD.backend = StatsD::Instrument::Backends::UDPBackend.new("1.2.3.4:8125", :statsite)
 
 # Sets up a logger backend
@@ -191,14 +191,14 @@ GoogleBase.statsd_count :insert, lambda{|object, args| object.class.to_s.downcas
 
 ### Tags
 
-The Datadog implementation support tags, which you can use to slice and dice metrics in their UI. You can specify a list of tags as an option, either standalone tag (e.g. `"mytag"`), or key value based, separated by a colon: `"env:production"`.
+The Datadog and OpenTSDB implementations support tags, which you can use to slice and dice metrics in their UI. You can specify a list of tags as an option, either standalone tag (e.g. `"mytag"`), or key value based, separated by a colon: `"env:production"`.
 
 ``` ruby
 StatsD.increment('my.counter', tags: ['env:production', 'unicorn'])
 GoogleBase.statsd_count :insert, 'GoogleBase.insert', tags: ['env:production']
 ```
 
-If implementation is not set to `:datadog`, tags will not be included in the UDP packets, and a
+If implementation is not set to `:datadog` or `:opentsdb`, tags will not be included in the UDP packets, and a
 warning is logged to `StatsD.logger`.
 
 ## Testing
