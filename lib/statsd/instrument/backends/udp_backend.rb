@@ -59,7 +59,7 @@ module StatsD::Instrument::Backends
 
     def generate_packet(metric)
       if metric.tags && ![:opentsdb, :datadog].include?(implementation)
-        StatsD.logger.warn("[StatsD] Tags are only supported on Datadog implementation.")
+        StatsD.logger.warn("[StatsD] Tags are only supported on Datadog and OpenTSDB implementations.")
       end
 
       command = metric.name
