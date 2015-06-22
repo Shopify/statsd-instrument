@@ -1,25 +1,10 @@
 require 'test_helper'
 
 class AssertionsTest < Minitest::Test
-
   def setup
     test_class = Class.new(Minitest::Test)
     test_class.send(:include, StatsD::Instrument::Assertions)
     @test_case = test_class.new('fake')
-  end
-
-  def test_capture_metrics_inside_block_only
-    StatsD.increment('counter')
-    metrics = @test_case.capture_statsd_calls do
-      StatsD.increment('counter')
-      StatsD.gauge('gauge', 12)
-    end
-    StatsD.gauge('gauge', 15)
-
-    assert_equal 2, metrics.length
-    assert_equal 'counter', metrics[0].name
-    assert_equal 'gauge', metrics[1].name
-    assert_equal 12, metrics[1].value
   end
 
   def test_assert_no_statsd_calls
@@ -45,7 +30,7 @@ class AssertionsTest < Minitest::Test
       @test_case.assert_no_statsd_calls do
         StatsD.increment('other')
       end
-    end    
+    end
   end
 
   def test_assert_statsd_call
@@ -132,7 +117,7 @@ class AssertionsTest < Minitest::Test
           StatsD.increment('counter2')
         end
       end
-    end    
+    end
 
     assert_assertion_triggered do
       @test_case.assert_statsd_increment('counter1') do

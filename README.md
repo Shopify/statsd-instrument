@@ -203,8 +203,10 @@ warning is logged to `StatsD.logger`.
 
 ## Testing
 
-This library comes with a module called `StatsD::Instrument::Assertions` to help you write tests
+This library comes with a module called `StatsD::Instrument::Assertions` and `StatsD::Instrument::Matchers` to help you write tests
 to verify StatsD is called properly.
+
+### minitest
 
 ``` ruby
 class MyTestcase < Minitest::Test
@@ -252,6 +254,31 @@ class MyTestcase < Minitest::Test
     assert_equal :c, metrics[0].type
     assert_equal 1, metrics[0].value
     assert_equal 0.01, metrics[0].sample_rate
+  end
+end
+
+```
+
+### RSpec
+
+```ruby
+RSpec.describe 'Matchers' do
+  context 'trigger_statsd_increment' do
+    it 'will pass if there is exactly one matching StatsD call' do
+      expect { StatsD.increment('counter') }.to trigger_statsd_increment('counter')
+    end
+
+    it 'will pass if it matches the correct number of times' do
+      expect { 
+        2.times do
+          StatsD.increment('counter') 
+        end
+      }.to trigger_statsd_increment('counter', times: 2)
+    end
+
+    it 'will pass if there is no matching StatsD call on negative expectation' do
+      expect { StatsD.increment('other_counter') }.not_to trigger_statsd_increment('counter')
+    end
   end
 end
 
