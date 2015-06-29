@@ -101,8 +101,8 @@ class StatsD::Instrument::Metric
   # @param tags [Array<String>, Hash<String, String>, nil] Tags specified in any form.
   # @return [Array<String>, nil] the list of tags in canonical form.
   def self.normalize_tags(tags)
-    return if tags.nil?
-    tags = tags.map { |k, v| "#{k.to_s.tr(':', '')}:#{v.to_s.tr(':', '')}" } if tags.is_a?(Hash)
+    return unless tags
+    tags = tags.map { |k, v| k.to_s + ":".freeze + v.to_s } if tags.is_a?(Hash)
     tags.map { |tag| tag.tr('|,'.freeze, ''.freeze) }
   end
 end

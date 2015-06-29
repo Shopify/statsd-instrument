@@ -26,7 +26,7 @@ class MetricTest < Minitest::Test
 
   def test_handle_bad_tags
     assert_equal ['ignored'], StatsD::Instrument::Metric.normalize_tags(['igno|red'])
-    assert_equal ['lolclass:omglol'], StatsD::Instrument::Metric.normalize_tags({ :"lol::class" => "omg::lol" })
+    assert_equal ['lol::class:omg::lol'], StatsD::Instrument::Metric.normalize_tags({ :"lol::class" => "omg::lol" })
   end
 
   def test_rewrite_tags_provided_as_hash
