@@ -20,15 +20,22 @@ class AssertionsTest < Minitest::Test
       end
     end
 
-    assert_assertion_triggered do
+    assert_assertion_triggered("No StatsD calls for metric counter expected.") do
       @test_case.assert_no_statsd_calls('counter') do
         StatsD.increment('counter')
       end
     end
 
-    assert_assertion_triggered do
+    assert_assertion_triggered("No StatsD calls for metric other expected.") do
       @test_case.assert_no_statsd_calls do
         StatsD.increment('other')
+      end
+    end
+
+    assert_assertion_triggered("No StatsD calls for metric other, another expected.") do
+      @test_case.assert_no_statsd_calls do
+        StatsD.increment('other')
+        StatsD.increment('another')
       end
     end
   end
