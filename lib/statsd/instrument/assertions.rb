@@ -4,7 +4,7 @@ module StatsD::Instrument::Assertions
   def assert_no_statsd_calls(metric_name = nil, &block)
     metrics = capture_statsd_calls(&block)
     metrics.select! { |m| m.name == metric_name } if metric_name
-    assert metrics.empty?, "No StatsD calls for metric #{metric_name} expected."
+    assert metrics.empty?, "No StatsD calls for metric #{metrics.map(&:name).join(', ')} expected."
   end
 
   def assert_statsd_increment(metric_name, options = {}, &block)
