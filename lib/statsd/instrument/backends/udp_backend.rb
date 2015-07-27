@@ -59,7 +59,7 @@ module StatsD::Instrument::Backends
     def generate_packet(metric)
       command = "#{metric.name}:#{metric.value}|#{metric.type}"
       command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
-      if metric.tags
+      if metric.tags 
         if tags_supported?
           command << "|##{metric.tags.join(',')}"
         else

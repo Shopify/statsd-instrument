@@ -19,13 +19,13 @@ class UDPBackendTest < Minitest::Test
 
     @backend.server = "localhost:1234"
     @backend.socket
-
+    
     @backend.port = 2345
     @backend.socket
 
     @backend.host = '127.0.0.1'
     @backend.socket
-  end
+  end  
 
   def test_collect_respects_sampling_rate
     @socket.expects(:send).once.returns(1)
@@ -35,13 +35,13 @@ class UDPBackendTest < Minitest::Test
     @backend.collect_metric(metric)
 
     @backend.stubs(:rand).returns(0.6)
-    @backend.collect_metric(metric)
+    @backend.collect_metric(metric)    
   end
 
   def test_support_counter_syntax
     @backend.expects(:write_packet).with('counter:1|c').once
     StatsD.increment('counter', sample_rate: 1.0)
-
+    
     @backend.expects(:write_packet).with('counter:1|c|@0.5').once
     StatsD.increment('counter', sample_rate: 0.5)
   end
@@ -100,7 +100,7 @@ class UDPBackendTest < Minitest::Test
     @backend.expects(:write_packet).never
     @logger.expects(:warn)
     StatsD.key_value('fookv', 3.33)
-  end
+  end  
 
   def test_support_tags_syntax_on_datadog
     @backend.implementation = :datadog
@@ -116,7 +116,7 @@ class UDPBackendTest < Minitest::Test
   end
 
   def test_socket_error_should_not_raise_but_log
-    @socket.stubs(:connect).raises(SocketError)
+    @socket.stubs(:connect).raises(SocketError)    
     @logger.expects(:error)
     StatsD.increment('fail')
   end
