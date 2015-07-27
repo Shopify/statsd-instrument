@@ -2,7 +2,6 @@ module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
 
     DEFAULT_IMPLEMENTATION = :statsd
-    DEFAULT_OPENTSDB_TAG_PREFIX = '_t_'.freeze
 
     attr_reader :host, :port
     attr_accessor :implementation
@@ -58,24 +57,22 @@ module StatsD::Instrument::Backends
     end
 
     def generate_packet(metric)
-      if metric.tags && ![:opentsdb, :datadog].include?(implementation)
-        StatsD.logger.warn("[StatsD] Tags are only supported on Datadog and OpenTSDB implementations.")
-      end
-
-      command = metric.name
-      if metric.tags && implementation == :opentsdb
-        command << metric.tags.map { |t| ".#{DEFAULT_OPENTSDB_TAG_PREFIX}#{t.tr(':'.freeze, '.'.freeze)}" }.join
-      end
-
-      command << ":#{metric.value}|#{metric.type}"
+      command = "#{metric.name}:#{metric.value}|#{metric.type}"
       command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
-
-      if metric.tags && implementation == :datadog
-        command << "|##{metric.tags.join(',')}"
+      if metric.tags
+        if tags_supported?
+          command << "|##{metric.tags.join(',')}"
+        else
+          StatsD.logger.warn("[StatsD] Tags are only supported on Datadog implementation.")
+        end
       end
 
       command << "\n" if implementation == :statsite
       command
+    end
+
+    def tags_supported?
+      implementation == :datadog
     end
 
     def write_packet(command)

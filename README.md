@@ -25,8 +25,11 @@ You can override the currently active backend by setting `StatsD.backend`:
 
 ``` ruby
 # Sets up a UDP backend. First argument is the UDP address to send StatsD packets to,
-# second argument specifies the protocol variant (i.e. `:statsd`, `:statsite`, `:opentsdb`, or `:datadog`).
+# second argument specifies the protocol variant (i.e. `:statsd`, `:statsite`, or `:datadog`).
 StatsD.backend = StatsD::Instrument::Backends::UDPBackend.new("1.2.3.4:8125", :statsite)
+
+# Sets up an OpenTSDB backend
+StatsD.backend = StatsD::Instrument::Backends::OpenTSDBBackend.new("1.2.3.4:8125")
 
 # Sets up a logger backend
 StatsD.backend = StatsD::Instrument::Backends::LoggerBackend.new(Rails.logger)
@@ -198,8 +201,8 @@ StatsD.increment('my.counter', tags: ['env:production', 'unicorn'])
 GoogleBase.statsd_count :insert, 'GoogleBase.insert', tags: ['env:production']
 ```
 
-If implementation is not set to `:datadog` or `:opentsdb`, tags will not be included in the UDP packets, and a
-warning is logged to `StatsD.logger`.
+If implementation is not set to `:datadog` or if not using the `OpenTSDBBackend`,
+tags will not be included in the UDP packets, and a warning is logged to `StatsD.logger`.
 
 ## Testing
 

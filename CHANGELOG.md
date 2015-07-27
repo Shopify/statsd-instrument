@@ -7,7 +7,7 @@ please at an entry to the "unreleased changes" section below.
 
 - Drop support for Ruby 1.9.3.
 - Add support for Ruby 2.2.
-- Add support for OpenTSDB tags.
+- Add support for OpenTSDB tags through a new `OpenTSDBBackend`.
 
 ### Version 2.0.6
 

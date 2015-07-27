@@ -108,13 +108,7 @@ class UDPBackendTest < Minitest::Test
     StatsD.increment('fooc', 3, tags: ['topic:foo', 'bar'])
   end
 
-  def test_support_tags_syntax_on_opentsdb
-    @backend.implementation = :opentsdb
-    @backend.expects(:write_packet).with("fooc._t_topic.foo._t_bar:3|c")
-    StatsD.increment('fooc', 3, tags: ['topic:foo', 'bar'])
-  end
-
-  def test_warn_when_using_tags_and_not_on_datadog_or_opentsdb
+  def test_warn_when_using_tags_and_not_on_datadog
     @backend.implementation = :other
     @backend.expects(:write_packet).with("fooc:1|c")
     @logger.expects(:warn)
