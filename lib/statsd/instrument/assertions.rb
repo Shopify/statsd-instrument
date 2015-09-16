@@ -43,7 +43,22 @@ module StatsD::Instrument::Assertions
 
     assert_equal options[:sample_rate], metric.sample_rate, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:sample_rate]
     assert_equal options[:value], metric.value, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:value]
-    assert_equal Set.new(StatsD::Instrument::Metric.normalize_tags(options[:tags])), Set.new(metric.tags), "Unexpected StatsD tags for metric #{metric_name}" if options[:tags]
+
+    if options[:tags]
+      expected_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:tags]))
+      actual_tags = Set.new(metric.tags)
+
+      if options[:ignore_tags]
+        ignored_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:ignore_tags])) - expected_tags
+        actual_tags -= ignored_tags
+
+        if options[:ignore_tags].is_a?(Array)
+          actual_tags.delete_if{ |key| options[:ignore_tags].include?(key.split(":").first) }
+        end
+      end
+
+      assert_equal expected_tags, actual_tags, "Unexpected StatsD tags for metric #{metric_name}"
+    end
 
     metric
   end
