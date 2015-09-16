@@ -57,7 +57,8 @@ module StatsD::Instrument::Assertions
         end
       end
 
-      assert_equal expected_tags, actual_tags, "Unexpected StatsD tags for metric #{metric_name}"
+      assert_equal expected_tags, actual_tags,
+        "Unexpected StatsD tags for metric #{metric_name}. Expected: #{expected_tags.inspect}, actual: #{actual_tags.inspect}"
     end
 
     metric
