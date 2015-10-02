@@ -41,8 +41,8 @@ module StatsD::Instrument::Assertions
     assert options[:times] === metrics.length, "The amount of StatsD calls for metric #{metric_name} was unexpected. Expected #{options[:times].inspect}, found #{metrics.length}"
     metric = metrics.first
 
-    assert_equal options[:sample_rate], metric.sample_rate, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:sample_rate]
-    assert_equal options[:value], metric.value, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:value]
+    assert_equal options[:sample_rate], metric.sample_rate, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:sample_rate]
+    assert_equal options[:value], metric.value, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:value]
 
     if options[:tags]
       expected_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:tags]))
