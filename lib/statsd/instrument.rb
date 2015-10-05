@@ -210,9 +210,20 @@ module StatsD
       raise ArgumentError, "already instrumented #{method} for #{self.name}" if method_defined? method_name_without_statsd
       raise ArgumentError, "could not find method #{method} for #{self.name}" unless method_defined?(method) || private_method_defined?(method)
 
+      method_scope = case
+      when private_method_defined?(method)
+        :private
+      when protected_method_defined?(method)
+        :protected
+      else
+        :public
+      end
+
       alias_method method_name_without_statsd, method
       yield method_name_without_statsd, method_name_with_statsd, metric_name
       alias_method method, method_name_with_statsd
+
+      send(method_scope, method)
     end
 
     def remove_from_method(method, name, action)
