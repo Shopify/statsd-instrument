@@ -45,6 +45,22 @@ end
 class GatewaySubClass < ActiveMerchant::Gateway
 end
 
+class InstrumentedClass
+  extend StatsD::Instrument
+
+  protected
+
+  def protected_but_still_instrumented
+  end
+  statsd_count :protected_but_still_instrumented, 'InstrumentedClass.protected_but_still_instrumented'
+
+  private
+
+  def private_but_still_instrumented
+  end
+  statsd_count :private_but_still_instrumented, 'InstrumentedClass.private_but_still_instrumented'
+end
+
 ActiveMerchant::Base.extend StatsD::Instrument
 
 class StatsDInstrumentationTest < Minitest::Test
@@ -116,7 +132,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment('ActiveMerchant.Base.post_with_block.failure', times: 1) do
       assert_equal 'successful', ActiveMerchant::Base.new.post_with_block { 'successful' }
       assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
-    end    
+    end
 
     ActiveMerchant::Base.statsd_remove_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block'
   end
@@ -218,5 +234,17 @@ class StatsDInstrumentationTest < Minitest::Test
     end
 
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+  end
+
+  def test_statsd_doesnt_change_method_scope
+    refute InstrumentedClass.public_instance_methods.include?(:private_but_still_instrumented), "Expected method to be private"
+    assert_statsd_increment('InstrumentedClass.private_but_still_instrumented') do
+      InstrumentedClass.new.send(:private_but_still_instrumented)
+    end
+
+    refute InstrumentedClass.public_instance_methods.include?(:protected_but_still_instrumented), "Expected method to be protected"
+    assert_statsd_increment('InstrumentedClass.protected_but_still_instrumented') do
+      InstrumentedClass.new.send(:protected_but_still_instrumented)
+    end
   end
 end
