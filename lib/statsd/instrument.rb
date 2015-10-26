@@ -210,7 +210,32 @@ module StatsD
       raise ArgumentError, "already instrumented #{method} for #{self.name}" if method_defined? method_name_without_statsd
       raise ArgumentError, "could not find method #{method} for #{self.name}" unless method_defined?(method) || private_method_defined?(method)
 
-      method_scope = case
+      method_scope = method_visibility(method)
+
+      alias_method method_name_without_statsd, method
+      yield method_name_without_statsd, method_name_with_statsd, metric_name
+      alias_method method, method_name_with_statsd
+
+      private(method_name_without_statsd)
+      send(method_scope, method)
+      private(method_name_with_statsd)
+    end
+
+    def remove_from_method(method, name, action)
+      method_name_without_statsd = :"#{method}_for_#{action}_on_#{self.name}_without_#{name}"
+      method_name_with_statsd = :"#{method}_for_#{action}_on_#{self.name}_with_#{name}"
+
+      method_scope = method_visibility(method)
+
+      send(:remove_method, method_name_with_statsd)
+      alias_method method, method_name_without_statsd
+      send(:remove_method, method_name_without_statsd)
+
+      send(method_scope, method)
+    end
+
+    def method_visibility(method)
+      case
       when private_method_defined?(method)
         :private
       when protected_method_defined?(method)
@@ -218,20 +243,6 @@ module StatsD
       else
         :public
       end
-
-      alias_method method_name_without_statsd, method
-      yield method_name_without_statsd, method_name_with_statsd, metric_name
-      alias_method method, method_name_with_statsd
-
-      send(method_scope, method)
-    end
-
-    def remove_from_method(method, name, action)
-      method_name_without_statsd = :"#{method}_for_#{action}_on_#{self.name}_without_#{name}"
-      method_name_with_statsd = :"#{method}_for_#{action}_on_#{self.name}_with_#{name}"
-      send(:remove_method, method_name_with_statsd)
-      alias_method method, method_name_without_statsd
-      send(:remove_method, method_name_without_statsd)
     end
   end
 

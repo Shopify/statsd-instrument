@@ -48,17 +48,21 @@ end
 class InstrumentedClass
   extend StatsD::Instrument
 
+  def public_and_instrumented
+  end
+  statsd_count :public_and_instrumented, 'InstrumentedClass.public_and_instrumented'
+
   protected
 
-  def protected_but_still_instrumented
+  def protected_and_instrumented
   end
-  statsd_count :protected_but_still_instrumented, 'InstrumentedClass.protected_but_still_instrumented'
+  statsd_count :protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented'
 
   private
 
-  def private_but_still_instrumented
+  def private_and_instrumented
   end
-  statsd_count :private_but_still_instrumented, 'InstrumentedClass.private_but_still_instrumented'
+  statsd_count :private_and_instrumented, 'InstrumentedClass.private_and_instrumented'
 end
 
 ActiveMerchant::Base.extend StatsD::Instrument
@@ -236,15 +240,66 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
   end
 
-  def test_statsd_doesnt_change_method_scope
-    refute InstrumentedClass.public_instance_methods.include?(:private_but_still_instrumented), "Expected method to be private"
-    assert_statsd_increment('InstrumentedClass.private_but_still_instrumented') do
-      InstrumentedClass.new.send(:private_but_still_instrumented)
+  def test_statsd_doesnt_change_method_scope_of_public_method
+    assert_scope InstrumentedClass, :public_and_instrumented, :public
+
+    assert_statsd_increment('InstrumentedClass.public_and_instrumented') do
+      InstrumentedClass.new.send(:public_and_instrumented)
+    end
+  end
+
+  def test_statsd_doesnt_change_method_scope_of_protected_method
+    assert_scope InstrumentedClass, :protected_and_instrumented, :protected
+
+    assert_statsd_increment('InstrumentedClass.protected_and_instrumented') do
+      InstrumentedClass.new.send(:protected_and_instrumented)
+    end
+  end
+
+  def test_statsd_doesnt_change_method_scope_of_private_method
+    assert_scope InstrumentedClass, :private_and_instrumented, :private
+
+    assert_statsd_increment('InstrumentedClass.private_and_instrumented') do
+      InstrumentedClass.new.send(:private_and_instrumented)
+    end
+  end
+
+  def test_statsd_doesnt_change_method_scope_on_removal_of_public_method
+    assert_scope InstrumentedClass, :public_and_instrumented, :public
+    InstrumentedClass.statsd_remove_count :public_and_instrumented, 'InstrumentedClass.public_and_instrumented'
+    assert_scope InstrumentedClass, :public_and_instrumented, :public
+
+    InstrumentedClass.statsd_count :public_and_instrumented, 'InstrumentedClass.public_and_instrumented'
+  end
+
+  def test_statsd_doesnt_change_method_scope_on_removal_of_protected_method
+    assert_scope InstrumentedClass, :protected_and_instrumented, :protected
+    InstrumentedClass.statsd_remove_count :protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented'
+    assert_scope InstrumentedClass, :protected_and_instrumented, :protected
+
+    InstrumentedClass.statsd_count :protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented'
+  end
+
+  def test_statsd_doesnt_change_method_scope_on_removal_of_private_method
+    assert_scope InstrumentedClass, :private_and_instrumented, :private
+    InstrumentedClass.statsd_remove_count :private_and_instrumented, 'InstrumentedClass.private_and_instrumented'
+    assert_scope InstrumentedClass, :private_and_instrumented, :private
+
+    InstrumentedClass.statsd_count :private_and_instrumented, 'InstrumentedClass.private_and_instrumented'
+  end
+
+  private
+
+  def assert_scope(klass, method, expected_scope)
+    method_scope = case
+    when klass.private_method_defined?(method)
+      :private
+    when klass.protected_method_defined?(method)
+      :protected
+    else
+      :public
     end
 
-    refute InstrumentedClass.public_instance_methods.include?(:protected_but_still_instrumented), "Expected method to be protected"
-    assert_statsd_increment('InstrumentedClass.protected_but_still_instrumented') do
-      InstrumentedClass.new.send(:protected_but_still_instrumented)
-    end
+    assert_equal method_scope, expected_scope, "Expected method to be #{expected_scope}"
   end
 end
