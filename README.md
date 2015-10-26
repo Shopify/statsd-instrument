@@ -87,7 +87,7 @@ StatsD.increment('GoogleBase.insert', 1, sample_rate: 0.1)
 
 #### StatsD.gauge
 
-A gauge is a single numerical value value that tells you the state of the system at a point in time. A good example would be the number of messages in a queue.
+A gauge is a single numerical value that tells you the state of the system at a point in time. A good example would be the number of messages in a queue.
 
 ``` ruby
 StatsD.gauge('GoogleBase.queued', 12, sample_rate: 1.0)
@@ -269,9 +269,9 @@ RSpec.describe 'Matchers' do
     end
 
     it 'will pass if it matches the correct number of times' do
-      expect { 
+      expect {
         2.times do
-          StatsD.increment('counter') 
+          StatsD.increment('counter')
         end
       }.to trigger_statsd_increment('counter', times: 2)
     end
