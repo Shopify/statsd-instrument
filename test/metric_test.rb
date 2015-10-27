@@ -16,11 +16,10 @@ class MetricTest < Minitest::Test
   end
 
   def test_name_prefix
-    StatsD.stubs(:prefix).returns('prefix')
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter')
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', prefix: 'prefix')
     assert_equal 'prefix.counter', m.name
 
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', no_prefix: true)
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', prefix: 'prefix', no_prefix: true)
     assert_equal 'counter', m.name
   end
 

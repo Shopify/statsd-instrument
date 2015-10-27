@@ -368,6 +368,7 @@ module StatsD
   # @param options (see StatsD::Instrument::Metric#initialize)
   # @return [StatsD::Instrument::Metric] The meric that was sent to the backend.
   def collect_metric(options)
+    options[:prefix] ||= prefix
     backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
     metric
   end
