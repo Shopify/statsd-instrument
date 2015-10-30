@@ -196,6 +196,9 @@ The Datadog implementation support tags, which you can use to slice and dice met
 ``` ruby
 StatsD.increment('my.counter', tags: ['env:production', 'unicorn'])
 GoogleBase.statsd_count :insert, 'GoogleBase.insert', tags: ['env:production']
+
+# Use a lambda for generating dynamic tags from the caller or method arguments
+GoogleBase.statsd_count :insert, 'GoogleBase.insert', tags: lambda { |calle, args| [args[0]] }
 ```
 
 If implementation is not set to `:datadog`, tags will not be included in the UDP packets, and a

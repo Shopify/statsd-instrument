@@ -7,6 +7,7 @@ please at an entry to the "unreleased changes" section below.
 
 - Drop support for Ruby 1.9.3.
 - Add support for Ruby 2.2.
+- Adds support for metric options that are a hash to have a lambda as a value which has access to the method caller and args. This is implemented specifically for tags but could support future options.
 
 ### Version 2.0.6
 

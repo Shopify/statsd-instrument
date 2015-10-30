@@ -46,6 +46,21 @@ module StatsD
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
     end
 
+    # @private
+    def self.process_metric_options(metric_options, calle, *method_args)
+      metric_options.map do |m_value|
+        next m_value unless m_value.is_a?(Hash)
+
+        m_value.each_with_object({}) do |(name, value), obj|
+          if value.respond_to?(:call)
+            obj[name] = value.call(calle, method_args)
+          else
+            obj[name] = value
+          end
+        end
+      end
+    end
+
     if Process.respond_to?(:clock_gettime)
       # @private
       def self.duration
@@ -105,6 +120,7 @@ module StatsD
             result
           ensure
             suffix = truthiness == false ? 'failure' : 'success'
+            metric_options = StatsD::Instrument.process_metric_options(metric_options, self, *args)
             StatsD.increment("#{StatsD::Instrument.generate_metric_name(metric_name, self, *args)}.#{suffix}", 1, *metric_options)
           end
         end
@@ -136,6 +152,7 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
+            metric_options = StatsD::Instrument.process_metric_options(metric_options, self, *args)
             StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), *metric_options) if truthiness
           end
         end
@@ -154,6 +171,7 @@ module StatsD
     def statsd_count(method, name, *metric_options)
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
+          metric_options = StatsD::Instrument.process_metric_options(metric_options, self, *args)
           StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), 1, *metric_options)
           send(old_method, *args, &block)
         end

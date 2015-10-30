@@ -107,6 +107,18 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::UniqueGateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.block'
   end
 
+  def test_statsd_count_if_with_tags_as_lambda
+    tag_lambda = lambda { |obj, args| ["ssl_post=#{args[0]}"] }
+    ActiveMerchant::Gateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.if_dynamic_tags', tags: tag_lambda
+
+    assert_statsd_increment('ActiveMerchant.Gateway.if_dynamic_tags', tags: ['ssl_post=true']) do
+      ActiveMerchant::Gateway.new.purchase(true)
+      ActiveMerchant::Gateway.new.purchase(false)
+    end
+
+    ActiveMerchant::Gateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.if_dynamic_tags'
+  end
+
   def test_statsd_count_success
     ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', 0.5
 
@@ -116,6 +128,23 @@ class StatsDInstrumentationTest < Minitest::Test
     end
 
     assert_statsd_increment('ActiveMerchant.Gateway.failure', sample_rate: 0.5, times: 1) do
+      ActiveMerchant::Gateway.new.purchase(false)
+      ActiveMerchant::Gateway.new.purchase(true)
+    end
+
+    ActiveMerchant::Gateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
+  end
+
+  def test_statsd_count_success_with_tags_as_lambda
+    tag_lambda = lambda { |obj, args| ["ssl_post=#{args[0]}"] }
+    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', sample_rate: 0.5, tags: tag_lambda
+
+    assert_statsd_increment('ActiveMerchant.Gateway.success', sample_rate: 0.5, times: 1, tags: ['ssl_post=true']) do
+      ActiveMerchant::Gateway.new.purchase(true)
+      ActiveMerchant::Gateway.new.purchase(false)
+    end
+
+    assert_statsd_increment('ActiveMerchant.Gateway.failure', sample_rate: 0.5, times: 1, tags: ['ssl_post=true']) do
       ActiveMerchant::Gateway.new.purchase(false)
       ActiveMerchant::Gateway.new.purchase(true)
     end
@@ -178,6 +207,17 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
   end
 
+  def test_statsd_count_with_tags_as_lambda
+    tag_lambda = lambda { |obj, args| ['dynamic', "ssl_post=#{args[0]}"] }
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, 'ActiveMerchant.Gateway.dynamic_tag', tags: tag_lambda)
+
+    assert_statsd_increment('ActiveMerchant.Gateway.dynamic_tag', tags: ['dynamic', 'ssl_post=true']) do
+      GatewaySubClass.new.purchase(true)
+    end
+
+    ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, 'ActiveMerchant.Gateway.dynamic_tag')
+  end
+
   def test_statsd_count_with_method_receiving_block
     ActiveMerchant::Base.statsd_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
 
@@ -238,6 +278,17 @@ class StatsDInstrumentationTest < Minitest::Test
     end
 
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+  end
+
+  def test_statsd_count_with_tags_as_lambda
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync.dynamic_tags', tags: lambda { |obj, args| ['dynamic'] }
+
+    assert_statsd_increment('ActiveMerchant.Gateway.sync.dynamic_tags', tags: ['dynamic']) do
+      ActiveMerchant::Gateway.sync
+    end
+
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync.dynamic_tags'
   end
 
   def test_statsd_doesnt_change_method_scope_of_public_method
