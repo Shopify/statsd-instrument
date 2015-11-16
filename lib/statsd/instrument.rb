@@ -168,10 +168,11 @@ module StatsD
     # @param name (see #statsd_measure)
     # @param metric_options (see #statsd_measure)
     # @return [void]
-    def statsd_count(method, name, *metric_options)
+    def statsd_count(method, name, *metric_option_args)
+      #metric_options = metric_options_args
       add_to_method(method, name, :count) do |old_method, new_method, metric_name|
         define_method(new_method) do |*args, &block|
-          metric_options = StatsD::Instrument.process_metric_options(metric_options, self, *args)
+          metric_options = StatsD::Instrument.process_metric_options(metric_option_args, self, *args)
           StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), 1, *metric_options)
           send(old_method, *args, &block)
         end

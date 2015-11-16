@@ -103,6 +103,6 @@ class StatsD::Instrument::Metric
   def self.normalize_tags(tags)
     return unless tags
     tags = tags.map { |k, v| k.to_s + ":".freeze + v.to_s } if tags.is_a?(Hash)
-    tags.map { |tag| tag.tr('|,'.freeze, ''.freeze) }
+    tags.map { |tag| tag.to_s.tr('|,'.freeze, ''.freeze) }
   end
 end
