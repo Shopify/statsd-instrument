@@ -11,6 +11,7 @@ module StatsD::Instrument::Matchers
   }
 
   class Matcher
+    include RSpec::Matchers::Composable
     include StatsD::Instrument::Helpers
 
     def initialize(metric_type, metric_name, options = {})
@@ -50,11 +51,13 @@ module StatsD::Instrument::Matchers
       raise RSpec::Expectations::ExpectationNotMetError, "No StatsD calls for metric #{metric_name} were made." if metrics.empty?
       raise RSpec::Expectations::ExpectationNotMetError, "The numbers of StatsD calls for metric #{metric_name} was unexpected. Expected #{options[:times].inspect}, got #{metrics.length}" if options[:times] && options[:times] != metrics.length
 
-      metric = metrics.first
+      [:sample_rate, :value, :tags].each do |expectation|
+        next unless options[expectation]
 
-      raise RSpec::Expectations::ExpectationNotMetError, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:sample_rate] && options[:sample_rate] != metric.sample_rate
-      raise RSpec::Expectations::ExpectationNotMetError, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:value] && options[:value] != metric.value
-      raise RSpec::Expectations::ExpectationNotMetError, "Unexpected StatsD tags for metric #{metric_name}" if options[:tags] && options[:tags] != metric.tags
+        if metrics.all? { |m| m.public_send(expectation) != options[expectation] }
+          raise RSpec::Expectations::ExpectationNotMetError, "Unexpected StatsD #{expectation.to_s.gsub('_', ' ')} for metric #{metric_name}"
+        end
+      end
 
       true
     end
