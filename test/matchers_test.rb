@@ -10,6 +10,16 @@ class MatchersTest < Minitest::Test
     refute StatsD::Instrument::Matchers::Increment.new(:c, 'counter', {}).matches? lambda { StatsD.increment('not_counter') }
   end
 
+  def test_statsd_increment_compound
+    matcher_1 = StatsD::Instrument::Matchers::Increment.new(:c, 'counter', tags: ['a'])
+    matcher_2 = StatsD::Instrument::Matchers::Increment.new(:c, 'counter', tags: ['b'])
+
+    assert RSpec::Matchers::BuiltIn::Compound::And.new(matcher_1, matcher_2).matches? lambda {
+      StatsD.increment('counter', tags: ['a'])
+      StatsD.increment('counter', tags: ['b'])
+    }
+  end
+
   def test_statsd_increment_with_times_matched
     assert StatsD::Instrument::Matchers::Increment.new(:c, 'counter', times: 1).matches? lambda { StatsD.increment('counter') }
   end
