@@ -262,6 +262,10 @@ end
 ### RSpec
 
 ```ruby
+RSpec.configure do |config|
+  config.include StatsD::Instrument::Matchers
+end
+
 RSpec.describe 'Matchers' do
   context 'trigger_statsd_increment' do
     it 'will pass if there is exactly one matching StatsD call' do
@@ -281,7 +285,6 @@ RSpec.describe 'Matchers' do
     end
   end
 end
-
 ```
 
 ## Notes
