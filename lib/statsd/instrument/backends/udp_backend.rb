@@ -76,7 +76,10 @@ module StatsD::Instrument::Backends
     end
 
     def write_packet(command)
-      socket.send(command, 0) > 0
+      StatsD.logger.debug { "[StatsD] statsd_command=#{command.inspect}" }
+      bytes_sent = socket.send(command, 0)
+      StatsD.logger.debug { "[StatsD] statsd_bytes_sent=#{bytes_sent}" }
+      bytes_sent > 0
     rescue SocketError, IOError, SystemCallError => e
       StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
     end
