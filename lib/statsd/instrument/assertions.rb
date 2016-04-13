@@ -39,28 +39,31 @@ module StatsD::Instrument::Assertions
     metrics = metrics.select { |m| m.type == metric_type && m.name == metric_name }
     assert metrics.length > 0, "No StatsD calls for metric #{metric_name} were made."
     assert options[:times] === metrics.length, "The amount of StatsD calls for metric #{metric_name} was unexpected. Expected #{options[:times].inspect}, found #{metrics.length}"
-    metric = metrics.first
 
-    assert_equal options[:sample_rate], metric.sample_rate, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:sample_rate]
-    assert_equal options[:value], metric.value, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:value]
+    metrics.each do |metric|
 
-    if options[:tags]
-      expected_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:tags]))
-      actual_tags = Set.new(metric.tags)
+      assert_equal options[:sample_rate], metric.sample_rate, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:sample_rate]
+      assert_equal options[:value], metric.value, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:value]
 
-      if options[:ignore_tags]
-        ignored_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:ignore_tags])) - expected_tags
-        actual_tags -= ignored_tags
+      if options[:tags]
 
-        if options[:ignore_tags].is_a?(Array)
-          actual_tags.delete_if{ |key| options[:ignore_tags].include?(key.split(":").first) }
+        expected_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:tags]))
+        actual_tags = Set.new(metric.tags)
+
+        if options[:ignore_tags]
+          ignored_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:ignore_tags])) - expected_tags
+          actual_tags -= ignored_tags
+
+          if options[:ignore_tags].is_a?(Array)
+            actual_tags.delete_if{ |key| options[:ignore_tags].include?(key.split(":").first) }
+          end
         end
+
+        assert_equal expected_tags, actual_tags,
+                     "Unexpected StatsD tags for metric #{metric_name}. Expected: #{expected_tags.inspect}, actual: #{actual_tags.inspect}"
       end
 
-      assert_equal expected_tags, actual_tags,
-        "Unexpected StatsD tags for metric #{metric_name}. Expected: #{expected_tags.inspect}, actual: #{actual_tags.inspect}"
+      metric
     end
-
-    metric
   end
 end
