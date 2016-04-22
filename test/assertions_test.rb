@@ -81,6 +81,20 @@ class AssertionsTest < Minitest::Test
     end
 
     assert_no_assertion_triggered do
+      @test_case.assert_statsd_increment('counter', times: 2, tags: ['foo:1']) do
+        StatsD.increment('counter', tags: { foo: 1 })
+        StatsD.increment('counter', tags: { foo: 1 })
+      end
+    end
+
+    assert_assertion_triggered do
+      @test_case.assert_statsd_increment('counter', times: 2, tags: ['foo:1']) do
+        StatsD.increment('counter', tags: { foo: 1 })
+        StatsD.increment('counter', tags: { foo: 2 })
+      end
+    end
+
+    assert_no_assertion_triggered do
       @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a', 'b']) do
         StatsD.increment('counter', sample_rate: 0.5, tags: ['a', 'b'])
       end
