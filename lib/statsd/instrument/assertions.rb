@@ -42,6 +42,7 @@ module StatsD::Instrument::Assertions
 
     metrics.each do |metric|
 
+      assert within_numeric_range?(metric.sample_rate), "Unexpected sample rate type for metric #{metric_name}, must be numeric"
       assert_equal options[:sample_rate], metric.sample_rate, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:sample_rate]
       assert_equal options[:value], metric.value, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:value]
 
@@ -65,5 +66,9 @@ module StatsD::Instrument::Assertions
 
       metric
     end
+  end
+
+  def within_numeric_range?(object)
+    object.kind_of?(Numeric) && (0.0..1.0).cover?(object)
   end
 end
