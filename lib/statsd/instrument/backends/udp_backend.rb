@@ -1,12 +1,17 @@
+require 'monitor'
+
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
 
     DEFAULT_IMPLEMENTATION = :statsd
 
+    include MonitorMixin
+
     attr_reader :host, :port
     attr_accessor :implementation
 
     def initialize(server = nil, implementation = nil)
+      super()
       self.server = server || "localhost:8125"
       self.implementation = (implementation || DEFAULT_IMPLEMENTATION).to_sym
     end
@@ -76,7 +81,9 @@ module StatsD::Instrument::Backends
     end
 
     def write_packet(command)
-      socket.send(command, 0) > 0
+      synchronize do
+        socket.send(command, 0) > 0
+      end
     rescue SocketError, IOError, SystemCallError => e
       StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
     end
