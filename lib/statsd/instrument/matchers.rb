@@ -1,5 +1,5 @@
 require 'rspec/expectations'
-require 'rspec/version'
+require 'rspec/core/version'
 
 module StatsD::Instrument::Matchers
   CUSTOM_MATCHERS = {
@@ -12,7 +12,7 @@ module StatsD::Instrument::Matchers
   }
 
   class Matcher
-    include RSpec::Matchers::Composable if RSpec::Version::STRING.start_with?('3')
+    include RSpec::Matchers::Composable if RSpec::Core::Version::STRING.start_with?('3')
     include StatsD::Instrument::Helpers
 
     def initialize(metric_type, metric_name, options = {})
