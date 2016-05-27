@@ -31,41 +31,51 @@ module StatsD::Instrument::Assertions
     assert_statsd_call(:kv, metric_name, options, &block)
   end
 
+  # @private
+  def assert_statsd_calls(expected_metrics, &block)
+    metrics = capture_statsd_calls(&block)
+    matched_expected_metrics = []
+
+    expected_metrics.each do |expected_metric|
+      expected_metric_times = expected_metric.times
+      expected_metric_times_remaining = expected_metric.times
+      filtered_metrics = metrics.select { |m| m.type == expected_metric.type && m.name == expected_metric.name }
+      assert filtered_metrics.length > 0,
+        "No StatsD calls for metric #{expected_metric.name} of type #{expected_metric.type} were made."
+
+      filtered_metrics.each do |metric|
+        assert within_numeric_range?(metric.sample_rate),
+          "Unexpected sample rate type for metric #{metric.name}, must be numeric"
+        if expected_metric.matches(metric)
+          assert expected_metric_times_remaining > 0,
+            "Unexpected StatsD call; number of times this metric was expected exceeded: #{expected_metric.inspect}"
+          expected_metric_times_remaining -= 1
+          metrics.delete(metric)
+          if expected_metric_times_remaining == 0
+            matched_expected_metrics << expected_metric
+          end
+        end
+      end
+
+      assert expected_metric_times_remaining == 0,
+          "Metric expected #{expected_metric_times} times but seen"\
+          " #{expected_metric_times-expected_metric_times_remaining}"\
+          " times: #{expected_metric.inspect}"
+    end
+    expected_metrics -= matched_expected_metrics
+
+    assert expected_metrics.empty?,
+      "Unexpected StatsD calls; the following metric expectations were not satisfied: #{expected_metrics.inspect}"
+  end
+
   private
 
   def assert_statsd_call(metric_type, metric_name, options = {}, &block)
+    options[:name] = metric_name
+    options[:type] = metric_type
     options[:times] ||= 1
-    metrics = capture_statsd_calls(&block)
-    metrics = metrics.select { |m| m.type == metric_type && m.name == metric_name }
-    assert metrics.length > 0, "No StatsD calls for metric #{metric_name} were made."
-    assert options[:times] === metrics.length, "The amount of StatsD calls for metric #{metric_name} was unexpected. Expected #{options[:times].inspect}, found #{metrics.length}"
-
-    metrics.each do |metric|
-
-      assert within_numeric_range?(metric.sample_rate), "Unexpected sample rate type for metric #{metric_name}, must be numeric"
-      assert_equal options[:sample_rate], metric.sample_rate, "Unexpected StatsD sample rate for metric #{metric_name}" if options[:sample_rate]
-      assert_equal options[:value], metric.value, "Unexpected value submitted for StatsD metric #{metric_name}" if options[:value]
-
-      if options[:tags]
-
-        expected_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:tags]))
-        actual_tags = Set.new(metric.tags)
-
-        if options[:ignore_tags]
-          ignored_tags = Set.new(StatsD::Instrument::Metric.normalize_tags(options[:ignore_tags])) - expected_tags
-          actual_tags -= ignored_tags
-
-          if options[:ignore_tags].is_a?(Array)
-            actual_tags.delete_if{ |key| options[:ignore_tags].include?(key.split(":").first) }
-          end
-        end
-
-        assert_equal expected_tags, actual_tags,
-                     "Unexpected StatsD tags for metric #{metric_name}. Expected: #{expected_tags.inspect}, actual: #{actual_tags.inspect}"
-      end
-
-      metric
-    end
+    expected_metric = StatsD::Instrument::MetricExpectation.new(options)
+    assert_statsd_calls([expected_metric], &block)
   end
 
   def within_numeric_range?(object)
