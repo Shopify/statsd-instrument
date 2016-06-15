@@ -17,12 +17,25 @@ class StatsDTest < Minitest::Test
     assert_equal :ms, metric.type
   end
 
+  def test_statsd_measure_with_explicit_value_as_keyword_argument
+    result = nil
+    metric = capture_statsd_call { result = StatsD.measure('values.foobar', value: 42) }
+    assert_equal metric, result
+    assert_equal 'values.foobar', metric.name
+    assert_equal 42, metric.value
+    assert_equal :ms, metric.type
+  end
+
+  def test_statsd_measure_without_value_or_block
+    assert_raises(ArgumentError) { StatsD.measure('values.foobar', tags: 123) }
+  end
+
   def test_statsd_measure_with_explicit_value_and_sample_rate
     metric = capture_statsd_call { StatsD.measure('values.foobar', 42, :sample_rate => 0.1) }
     assert_equal 0.1, metric.sample_rate
   end
 
-  def test_statsd_measure_with_benchmarked_duration
+  def test_statsd_measure_with_benchmarked_block_duration
     StatsD::Instrument.stubs(:duration).returns(1.12)
     metric = capture_statsd_call do
       StatsD.measure('values.foobar') { 'foo' }
@@ -51,6 +64,12 @@ class StatsDTest < Minitest::Test
     assert_equal 1, metric.value
   end
 
+  def test_statsd_increment_with_value_as_keyword_argument
+    metric = capture_statsd_call { StatsD.increment('values.foobar', :value => 2) }
+    assert_equal StatsD.default_sample_rate, metric.sample_rate
+    assert_equal 2, metric.value
+  end
+
   def test_statsd_increment_with_multiple_arguments
     metric = capture_statsd_call { StatsD.increment('values.foobar', 12, nil, ['test']) }
     assert_equal StatsD.default_sample_rate, metric.sample_rate
@@ -65,6 +84,19 @@ class StatsDTest < Minitest::Test
     assert_equal :g, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 12, metric.value
+  end
+
+  def test_statsd_gauge_with_keyword_argument
+    result = nil
+    metric = capture_statsd_call { result = StatsD.gauge('values.foobar', value: 13) }
+    assert_equal metric, result
+    assert_equal :g, metric.type
+    assert_equal 'values.foobar', metric.name
+    assert_equal 13, metric.value
+  end
+
+  def test_statsd_gauge_without_value
+    assert_raises(ArgumentError) { StatsD.gauge('values.foobar', tags: 123) }
   end
 
   def test_statsd_set
