@@ -277,7 +277,7 @@ module StatsD
   def measure(key, value = nil, *metric_options, &block)
     if value.is_a?(Hash) && metric_options.empty?
       metric_options = [value]
-      value = nil
+      value = value.fetch(:value, nil)
     end
 
     result = nil
@@ -301,7 +301,7 @@ module StatsD
   def increment(key, value = 1, *metric_options)
     if value.is_a?(Hash) && metric_options.empty?
       metric_options = [value]
-      value = 1
+      value = value.fetch(:value, 1)
     end
 
     collect_metric(hash_argument(metric_options).merge(type: :c, name: key, value: value))
@@ -313,6 +313,11 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   def gauge(key, value, *metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = value.fetch(:value, nil)
+    end
+
     collect_metric(hash_argument(metric_options).merge(type: :g, name: key, value: value))
   end
 
@@ -323,6 +328,11 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
   def histogram(key, value, *metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = value.fetch(:value, nil)
+    end
+
     collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
   end
 
@@ -333,6 +343,11 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the statsite implementation only.
   def key_value(key, value, *metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = value.fetch(:value, nil)
+    end
+
     collect_metric(hash_argument(metric_options).merge(type: :kv, name: key, value: value))
   end
 
@@ -343,6 +358,11 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
   def set(key, value, *metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = value.fetch(:value, nil)
+    end
+
     collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
   end
 
