@@ -28,7 +28,7 @@ module StatsD::Instrument::Environment
   #
   # @return [String] The detected environment.
   def environment
-    if defined?(Rails)
+    if defined?(Rails) && Rails.respond_to?(:env)
       Rails.env.to_s
     else
       ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['ENV'] || 'development'

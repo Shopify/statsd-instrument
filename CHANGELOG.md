@@ -8,6 +8,7 @@ please at an entry to the "unreleased changes" section below.
 - Drop support for Ruby 1.9.3.
 - Add support for Ruby 2.2.
 - Make library compatible with RSpec 2.
+- Ask Rails for the environment if Rails is loaded, not just defined
 
 ### Version 2.0.6
 
