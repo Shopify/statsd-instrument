@@ -44,7 +44,7 @@ module StatsD
     def statsd_instrumentations
       if defined?(@statsd_instrumentations)
         @statsd_instrumentations
-      elsif superclass.respond_to?(:statsd_instrumentations)
+      elsif respond_to?(:superclass) && superclass.respond_to?(:statsd_instrumentations)
         superclass.statsd_instrumentations
       else
         @statsd_instrumentations = {}
