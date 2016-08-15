@@ -40,6 +40,16 @@ module StatsD
   # StatsD metrics. E.g., yopu can create counters on how often a method is called, how often it is
   # successful, the duration of the methods call, etc.
   module Instrument
+    # @private
+    def statsd_instrumentations
+      if defined?(@statsd_instrumentations)
+        @statsd_instrumentations
+      elsif respond_to?(:superclass) && superclass.respond_to?(:statsd_instrumentations)
+        superclass.statsd_instrumentations
+      else
+        @statsd_instrumentations = {}
+      end
+    end
 
     # @private
     def self.generate_metric_name(metric_name, callee, *args)
@@ -70,9 +80,9 @@ module StatsD
     # @param metric_options (see StatsD#measure)
     # @return [void]
     def statsd_measure(method, name, *metric_options)
-      add_to_method(method, name, :measure) do |old_method, new_method, metric_name, *args|
-        define_method(new_method) do |*args, &block|
-          StatsD.measure(StatsD::Instrument.generate_metric_name(metric_name, self, *args), nil, *metric_options) { send(old_method, *args, &block) }
+      add_to_method(method, name, :measure) do
+        define_method(method) do |*args, &block|
+          StatsD.measure(StatsD::Instrument.generate_metric_name(name, self, *args), nil, *metric_options) { super(*args, &block) }
         end
       end
     end
@@ -93,10 +103,10 @@ module StatsD
     # @return [void]
     # @see #statsd_count_if
     def statsd_count_success(method, name, *metric_options)
-      add_to_method(method, name, :count_success) do |old_method, new_method, metric_name|
-        define_method(new_method) do |*args, &block|
+      add_to_method(method, name, :count_success) do
+        define_method(method) do |*args, &block|
           begin
-            truthiness = result = send(old_method, *args, &block)
+            truthiness = result = super(*args, &block)
           rescue
             truthiness = false
             raise
@@ -105,7 +115,7 @@ module StatsD
             result
           ensure
             suffix = truthiness == false ? 'failure' : 'success'
-            StatsD.increment("#{StatsD::Instrument.generate_metric_name(metric_name, self, *args)}.#{suffix}", 1, *metric_options)
+            StatsD.increment("#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}", 1, *metric_options)
           end
         end
       end
@@ -125,10 +135,10 @@ module StatsD
     # @return [void]
     # @see #statsd_count_success
     def statsd_count_if(method, name, *metric_options)
-      add_to_method(method, name, :count_if) do |old_method, new_method, metric_name|
-        define_method(new_method) do |*args, &block|
+      add_to_method(method, name, :count_if) do
+        define_method(method) do |*args, &block|
           begin
-            truthiness = result = send(old_method, *args, &block)
+            truthiness = result = super(*args, &block)
           rescue
             truthiness = false
             raise
@@ -136,7 +146,7 @@ module StatsD
             truthiness = (yield(result) rescue false) if block_given?
             result
           ensure
-            StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), *metric_options) if truthiness
+            StatsD.increment(StatsD::Instrument.generate_metric_name(name, self, *args), *metric_options) if truthiness
           end
         end
       end
@@ -152,10 +162,10 @@ module StatsD
     # @param metric_options (see #statsd_measure)
     # @return [void]
     def statsd_count(method, name, *metric_options)
-      add_to_method(method, name, :count) do |old_method, new_method, metric_name|
-        define_method(new_method) do |*args, &block|
-          StatsD.increment(StatsD::Instrument.generate_metric_name(metric_name, self, *args), 1, *metric_options)
-          send(old_method, *args, &block)
+      add_to_method(method, name, :count) do
+        define_method(method) do |*args, &block|
+          StatsD.increment(StatsD::Instrument.generate_metric_name(name, self, *args), 1, *metric_options)
+          super(*args, &block)
         end
       end
     end
@@ -198,40 +208,33 @@ module StatsD
 
     private
 
+    def statsd_instrumentation_for(method, name, action)
+      unless statsd_instrumentations.key?([method, name, action])
+        mod = Module.new do
+          define_singleton_method(:inspect) do
+            "StatsD_Instrument_#{method}_for_#{action}_with_#{name}"
+          end
+        end
+        @statsd_instrumentations = statsd_instrumentations.merge([method, name, action] => mod)
+      end
+      @statsd_instrumentations[[method, name, action]]
+    end
+
     def add_to_method(method, name, action, &block)
-      metric_name = name
+      instrumentation_module = statsd_instrumentation_for(method, name, action)
 
-      method_name_without_statsd = :"#{method}_for_#{action}_on_#{self.name}_without_#{name}"
-      # raw_ssl_request_for_measure_on_FedEx_without_ActiveMerchant.Shipping.#{self.class.name}.ssl_request
-
-      method_name_with_statsd = :"#{method}_for_#{action}_on_#{self.name}_with_#{name}"
-      # raw_ssl_request_for_measure_on_FedEx_with_ActiveMerchant.Shipping.#{self.class.name}.ssl_request
-
-      raise ArgumentError, "already instrumented #{method} for #{self.name}" if method_defined? method_name_without_statsd
+      raise ArgumentError, "already instrumented #{method} for #{self.name}" if instrumentation_module.method_defined?(method)
       raise ArgumentError, "could not find method #{method} for #{self.name}" unless method_defined?(method) || private_method_defined?(method)
 
       method_scope = method_visibility(method)
 
-      alias_method method_name_without_statsd, method
-      yield method_name_without_statsd, method_name_with_statsd, metric_name
-      alias_method method, method_name_with_statsd
-
-      private(method_name_without_statsd)
-      send(method_scope, method)
-      private(method_name_with_statsd)
+      instrumentation_module.module_eval(&block)
+      instrumentation_module.send(method_scope, method)
+      prepend(instrumentation_module) unless self < instrumentation_module
     end
 
     def remove_from_method(method, name, action)
-      method_name_without_statsd = :"#{method}_for_#{action}_on_#{self.name}_without_#{name}"
-      method_name_with_statsd = :"#{method}_for_#{action}_on_#{self.name}_with_#{name}"
-
-      method_scope = method_visibility(method)
-
-      send(:remove_method, method_name_with_statsd)
-      alias_method method, method_name_without_statsd
-      send(:remove_method, method_name_without_statsd)
-
-      send(method_scope, method)
+      statsd_instrumentation_for(method, name, action).send(:remove_method, method)
     end
 
     def method_visibility(method)

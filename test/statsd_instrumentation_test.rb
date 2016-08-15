@@ -288,6 +288,22 @@ class StatsDInstrumentationTest < Minitest::Test
     InstrumentedClass.statsd_count :private_and_instrumented, 'InstrumentedClass.private_and_instrumented'
   end
 
+  def test_statsd_works_with_prepended_modules
+    mod = Module.new do
+      define_method(:foo) { super() }
+    end
+    klass = Class.new do
+      prepend mod
+      extend StatsD::Instrument
+      define_method(:foo) {}
+      statsd_count :foo, "foo"
+    end
+
+    assert_statsd_increment("foo") do
+      klass.new.foo
+    end
+  end
+
   private
 
   def assert_scope(klass, method, expected_scope)
