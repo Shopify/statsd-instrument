@@ -55,7 +55,10 @@ module StatsD::Instrument::Matchers
       [:sample_rate, :value, :tags].each do |expectation|
         next unless options[expectation]
 
-        if metrics.all? { |m| m.public_send(expectation) != options[expectation] }
+        num_matches = metrics.count { |m| m.public_send(expectation) == options[expectation] }
+        found = options[:times] ? num_matches == options[:times] : num_matches > 0
+
+        if !found
           raise RSpec::Expectations::ExpectationNotMetError, "Unexpected StatsD #{expectation.to_s.gsub('_', ' ')} for metric #{metric_name}"
         end
       end
