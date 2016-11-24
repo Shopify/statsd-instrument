@@ -9,6 +9,7 @@ please at an entry to the "unreleased changes" section below.
 - Add support for Ruby 2.2.
 - Make library compatible with RSpec 2.
 - Ask Rails for the environment if Rails is loaded, not just defined
+- RSpec: verbose failure messages (expected vs. actual), rspec-mock argument matchers support
 
 ### Version 2.0.6
 

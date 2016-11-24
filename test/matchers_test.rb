@@ -89,4 +89,14 @@ class MatchersTest < Minitest::Test
       StatsD.increment('counter', value: 2)
     }
   end
+
+  def test_statsd_increment_with_sample_rate_and_argument_matcher_matched
+    between_matcher = RSpec::Matchers::BuiltIn::BeBetween.new(0.4, 0.6).inclusive
+    assert StatsD::Instrument::Matchers::Increment.new(:c, 'counter', sample_rate: between_matcher).matches? lambda { StatsD.increment('counter', sample_rate: 0.5) }
+  end
+
+  def test_statsd_increment_with_sample_rate_and_argument_matcher_not_matched
+    between_matcher = RSpec::Matchers::BuiltIn::BeBetween.new(0.4, 0.6).inclusive
+    refute StatsD::Instrument::Matchers::Increment.new(:c, 'counter', sample_rate: between_matcher).matches? lambda { StatsD.increment('counter', sample_rate: 0.7) }
+  end
 end

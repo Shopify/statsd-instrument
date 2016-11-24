@@ -55,7 +55,11 @@ module StatsD::Instrument::Matchers
       [:sample_rate, :value, :tags].each do |expectation|
         next unless options[expectation]
 
-        num_matches = metrics.count { |m| m.public_send(expectation) == options[expectation] }
+        num_matches = metrics.count do |m|
+          matcher = RSpec::Matchers::BuiltIn::Match.new(options[expectation])
+          matcher.matches?(m.public_send(expectation))
+        end
+
         found = options[:times] ? num_matches == options[:times] : num_matches > 0
 
         if !found
