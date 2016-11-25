@@ -55,12 +55,32 @@ module StatsD::Instrument::Matchers
       [:sample_rate, :value, :tags].each do |expectation|
         next unless options[expectation]
 
-        if metrics.all? { |m| m.public_send(expectation) != options[expectation] }
-          raise RSpec::Expectations::ExpectationNotMetError, "Unexpected StatsD #{expectation.to_s.gsub('_', ' ')} for metric #{metric_name}"
+        num_matches = metrics.count do |m|
+          matcher = RSpec::Matchers::BuiltIn::Match.new(options[expectation])
+          matcher.matches?(m.public_send(expectation))
+        end
+
+        found = options[:times] ? num_matches == options[:times] : num_matches > 0
+
+        if !found
+          message = metric_information(metric_name, options, metrics, expectation)
+          raise RSpec::Expectations::ExpectationNotMetError, message
         end
       end
 
       true
+    end
+
+    def metric_information(metric_name, options, metrics, expectation)
+      message = "expected StatsD #{expectation.inspect} for metric '#{metric_name}' to be called"
+
+      message += "\n  "
+      message += options[:times] ? "exactly #{options[:times]} times" : "at least once"
+      message += " with: #{options[expectation]}"
+
+      message += "\n  captured metric values: #{metrics.map(&expectation).join(', ')}"
+
+      message
     end
   end
 

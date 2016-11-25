@@ -280,6 +280,12 @@ RSpec.describe 'Matchers' do
       }.to trigger_statsd_increment('counter', times: 2)
     end
 
+    it 'will pass if it matches argument' do
+      expect {
+        StatsD.measure('counter', 0.3001)
+      }.to trigger_statsd_measure('counter', value: be_between(0.29, 0.31))
+    end
+
     it 'will pass if there is no matching StatsD call on negative expectation' do
       expect { StatsD.increment('other_counter') }.not_to trigger_statsd_increment('counter')
     end
