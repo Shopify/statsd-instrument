@@ -17,6 +17,7 @@ module StatsD::Instrument::Backends
     end
 
     def collect_metric(metric)
+      raise "You shouldn't send metrics on CI !!!"
       unless implementation_supports_metric_type?(metric.type)
         StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} not supported on #{implementation} implementation.")
         return false
