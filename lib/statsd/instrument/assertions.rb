@@ -33,6 +33,10 @@ module StatsD::Instrument::Assertions
 
   # @private
   def assert_statsd_calls(expected_metrics, &block)
+    unless block
+      raise ArgumentError, "block must be given"
+    end
+
     metrics = capture_statsd_calls(&block)
     matched_expected_metrics = []
 

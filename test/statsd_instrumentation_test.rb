@@ -208,6 +208,13 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
   end
 
+  def test_statsd_measure_yells_without_block
+    err = assert_raises(ArgumentError) do
+      assert_statsd_measure('ActiveMerchant.Gateway.ssl_post')
+    end
+    assert_equal "block must be given", err.to_s
+  end
+
   def test_statsd_measure_with_method_receiving_block
     ActiveMerchant::Base.statsd_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
 
