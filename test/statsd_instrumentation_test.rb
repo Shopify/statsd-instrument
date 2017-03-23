@@ -77,7 +77,7 @@ class StatsDInstrumentationTest < Minitest::Test
       ActiveMerchant::Gateway.new.purchase(true)
       ActiveMerchant::Gateway.new.purchase(false)
     end
-
+  ensure
     ActiveMerchant::Gateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
   end
 
@@ -90,7 +90,7 @@ class StatsDInstrumentationTest < Minitest::Test
       assert_equal 'true',  ActiveMerchant::Base.new.post_with_block { 'true' }
       assert_equal 'false', ActiveMerchant::Base.new.post_with_block { 'false' }
     end
-
+  ensure
     ActiveMerchant::Base.statsd_remove_count_if :post_with_block, 'ActiveMerchant.Base.post_with_block'
   end
 
@@ -103,7 +103,7 @@ class StatsDInstrumentationTest < Minitest::Test
       ActiveMerchant::UniqueGateway.new.purchase(true)
       ActiveMerchant::UniqueGateway.new.purchase(false)
     end
-
+  ensure
     ActiveMerchant::UniqueGateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.block'
   end
 
@@ -119,7 +119,7 @@ class StatsDInstrumentationTest < Minitest::Test
       ActiveMerchant::Gateway.new.purchase(false)
       ActiveMerchant::Gateway.new.purchase(true)
     end
-
+  ensure
     ActiveMerchant::Gateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
   end
 
@@ -137,7 +137,7 @@ class StatsDInstrumentationTest < Minitest::Test
       assert_equal 'successful', ActiveMerchant::Base.new.post_with_block { 'successful' }
       assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
     end
-
+  ensure
     ActiveMerchant::Base.statsd_remove_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block'
   end
 
@@ -153,7 +153,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment('ActiveMerchant.Gateway.failure') do
       ActiveMerchant::UniqueGateway.new.purchase(false)
     end
-
+  ensure
     ActiveMerchant::UniqueGateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
   end
 
@@ -163,7 +163,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment('ActiveMerchant.Gateway.ssl_post') do
       ActiveMerchant::Gateway.new.purchase(true)
     end
-
+  ensure
     ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
   end
 
@@ -174,7 +174,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment('gatewaysubclass.insert.true') do
       GatewaySubClass.new.purchase(true)
     end
-
+  ensure
     ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
   end
 
@@ -184,7 +184,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment('ActiveMerchant.Base.post_with_block') do
       assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
     end
-
+  ensure
     ActiveMerchant::Base.statsd_remove_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
   end
 
@@ -194,7 +194,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_measure('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
-
+  ensure
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
   end
 
@@ -204,7 +204,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_measure('ActiveMerchant.Gateway.ssl_post') do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
-
+  ensure
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
   end
 
@@ -221,7 +221,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_measure('ActiveMerchant.Base.post_with_block') do
       assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
     end
-
+  ensure
     ActiveMerchant::Base.statsd_remove_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
   end
 
@@ -232,7 +232,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment('ActiveMerchant.Gateway.sync') do
       ActiveMerchant::Gateway.sync
     end
-
+  ensure
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
   end
 
@@ -243,7 +243,7 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment('ActiveMerchant.Gateway.sync', tags: ['key:value']) do
       ActiveMerchant::Gateway.sync
     end
-
+  ensure
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
   end
 
