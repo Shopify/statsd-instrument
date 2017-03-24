@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+require 'statsd-instrument'
+require 'statsd/instrument/backends/store/unpacker'
+
+File.open(ARGV[0], 'rb') do |io|
+  unpacker = StatsD::Instrument::Backends::Store::Unpacker.new(io)
+  while line = unpacker.next_metric
+    puts(line) unless line.nil?
+  end
+end
