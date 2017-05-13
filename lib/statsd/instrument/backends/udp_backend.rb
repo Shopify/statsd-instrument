@@ -86,6 +86,7 @@ module StatsD::Instrument::Backends
       end
     rescue SocketError, IOError, SystemCallError => e
       StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
+      invalidate_socket
     end
 
     def invalidate_socket
