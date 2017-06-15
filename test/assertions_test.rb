@@ -149,6 +149,25 @@ class AssertionsTest < Minitest::Test
     end
   end
 
+  def test_assert_calls_while_exception
+    assert_no_assertion_triggered do
+      assert_raises(RuntimeError) do
+        @test_case.assert_statsd_increment('counter') do
+          StatsD.increment('counter')
+          raise "foo"
+        end
+      end
+    end
+
+    assert_assertion_triggered do
+      assert_raises(RuntimeError) do
+        @test_case.assert_statsd_increment('counter') do
+          raise "foo"
+        end
+      end
+    end
+  end
+
   def test_tags_will_match_subsets
     assert_no_assertion_triggered do
       @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }) do
