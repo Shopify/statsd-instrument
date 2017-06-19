@@ -206,6 +206,10 @@ module StatsD
       remove_from_method(method, name, :measure)
     end
 
+    def self.count_method(method_name, **kwargs)
+      StatsD::Instrument::MethodCounter.new(method_name, **kwargs)
+    end
+
     private
 
     def statsd_instrumentation_for(method, name, action)
@@ -403,5 +407,6 @@ require 'statsd/instrument/environment'
 require 'statsd/instrument/helpers'
 require 'statsd/instrument/assertions'
 require 'statsd/instrument/metric_expectation'
+require 'statsd/instrument/method_counter'
 require 'statsd/instrument/matchers' if defined?(::RSpec)
 require 'statsd/instrument/railtie' if defined?(Rails)
