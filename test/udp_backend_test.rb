@@ -138,8 +138,7 @@ class UDPBackendTest < Minitest::Test
       Signal.trap('TERM') do
         $sent_packet = false
 
-        socket = @backend.socket
-        class << socket
+        class << @backend.socket
           def send(command, *args)
             $sent_packet = true if command == 'exiting:1|c'
             command.length
