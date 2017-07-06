@@ -5,6 +5,11 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+### Version 2.1.3
+
+- The `assert_statsd_calls` test helper will now raise an exception whenever a block isn't passed.
+- Sending stats inside an exit handler will no longer cause programs to exit abruptly.
+
 ### Version 2.1.2
 
 - Use `prepend` instead of rewriting classes for metaprogramming methods.
