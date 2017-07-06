@@ -64,7 +64,7 @@ module StatsD::Instrument::Backends
     def generate_packet(metric)
       command = "#{metric.name}:#{metric.value}|#{metric.type}"
       command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
-      if metric.tags 
+      if metric.tags
         if tags_supported?
           command << "|##{metric.tags.join(',')}"
         else
@@ -84,6 +84,11 @@ module StatsD::Instrument::Backends
       synchronize do
         socket.send(command, 0) > 0
       end
+    rescue ThreadError => e
+      # In cases where a TERM or KILL signal has been sent, and we send stats as
+      # part of a signal handler, locks cannot be acquired, so we do our best
+      # to try and send the command without a lock.
+      socket.send(command, 0) > 0
     rescue SocketError, IOError, SystemCallError => e
       StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
     end
