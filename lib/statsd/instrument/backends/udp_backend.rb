@@ -89,7 +89,7 @@ module StatsD::Instrument::Backends
       # part of a signal handler, locks cannot be acquired, so we do our best
       # to try and send the command without a lock.
       socket.send(command, 0) > 0
-    rescue SocketError, IOError, SystemCallError => e
+    rescue SocketError, IOError, SystemCallError, Errno::ECONNREFUSED => e
       StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
     end
 
