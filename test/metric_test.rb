@@ -24,6 +24,14 @@ class MetricTest < Minitest::Test
     assert_equal 'counter', m.name
   end
 
+  def test_bad_metric_name
+    assert_equal 'my_metric', StatsD::Instrument::Metric.normalize_name('my:metric')
+    assert_equal 'my_metric', StatsD::Instrument::Metric.normalize_name('my|metric')
+
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'lol::class')
+    assert_equal 'lol__class', m.name
+  end
+
   def test_handle_bad_tags
     assert_equal ['ignored'], StatsD::Instrument::Metric.normalize_tags(['igno|red'])
     assert_equal ['lol::class:omg::lol'], StatsD::Instrument::Metric.normalize_tags({ :"lol::class" => "omg::lol" })
