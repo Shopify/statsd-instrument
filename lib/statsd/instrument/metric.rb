@@ -99,7 +99,7 @@ class StatsD::Instrument::Metric
   # @param name [String]
   # @return [String]
   def self.normalize_name(name)
-    name.gsub(%r{[:|]}, '_')
+    name.tr(':|', '_')
   end
 
   # Utility function to convert tags to the canonical form.
