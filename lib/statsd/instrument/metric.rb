@@ -28,7 +28,7 @@
 #
 class StatsD::Instrument::Metric
 
-  attr_accessor :type, :name, :value, :sample_rate, :tags
+  attr_accessor :type, :name, :value, :sample_rate, :tags, :metadata
 
   # Initializes a new metric instance.
   # Normally, you don't want to call this method directly, but use one of the metric collection
@@ -51,6 +51,7 @@ class StatsD::Instrument::Metric
     @value       = options[:value] || default_value
     @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
     @tags        = StatsD::Instrument::Metric.normalize_tags(options[:tags])
+    @metadata    = options.reject { |k, _| [:type, :name, :value, :sample_rate, :tags].include?(k) }
   end
 
   # The default value for this metric, which will be used if it is not set.
