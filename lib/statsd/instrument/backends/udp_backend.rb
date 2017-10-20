@@ -2,23 +2,20 @@ require 'monitor'
 
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
-
-    DEFAULT_IMPLEMENTATION = :statsd
-
     include MonitorMixin
 
-    attr_reader :host, :port
-    attr_accessor :implementation
+    attr_reader(:host, :port)
+    attr_accessor(:protocol)
 
-    def initialize(server = nil, implementation = nil)
+    def initialize(server = nil, protocol = nil)
       super()
       self.server = server || "localhost:8125"
-      self.implementation = (implementation || DEFAULT_IMPLEMENTATION).to_sym
+      self.protocol = protocol || StatsD::Instrument::Protocols::Datadog.new
     end
 
     def collect_metric(metric)
-      unless implementation_supports_metric_type?(metric.type)
-        StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} not supported on #{implementation} implementation.")
+      unless protocol.supports?(metric)
+        StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} not supported on #{protocol.class.name} implementation.")
         return false
       end
 
@@ -26,20 +23,12 @@ module StatsD::Instrument::Backends
         return false
       end
 
-      write_packet(generate_packet(metric))
-    end
-
-    def implementation_supports_metric_type?(type)
-      case type
-        when :h;  implementation == :datadog
-        when :kv; implementation == :statsite
-        else true
-      end
+      write_packet(protocol.generate_packet(metric))
     end
 
     def server=(connection_string)
-      self.host, port = connection_string.split(':', 2)
-      self.port = port.to_i
+      @host, @port = connection_string.split(':', 2)
+      @port = @port.to_i
       invalidate_socket
     end
 
@@ -61,24 +50,7 @@ module StatsD::Instrument::Backends
       @socket
     end
 
-    def generate_packet(metric)
-      command = "#{metric.name}:#{metric.value}|#{metric.type}"
-      command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
-      if metric.tags
-        if tags_supported?
-          command << "|##{metric.tags.join(',')}"
-        else
-          StatsD.logger.warn("[StatsD] Tags are only supported on Datadog implementation.")
-        end
-      end
-
-      command << "\n" if implementation == :statsite
-      command
-    end
-
-    def tags_supported?
-      implementation == :datadog
-    end
+    private
 
     def write_packet(command)
       synchronize do

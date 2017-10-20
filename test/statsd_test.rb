@@ -26,17 +26,13 @@ class StatsDTest < Minitest::Test
     assert_equal :ms, metric.type
   end
 
-  def test_statsd_measure_without_value_or_block
-    assert_raises(ArgumentError) { StatsD.measure('values.foobar', tags: 123) }
-  end
-
   def test_statsd_measure_with_explicit_value_and_sample_rate
     metric = capture_statsd_call { StatsD.measure('values.foobar', 42, :sample_rate => 0.1) }
     assert_equal 0.1, metric.sample_rate
   end
 
   def test_statsd_measure_with_benchmarked_block_duration
-    StatsD::Instrument.stubs(:duration).returns(1.12)
+    StatsD::Instrument.stubs(:current_timestamp).returns(0, 1.12)
     metric = capture_statsd_call do
       StatsD.measure('values.foobar') { 'foo' }
     end

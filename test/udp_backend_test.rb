@@ -2,14 +2,14 @@ require 'test_helper'
 
 class UDPBackendTest < Minitest::Test
   def setup
-    StatsD.stubs(:backend).returns(@backend = StatsD::Instrument::Backends::UDPBackend.new)
+    StatsD.client.stubs(:backend).returns(@backend = StatsD::Instrument::Backends::UDPBackend.new)
     @backend.stubs(:rand).returns(0.0)
 
     UDPSocket.stubs(:new).returns(@socket = mock('socket'))
     @socket.stubs(:connect)
     @socket.stubs(:send).returns(1)
 
-    StatsD.stubs(:logger).returns(@logger = mock('logger'))
+    StatsD.client.stubs(:logger).returns(@logger = mock('logger'))
   end
 
   def test_changing_host_or_port_should_create_new_socket
@@ -29,7 +29,7 @@ class UDPBackendTest < Minitest::Test
 
   def test_collect_respects_sampling_rate
     @socket.expects(:send).once.returns(1)
-    metric = StatsD::Instrument::Metric.new(type: :c, name: 'test', sample_rate: 0.5)
+    metric = StatsD::Instrument::Metric.new(type: :c, name: 'test', value: 1, sample_rate: 0.5)
 
     @backend.stubs(:rand).returns(0.4)
     @backend.collect_metric(metric)
@@ -71,48 +71,85 @@ class UDPBackendTest < Minitest::Test
   end
 
   def test_histogram_syntax_on_datadog
-    @backend.implementation = :datadog
+    @backend.protocol = StatsD::Instrument::Protocols::Datadog.new
     @backend.expects(:write_packet).with('fooh:42.4|h')
     StatsD.histogram('fooh', 42.4)
   end
 
+  def test_event_on_datadog
+    @backend.protocol = StatsD::Instrument::Protocols::Datadog.new
+    @backend.expects(:write_packet).with('_e{4,3}:fooh|baz|h:localhost:3000|@0.01|#foo')
+    StatsD.event('fooh', 'baz', hostname: 'localhost:3000', sample_rate: 0.01, tags: ["foo"])
+  end
+
+  def test_event_on_datadog_escapes_newlines
+    @backend.protocol = StatsD::Instrument::Protocols::Datadog.new
+    @backend.expects(:write_packet).with('_e{8,5}:fooh\\n\\n|baz\\n')
+    StatsD.event('fooh\n\n', 'baz\n')
+  end
+
+  def test_event_on_datadog_ignores_invalid_metadata
+    @backend.protocol = StatsD::Instrument::Protocols::Datadog.new
+    @backend.expects(:write_packet).with('_e{4,3}:fooh|baz')
+    StatsD.event('fooh', 'baz', i_am_not_supported: 'not-supported')
+  end
+
+  def test_event_warns_when_not_using_datadog
+    @backend.protocol = StatsD::Instrument::Protocols::Statsite.new
+    @backend.expects(:write_packet).never
+    @logger.expects(:warn)
+    StatsD.event('fooh', 'bar')
+  end
+
+  def test_service_check_on_datadog
+    @backend.protocol = StatsD::Instrument::Protocols::Datadog.new
+    @backend.expects(:write_packet).with('_sc|fooh|baz|h:localhost:3000|@0.01|#foo')
+    StatsD.service_check('fooh', 'baz', hostname: 'localhost:3000', sample_rate: 0.01, tags: ["foo"])
+  end
+
+  def test_service_check_on_datadog_ignores_invalid_metadata
+    @backend.protocol = StatsD::Instrument::Protocols::Datadog.new
+    @backend.expects(:write_packet).with('_sc|fooh|baz')
+    StatsD.service_check('fooh', 'baz', i_am_not_supported: 'not-supported')
+  end
+
+  def test_service_check_warns_when_not_using_datadog
+    @backend.protocol = StatsD::Instrument::Protocols::Statsite.new
+    @backend.expects(:write_packet).never
+    @logger.expects(:warn)
+    StatsD.service_check('fooh', 'bar')
+  end
+
   def test_histogram_warns_if_not_using_datadog
-    @backend.implementation = :other
+    @backend.protocol = StatsD::Instrument::Protocols::Statsite.new
     @backend.expects(:write_packet).never
     @logger.expects(:warn)
     StatsD.histogram('fooh', 42.4)
   end
 
   def test_supports_key_value_syntax_on_statsite
-    @backend.implementation = :statsite
+    @backend.protocol = StatsD::Instrument::Protocols::Statsite.new
     @backend.expects(:write_packet).with("fooy:42|kv\n")
     StatsD.key_value('fooy', 42)
   end
 
   def test_supports_key_value_with_timestamp_on_statsite
-    @backend.implementation = :statsite
+    @backend.protocol = StatsD::Instrument::Protocols::Statsite.new
     @backend.expects(:write_packet).with("fooy:42|kv|@123456\n")
     StatsD.key_value('fooy', 42, 123456)
   end
 
   def test_warn_when_using_key_value_and_not_on_statsite
-    @backend.implementation = :other
+    @backend.protocol = StatsD::Instrument::Protocols::Datadog.new
     @backend.expects(:write_packet).never
     @logger.expects(:warn)
     StatsD.key_value('fookv', 3.33)
   end
 
   def test_support_tags_syntax_on_datadog
-    @backend.implementation = :datadog
+    @backend.protocol = StatsD::Instrument::Protocols::Datadog.new
     @backend.expects(:write_packet).with("fooc:3|c|#topic:foo,bar")
     StatsD.increment('fooc', 3, tags: ['topic:foo', 'bar'])
-  end
-
-  def test_warn_when_using_tags_and_not_on_datadog
-    @backend.implementation = :other
-    @backend.expects(:write_packet).with("fooc:1|c")
-    @logger.expects(:warn)
-    StatsD.increment('fooc', tags: ['ignored'])
   end
 
   def test_socket_error_should_not_raise_but_log

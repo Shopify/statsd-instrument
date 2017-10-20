@@ -56,19 +56,21 @@ module StatsD
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
     end
 
+    def self.duration
+      start = current_timestamp
+      yield
+      current_timestamp - start
+    end
+
     if Process.respond_to?(:clock_gettime)
       # @private
-      def self.duration
-        start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        yield
-        Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+      def self.current_timestamp
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
     else
       # @private
-      def self.duration
-        start = Time.now
-        yield
-        Time.now - start
+      def self.current_timestamp
+        Time.now
       end
     end
 
@@ -249,159 +251,88 @@ module StatsD
     end
   end
 
-  attr_accessor :logger, :default_sample_rate, :prefix
-  attr_writer :backend
-
-  def backend
-    @backend ||= StatsD::Instrument::Environment.default_backend
+  def client
+    @client ||= StatsD::Instrument::Client.new
   end
 
-  # Emits a duration metric.
-  #
-  # @overload measure(key, value, metric_options = {})
-  #   Emits a measure metric, by providing a duration in milliseconds.
-  #   @param key [String] The name of the metric.
-  #   @param value [Float] The measured duration in milliseconds
-  #   @param metric_options [Hash] Options for the metric
-  #   @return [StatsD::Instrument::Metric] The metric that was sent to the backend.
-  #
-  # @overload measure(key, metric_options = {}, &block)
-  #   Emits a measure metric, after measuring the execution duration of the
-  #   block passed to this method.
-  #   @param key [String] The name of the metric.
-  #   @param metric_options [Hash] Options for the metric
-  #   @yield The method will yield the block that was passed to this emthod to measure its duration.
-  #   @return The value that was returns by the block passed to this method.
-  #
-  #   @example
-  #      http_response = StatsD.measure('HTTP.call.duration') do
-  #        HTTP.get(url)
-  #      end
-  def measure(key, value = nil, *metric_options, &block)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
+  attr_writer :client
 
-    result = nil
-    value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
-    metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
-    result = metric unless block_given?
-    result
+  extend Forwardable
+
+  def_delegators(
+    :client,
+    :backend,
+    :backend=,
+    :logger,
+    :logger=,
+    :prefix,
+    :prefix=,
+    :default_sample_rate,
+    :default_sample_rate=,
+    :count_method,
+    :measure_method,
+  )
+
+  def measure(*args, &block)
+    options = adapt_args(*args)
+    client.measure(options, &block)
   end
 
-  # Emits a counter metric.
-  # @param key [String] The name of the metric.
-  # @param value [Integer] The value to increment the counter by.
-  #
-  #   You should not compensate for the sample rate using the counter increment. E.g., if
-  #   your sample rate is 0.01, you should <b>not</b> use 100 as increment to compensate for it.
-  #   The sample rate is part of the packet that is being sent to the server, and the server
-  #   should know how to handle it.
-  #
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  def increment(key, value = 1, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, 1)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :c, name: key, value: value))
+  def gauge(*args, &block)
+    options = adapt_args(*args)
+    client.gauge(options, &block)
   end
 
-  # Emits a gauge metric.
-  # @param key [String] The name of the metric.
-  # @param value [Numeric] The current value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  def gauge(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :g, name: key, value: value))
+  def histogram(*args, &block)
+    options = adapt_args(*args)
+    client.histogram(options, &block)
   end
 
-  # Emits a histogram metric.
-  # @param key [String] The name of the metric.
-  # @param value [Numeric] The value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  # @note Supported by the datadog implementation only.
-  def histogram(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
+  def key_value(*args, &block)
+    options = adapt_args(*args)
+    client.key_value(options, &block)
   end
 
-  # Emits a key/value metric.
-  # @param key [String] The name of the metric.
-  # @param value [Numeric] The value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  # @note Supported by the statsite implementation only.
-  def key_value(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :kv, name: key, value: value))
+  def set(*args, &block)
+    options = adapt_args(*args)
+    client.set(options, &block)
   end
 
-  # Emits a set metric.
-  # @param key [String] The name of the metric.
-  # @param value [Numeric] The value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  # @note Supported by the datadog implementation only.
-  def set(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
+  def event(*args, &block)
+    options = adapt_args(*args)
+    client.event(options, &block)
   end
 
-  private
-
-  # Converts old-style ordered arguments in an argument hash for backwards compatibility.
-  # @param args [Array] The list of non-required arguments.
-  # @return [Hash] The hash of optional arguments.
-  def hash_argument(args)
-    return {} if args.length == 0
-    return args.first if args.length == 1 && args.first.is_a?(Hash)
-
-    order = [:sample_rate, :tags]
-    hash = {}
-    args.each_with_index do |value, index|
-      hash[order[index]] = value
-    end
-
-    return hash
+  def service_check(*args, &block)
+    options = adapt_args(*args)
+    client.service_check(options, &block)
   end
 
-  # Instantiates a metric, and sends it to the backend for further processing.
-  # @param options (see StatsD::Instrument::Metric#initialize)
-  # @return [StatsD::Instrument::Metric] The meric that was sent to the backend.
-  def collect_metric(options)
-    backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
-    metric
+  def increment(*args, &block)
+    options = adapt_args(*args)
+    client.count(options, &block)
+  end
+
+  def adapt_args(*args, **metric_options)
+    options = args
+      .zip([:name, :value, :sample_rate, :tags])
+      .to_h
+      .invert
+
+    metric_options.merge(options)
   end
 end
 
 require 'statsd/instrument/version'
 require 'statsd/instrument/metric'
+require 'statsd/instrument/client'
+require 'statsd/instrument/protocol'
 require 'statsd/instrument/backend'
-require 'statsd/instrument/environment'
 require 'statsd/instrument/helpers'
 require 'statsd/instrument/assertions'
 require 'statsd/instrument/metric_expectation'
+require 'statsd/instrument/counter'
+require 'statsd/instrument/measurer'
+require 'statsd/instrument/method_instrumenter'
 require 'statsd/instrument/matchers' if defined?(::RSpec)
 require 'statsd/instrument/railtie' if defined?(Rails)

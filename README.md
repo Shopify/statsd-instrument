@@ -106,6 +106,33 @@ StatsD.set('GoogleBase.customers', "12345", sample_rate: 1.0)
 
 Because you are counting unique values, the results of using a sampling value less than 1.0 can lead to unexpected, hard to interpret results.
 
+#### StatsD.event
+
+An event is a (title, text) tuple that can be used to correlate metrics with something that occured within the system.
+This is a good fit for instance to correlate response time variation with a deploy of the new code.
+
+```ruby
+StatsD.event('shipit.deploy', 'started', sample_rate: 1.0)
+```
+
+*Note: This is only supported by the [datadog implementatation](https://docs.datadoghq.com/guides/dogstatsd/#events).*
+
+Events support additional metadata such as `date_happened`, `hostname`, `aggregation_key`, `priority`, `source_type_name`, `alert_type`.
+
+#### StatsD.service_check
+
+An event is a (title, text) tuple that can be used to correlate metrics with something that occured within the system.
+This is a good fit for instance to correlate response time variation with a deploy of the new code.
+
+```ruby
+StatsD.service_check('shipit.redis_connection', 'ok')
+```
+
+*Note: This is only supported by the [datadog implementatation](https://docs.datadoghq.com/guides/dogstatsd/#service-checks).*
+
+Service checks support additional metadata such as `timestamp`, `hostname`, `message`.
+
+
 ### Metaprogramming Methods
 
 As mentioned, it's most common to use the provided metaprogramming methods. This lets you define all of your instrumentation in one file and not litter your code with instrumentation details. You should enable a class for instrumentation by extending it with the `StatsD::Instrument` class.

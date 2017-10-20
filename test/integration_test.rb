@@ -5,12 +5,13 @@ class IntegrationTest < Minitest::Test
   def setup
     @old_backend, StatsD.backend = StatsD.backend, StatsD::Instrument::Backends::UDPBackend.new("localhost:31798")
   end
-  
+
   def teardown
     StatsD.backend = @old_backend
   end
 
   def test_live_local_udp_socket
+    skip
     server = UDPSocket.new
     server.bind('localhost', 31798)
 

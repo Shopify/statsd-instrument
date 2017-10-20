@@ -75,10 +75,13 @@ module StatsD::Instrument::Assertions
   private
 
   def assert_statsd_call(metric_type, metric_name, options = {}, &block)
-    options[:name] = metric_name
-    options[:type] = metric_type
-    options[:times] ||= 1
-    expected_metric = StatsD::Instrument::MetricExpectation.new(options)
+    expected_metric = StatsD::Instrument::MetricExpectation.build(
+      {
+        client: StatsD.client,
+        type: metric_type,
+        name: metric_name,
+      }.merge(options),
+    )
     assert_statsd_calls([expected_metric], &block)
   end
 

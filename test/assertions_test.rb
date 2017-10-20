@@ -165,8 +165,8 @@ class AssertionsTest < Minitest::Test
 
   def test_multiple_metrics_are_not_order_dependent
     assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+      foo_1_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 2 })
@@ -174,8 +174,8 @@ class AssertionsTest < Minitest::Test
     end
 
     assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+      foo_1_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 2 })
@@ -183,8 +183,8 @@ class AssertionsTest < Minitest::Test
     end
 
     assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+      foo_1_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 1 })
@@ -193,8 +193,8 @@ class AssertionsTest < Minitest::Test
     end
 
     assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+      foo_1_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 1 })
@@ -203,8 +203,8 @@ class AssertionsTest < Minitest::Test
     end
 
     assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+      foo_1_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 2 })
@@ -215,8 +215,8 @@ class AssertionsTest < Minitest::Test
 
   def test_assert_multiple_statsd_calls
     assert_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+      foo_1_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 2 })
@@ -224,8 +224,8 @@ class AssertionsTest < Minitest::Test
     end
 
     assert_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+      foo_1_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 1 })
@@ -235,8 +235,8 @@ class AssertionsTest < Minitest::Test
     end
 
     assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+      foo_1_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::MetricExpectation.build(client: StatsD.client, type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 1 })

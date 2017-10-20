@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 # The Metric class represents a metric sample to be send by a backend.
 #
 # @!attribute type
@@ -27,8 +28,60 @@
 # @see StatsD::Instrument::Backend A StatsD::Instrument::Backend is used to collect metrics.
 #
 class StatsD::Instrument::Metric
+  class << self
+    def build(client:, type:, name:, **options)
+      if StatsD.prefix && !options[:no_prefix]
+        name = "#{client.prefix}.#{name}"
+      end
 
-  attr_accessor :type, :name, :value, :sample_rate, :tags
+      value = options.fetch(:value) do
+        case type
+        when :c
+          1
+        when :ms
+          nil
+        else
+          raise ArgumentError, "A value is required for metric type #{type.inspect}."
+        end
+      end
+      metadata = options.reject do |k, _|
+        [:type, :name, :value, :sample_rate, :tags].include?(k)
+      end
+      tags = normalize_tags(options[:tags])
+      sample_rate = options[:sample_rate] || client.default_sample_rate
+      discarded = options.fetch(:discarded, false)
+
+      new(
+        type: type,
+        name: name,
+        value: value,
+        sample_rate: sample_rate,
+        tags: tags,
+        metadata: metadata,
+        discarded: discarded,
+      )
+    end
+
+    private
+
+    def normalize_tags(tags)
+      return unless tags
+      if tags.is_a?(Hash)
+        tags.map { |k, v| "#{k}:#{v}".tr("|,", "") }
+      else
+        tags.map { |tag| tag.tr("|,", "") }
+      end
+    end
+  end
+
+  attr_accessor(
+    :type,
+    :name,
+    :value,
+    :sample_rate,
+    :tags,
+    :metadata,
+  )
 
   # Initializes a new metric instance.
   # Normally, you don't want to call this method directly, but use one of the metric collection
@@ -43,47 +96,49 @@ class StatsD::Instrument::Metric
   #   {StatsD#default_sample_rate}.
   # @option options [Array<String>, Hash<String, String>, nil] :tags The tags to apply to this metric.
   #   See {.normalize_tags} for more information.
-  def initialize(options = {})
-    @type = options[:type] or raise ArgumentError, "Metric :type is required."
-    @name = options[:name] or raise ArgumentError, "Metric :name is required."
-    @name = StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
-
-    @value       = options[:value] || default_value
-    @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
-    @tags        = StatsD::Instrument::Metric.normalize_tags(options[:tags])
-  end
-
-  # The default value for this metric, which will be used if it is not set.
-  #
-  # A default value is only defined for counter metrics (<tt>1</tt>). For all other
-  # metric types, this emthod will raise an <tt>ArgumentError</tt>.
-  #
-  # @return [Numeric, String] The default value for this metric.
-  # @raise ArgumentError if the metric type doesn't have a default value
-  def default_value
-    case type
-      when :c; 1
-      else raise ArgumentError, "A value is required for metric type #{type.inspect}."
-    end
+  def initialize(
+    type:,
+    name:,
+    value:,
+    discarded: false,
+    metadata: nil,
+    tags: nil,
+    sample_rate: nil
+  )
+    @type = type
+    @name = name
+    @value = value
+    @discarded = discarded
+    @metadata = metadata
+    @tags = tags
+    @sample_rate = sample_rate
   end
 
   # @private
   # @return [String]
   def to_s
-    str = "#{TYPES[type]} #{name}:#{value}"
-    str << " @#{sample_rate}" if sample_rate != 1.0
-    str << " " << tags.map { |t| "##{t}"}.join(' ') if tags
-    str
+    str = [TYPES[type].to_s, "#{name}:#{value}"]
+    str << "@#{sample_rate}" if sample_rate != 1.0
+    str << tags.map { |t| "##{t}" } if tags
+    str.join(" ")
   end
 
   # @private
   # @return [String]
   def inspect
-    "#<StatsD::Instrument::Metric #{self.to_s}>"
+    "#<StatsD::Instrument::Metric #{self}>"
   end
 
-  # The metric types that are supported by this library. Note that every StatsD server
-  # implementation only supports a subset of them.
+  def discard
+    @discarded = true
+  end
+
+  def discarded?
+    !!@discarded
+  end
+
+  private
+
   TYPES = {
     c:  'increment',
     ms: 'measure',
@@ -92,17 +147,4 @@ class StatsD::Instrument::Metric
     kv: 'key/value',
     s:  'set',
   }
-
-  # Utility function to convert tags to the canonical form.
-  #
-  # - Tags specified as key value pairs will be converted into an array
-  # - Tags are normalized to only use word characters and underscores.
-  #
-  # @param tags [Array<String>, Hash<String, String>, nil] Tags specified in any form.
-  # @return [Array<String>, nil] the list of tags in canonical form.
-  def self.normalize_tags(tags)
-    return unless tags
-    tags = tags.map { |k, v| k.to_s + ":".freeze + v.to_s } if tags.is_a?(Hash)
-    tags.map { |tag| tag.tr('|,'.freeze, ''.freeze) }
-  end
 end
