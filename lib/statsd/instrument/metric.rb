@@ -46,6 +46,7 @@ class StatsD::Instrument::Metric
   def initialize(options = {})
     @type = options[:type] or raise ArgumentError, "Metric :type is required."
     @name = options[:name] or raise ArgumentError, "Metric :name is required."
+    @name = normalize_name(@name)
     @name = StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
 
     @value       = options[:value] || default_value
@@ -92,6 +93,14 @@ class StatsD::Instrument::Metric
     kv: 'key/value',
     s:  'set',
   }
+
+  # Strip metric names of special characters used by StatsD line protocol, replace with underscore
+  #
+  # @param name [String]
+  # @return [String]
+  def normalize_name(name)
+    name.tr(':|@'.freeze, '_')
+  end
 
   # Utility function to convert tags to the canonical form.
   #
