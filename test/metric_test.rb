@@ -25,11 +25,12 @@ class MetricTest < Minitest::Test
   end
 
   def test_bad_metric_name
-    assert_equal 'my_metric', StatsD::Instrument::Metric.normalize_name('my:metric')
-    assert_equal 'my_metric', StatsD::Instrument::Metric.normalize_name('my|metric')
-
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'lol::class')
-    assert_equal 'lol__class', m.name
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'my:metric', no_prefix: true)
+    assert_equal 'my_metric', m.name
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'my|metric', no_prefix: true)
+    assert_equal 'my_metric', m.name
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'my@metric', no_prefix: true)
+    assert_equal 'my_metric', m.name
   end
 
   def test_handle_bad_tags

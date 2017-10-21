@@ -46,7 +46,7 @@ class StatsD::Instrument::Metric
   def initialize(options = {})
     @type = options[:type] or raise ArgumentError, "Metric :type is required."
     @name = options[:name] or raise ArgumentError, "Metric :name is required."
-    @name = StatsD::Instrument::Metric.normalize_name(@name)
+    @name = normalize_name(@name)
     @name = StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
 
     @value       = options[:value] || default_value
@@ -98,8 +98,8 @@ class StatsD::Instrument::Metric
   #
   # @param name [String]
   # @return [String]
-  def self.normalize_name(name)
-    name.tr(':|', '_')
+  def normalize_name(name)
+    name.tr(':|@'.freeze, '_')
   end
 
   # Utility function to convert tags to the canonical form.
