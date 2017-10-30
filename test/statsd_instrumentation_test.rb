@@ -37,6 +37,10 @@ class ActiveMerchant::UniqueGateway < ActiveMerchant::Base
     {:success => arg}
   end
 
+  def boom
+    raise "boom!"
+  end
+
   def purchase(arg)
     ssl_post(arg)
   end
@@ -196,6 +200,18 @@ class StatsDInstrumentationTest < Minitest::Test
     end
   ensure
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  end
+
+  def test_statsd_measure_when_exception_is_raised
+    ActiveMerchant::UniqueGateway.statsd_measure :boom, 'ActiveMerchant.Gateway.boom', sample_rate: 0.3
+
+    assert_statsd_measure('ActiveMerchant.Gateway.boom', sample_rate: 0.3) do
+      assert_raises("boom!") do
+        ActiveMerchant::UniqueGateway.new.boom
+      end
+    end
+  ensure
+    ActiveMerchant::UniqueGateway.statsd_remove_measure :boom, 'ActiveMerchant.Gateway.boom'
   end
 
   def test_statsd_measure_uses_normalized_metric_name

@@ -56,19 +56,21 @@ module StatsD
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
     end
 
+    def self.duration
+      start = current_timestamp
+      yield
+      current_timestamp - start
+    end
+
     if Process.respond_to?(:clock_gettime)
       # @private
-      def self.duration
-        start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        yield
-        Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+      def self.current_timestamp
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
     else
       # @private
-      def self.duration
-        start = Time.now
-        yield
-        Time.now - start
+      def self.current_timestamp
+        Time.now
       end
     end
 
@@ -277,17 +279,25 @@ module StatsD
   #      http_response = StatsD.measure('HTTP.call.duration') do
   #        HTTP.get(url)
   #      end
-  def measure(key, value = nil, *metric_options, &block)
+  def measure(key, value = nil, *metric_options)
     if value.is_a?(Hash) && metric_options.empty?
       metric_options = [value]
       value = value.fetch(:value, nil)
     end
 
-    result = nil
-    value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
-    metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
-    result = metric unless block_given?
-    result
+    if block_given?
+      result = nil
+      start = StatsD::Instrument.current_timestamp
+      begin
+        result = yield
+      ensure
+        value = 1000 * (StatsD::Instrument.current_timestamp - start)
+        collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
+        result
+      end
+    else
+      collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
+    end
   end
 
   # Emits a counter metric.
