@@ -46,6 +46,9 @@ StatsD.prefix = nil # but can be set to any string
 # Sample 10% of events. By default all events are reported, which may overload your network or server.
 # You can, and should vary this on a per metric basis, depending on frequency and accuracy requirements
 StatsD.default_sample_rate = (ENV['STATSD_SAMPLE_RATE'] || 0.1 ).to_f
+
+# Optionally measure block even if there is an exception
+StatsD.measure_on_exception = true # default is false
 ```
 
 ## StatsD keys
