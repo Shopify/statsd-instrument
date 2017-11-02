@@ -24,6 +24,9 @@ require 'logger'
 #   The sample rate to use if the sample rate is unspecified for a metric call.
 #   @return [Float] Default is 1.0.
 #
+# @!attribute measure_on_exception
+#   Indicates whether or not to measure time when an exception is raised.
+#
 # @!attribute logger
 #   The logger to use in case of any errors. The logger is also used as default logger
 #   for the LoggerBackend (although this can be overwritten).
@@ -249,7 +252,7 @@ module StatsD
     end
   end
 
-  attr_accessor :logger, :default_sample_rate, :prefix
+  attr_accessor :logger, :default_sample_rate, :prefix, :measure_on_exception
   attr_writer :backend
 
   def backend
@@ -284,10 +287,24 @@ module StatsD
     end
 
     result = nil
-    value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
+    err = nil
+
+    value = 1000 * StatsD::Instrument.duration do
+      begin
+        result = block.call
+      rescue => e
+        if measure_on_exception
+          err = e
+        else
+          raise
+        end
+      end
+    end if block_given?
+
     metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
     result = metric unless block_given?
-    result
+
+    err.nil? ? result : raise(err)
   end
 
   # Emits a counter metric.

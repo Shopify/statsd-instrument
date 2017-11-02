@@ -48,6 +48,25 @@ class StatsDTest < Minitest::Test
     assert_equal 'sarah', return_value
   end
 
+  def test_statsd_measure_dont_measure_on_exception
+    metrics = capture_statsd_calls {
+      StatsD.measure('values.foobar') { raise(StandardError) } rescue nil
+    }
+
+    assert_equal 0, metrics.length
+  end
+
+  def test_statsd_measure_do_measure_on_exception
+    StatsD.measure_on_exception = true
+    metric = capture_statsd_call {
+      StatsD.measure('values.foobar') { raise(StandardError) } rescue nil
+    }
+
+    assert_instance_of Float, metric.value
+  ensure
+    StatsD.measure_on_exception = false
+  end
+
   def test_statsd_increment
     result = nil
     metric = capture_statsd_call { result = StatsD.increment('values.foobar', 3) }
