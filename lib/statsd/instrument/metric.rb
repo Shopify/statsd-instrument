@@ -47,7 +47,7 @@ class StatsD::Instrument::Metric
     @type = options[:type] or raise ArgumentError, "Metric :type is required."
     @name = options[:name] or raise ArgumentError, "Metric :name is required."
     @name = StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
-
+    @discarded   = false
     @value       = options[:value] || default_value
     @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
     @tags        = StatsD::Instrument::Metric.normalize_tags(options[:tags])
@@ -80,6 +80,14 @@ class StatsD::Instrument::Metric
   # @return [String]
   def inspect
     "#<StatsD::Instrument::Metric #{self.to_s}>"
+  end
+
+  def discard
+    @discarded = true
+  end
+
+  def discarded?
+    !!@discarded
   end
 
   # The metric types that are supported by this library. Note that every StatsD server
