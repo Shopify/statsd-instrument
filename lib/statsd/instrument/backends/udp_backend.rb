@@ -71,7 +71,7 @@ module StatsD::Instrument::Backends
         elsif tags_supported? && implementation == :collectd
           metric_tags = "#{metric.tags.join(',')}"
           metric_tags = metric_tags.prepend("[") << "]"
-          command.prepend(metric_tags)
+          command.prepend(metric_tags.gsub(":", "="))
         #  "statsd.[foo=bar,dim=val]test:1|g"
         else
           StatsD.logger.warn("[StatsD] Tags are only supported on Datadog implementation.")
