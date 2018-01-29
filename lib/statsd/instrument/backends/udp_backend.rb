@@ -67,7 +67,6 @@ module StatsD::Instrument::Backends
       if metric.tags
         if tags_supported? && implementation == :datadog
           command << "|##{metric.tags.join(',')}"
-        #support added for collectd implementation
         elsif tags_supported? && implementation == :collectd
           metric_tags = "#{metric.tags.join(',')}"
           metric_tags = metric_tags.prepend("[") << "]"
