@@ -191,7 +191,7 @@ GoogleBase.statsd_count :insert, lambda{|object, args| object.class.to_s.downcas
 
 ### Tags
 
-The Datadog implementation support tags, which you can use to slice and dice metrics in their UI. You can specify a list of tags as an option, either standalone tag (e.g. `"mytag"`), or key value based, separated by a colon: `"env:production"`.
+The Datadog implementation supports tags, which you can use to slice and dice metrics in their UI. You can specify a list of tags as an option, either standalone tag (e.g. `"mytag"`), or key value based, separated by a colon: `"env:production"`.
 
 ``` ruby
 StatsD.increment('my.counter', tags: ['env:production', 'unicorn'])
