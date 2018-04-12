@@ -1,6 +1,6 @@
 # StatsD client for Ruby apps
 
-[![Built on Travis](https://secure.travis-ci.org/Shopify/statsd-instrument.png?branch=master)](https://secure.travis-ci.org/Shopify/statsd-instrument)
+[![Built on Travis](https://secure.travis-ci.org/Shopify/statsd-instrument.svg?branch=master)](https://secure.travis-ci.org/Shopify/statsd-instrument)
 
 This is a ruby client for statsd (http://github.com/etsy/statsd). It provides a lightweight way to track and measure metrics in your application.
 
