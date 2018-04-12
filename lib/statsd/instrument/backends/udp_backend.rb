@@ -9,6 +9,7 @@ module StatsD::Instrument::Backends
 
     attr_reader :host, :port
     attr_accessor :implementation
+    attr_accessor :tags_whitelist
 
     def initialize(server = nil, implementation = nil)
       super()
@@ -66,7 +67,7 @@ module StatsD::Instrument::Backends
       command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
       if metric.tags
         if tags_supported?
-          command << "|##{metric.tags.join(',')}"
+          command << packet_tags(metric.tags)
         else
           StatsD.logger.warn("[StatsD] Tags are only supported on Datadog implementation.")
         end
@@ -74,6 +75,15 @@ module StatsD::Instrument::Backends
 
       command << "\n" if implementation == :statsite
       command
+    end
+
+    def packet_tags(tags)
+      if self.tags_whitelist
+        tags = tags.select { |tag| self.tags_whitelist.any? { |white| tag.start_with?(white) } }
+        return "" if tags.empty?
+      end
+
+      "|##{tags.join(',')}"
     end
 
     def tags_supported?

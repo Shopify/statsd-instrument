@@ -115,6 +115,13 @@ class UDPBackendTest < Minitest::Test
     StatsD.increment('fooc', tags: ['ignored'])
   end
 
+  def test_support_tags_whitelist_on_datadog
+    @backend.implementation = :datadog
+    @backend.tags_whitelist = ['host:']
+    @backend.expects(:write_packet).with("fooc:3|c|#host:1")
+    StatsD.increment('fooc', 3, tags: ['hostname:2', 'host:1'])
+  end
+
   def test_socket_error_should_not_raise_but_log
     @socket.stubs(:connect).raises(SocketError)
     @logger.expects(:error)
