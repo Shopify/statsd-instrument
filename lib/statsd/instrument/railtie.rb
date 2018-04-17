@@ -9,6 +9,6 @@ class StatsD::Instrument::Railtie < Rails::Railtie
   end
 
   initializer 'statsd-instrument.setup_backend', after: 'statsd-instrument.use_rails_logger' do
-    ::StatsD.backend = ::StatsD::Instrument::Environment.default_backend
+    ::StatsD.backend ||= ::StatsD::Instrument::Environment.default_backend
   end
 end

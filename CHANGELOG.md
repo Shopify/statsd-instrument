@@ -4,6 +4,7 @@ This file documents the changes between releases of this library. When creating 
 please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
+- Only rely on the default backend for an environment if one was not already declared.
 
 ### Version 2.1.3
 
