@@ -383,6 +383,7 @@ module StatsD
   # are on the StatsD interface
   alias time measure
   alias timer measure
+  alias timing measure
 
   private
 
