@@ -369,6 +369,21 @@ module StatsD
     collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
   end
 
+  # This is a hack method.  As of right now, we're not concerned with batching
+  # packets to our aggregator, as it's always on the localhost.
+  # If you're interested in having actual batch support on statsd-instrument
+  # please open a pull request.
+  # This is included in order to comply with other interfaces that assume
+  # the batch method is on the interface.
+  def batch
+    yield self
+  end
+
+  # These two methods are to comply with interfaces that other libraries are assuming
+  # are on the StatsD interface
+  alias time measure
+  alias timer measure
+
   private
 
   # Converts old-style ordered arguments in an argument hash for backwards compatibility.
