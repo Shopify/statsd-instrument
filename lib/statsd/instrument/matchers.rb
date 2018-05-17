@@ -8,7 +8,9 @@ module StatsD::Instrument::Matchers
     gauge: :g,
     histogram: :h,
     set: :s,
-    key_value: :kv
+    key_value: :kv,
+    event: :_e,
+    service_check: :_sc
   }
 
   class Matcher

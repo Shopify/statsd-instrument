@@ -5,6 +5,21 @@ module StatsD::Instrument::Backends
 
     DEFAULT_IMPLEMENTATION = :statsd
 
+    EVENT_OPTIONS = {
+      date_happened: 'd',
+      hostname: 'h',
+      aggregation_key: 'k',
+      priority: 'p',
+      source_type_name: 's',
+      alert_type: 't',
+    }
+
+    SERVICE_CHECK_OPTIONS = {
+      timestamp: 'd',
+      hostname: 'h',
+      message: 'm',
+    }
+
     include MonitorMixin
 
     attr_reader :host, :port
@@ -32,6 +47,8 @@ module StatsD::Instrument::Backends
     def implementation_supports_metric_type?(type)
       case type
         when :h;  implementation == :datadog
+        when :_e; implementation == :datadog
+        when :_sc; implementation == :datadog
         when :kv; implementation == :statsite
         else true
       end
@@ -62,7 +79,19 @@ module StatsD::Instrument::Backends
     end
 
     def generate_packet(metric)
-      command = "#{metric.name}:#{metric.value}|#{metric.type}"
+      command = ""
+      if metric.type == :_e
+        escaped_title = metric.name.tr('\n', '\\n')
+        escaped_text = metric.value.tr('\n', '\\n')
+
+        command << "_e{#{escaped_title.size},#{escaped_text.size}}:#{escaped_title}|#{escaped_text}"
+        command << generate_metadata(metric, EVENT_OPTIONS)
+      elsif metric.type == :_sc
+        command << "_sc|#{metric.name}|#{metric.value}"
+        command << generate_metadata(metric, SERVICE_CHECK_OPTIONS)
+      else
+        command = "#{metric.name}:#{metric.value}|#{metric.type}"
+      end
       command << "|@#{metric.sample_rate}" if metric.sample_rate < 1 || (implementation == :statsite && metric.sample_rate > 1)
       if metric.tags
         if tags_supported?
@@ -96,5 +125,14 @@ module StatsD::Instrument::Backends
     def invalidate_socket
       @socket = nil
     end
+
+    private
+
+    def generate_metadata(metric, options)
+      (metric.metadata.keys & options.keys).map do |key|
+        "|#{options[key]}:#{metric.metadata[key]}"
+      end.join
+    end
+    
   end
 end

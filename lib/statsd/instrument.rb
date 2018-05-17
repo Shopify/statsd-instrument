@@ -369,6 +369,36 @@ module StatsD
     collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
   end
 
+  # Emits an event metric.
+  # @param title [String] Title of the event.
+  # @param text [String] Body of the event.
+  # @param metric_options [Hash] (default: {}) Metric options
+  # @return (see #collect_metric)
+  # @note Supported by the datadog implementation only.
+  def event(title, text, *metric_options)
+    if text.is_a?(Hash) && metric_options.empty?
+      metric_options = [text]
+      text = text.fetch(:text, nil)
+    end
+
+    collect_metric(hash_argument(metric_options).merge(type: :_e, name: title, value: text))
+  end
+
+  # Emits a service check metric.
+  # @param title [String] Title of the event.
+  # @param text [String] Body of the event.
+  # @param metric_options [Hash] (default: {}) Metric options
+  # @return (see #collect_metric)
+  # @note Supported by the datadog implementation only.
+  def service_check(name, status, *metric_options)
+    if status.is_a?(Hash) && metric_options.empty?
+      metric_options = [status]
+      status = status.fetch(:status, nil)
+    end
+
+    collect_metric(hash_argument(metric_options).merge(type: :_sc, name: name, value: status))
+  end
+
   private
 
   # Converts old-style ordered arguments in an argument hash for backwards compatibility.
