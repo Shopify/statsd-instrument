@@ -5,6 +5,8 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+### Version 2.2.4
+
 - Add support for two new datadog specific metric types: events and service checks.
 
 ### Version 2.1.3
