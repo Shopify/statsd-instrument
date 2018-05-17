@@ -76,6 +76,50 @@ class UDPBackendTest < Minitest::Test
     StatsD.histogram('fooh', 42.4)
   end
 
+  def test_event_on_datadog
+    @backend.implementation = :datadog
+    @backend.expects(:write_packet).with('_e{4,3}:fooh|baz|h:localhost:3000|@0.01|#foo')
+    StatsD.event('fooh', 'baz', hostname: 'localhost:3000', sample_rate: 0.01, tags: ["foo"])
+  end
+
+  def test_event_on_datadog_escapes_newlines
+    @backend.implementation = :datadog
+    @backend.expects(:write_packet).with('_e{8,5}:fooh\\n\\n|baz\\n')
+    StatsD.event('fooh\n\n', 'baz\n')
+  end
+
+  def test_event_on_datadog_ignores_invalid_metadata
+    @backend.implementation = :datadog
+    @backend.expects(:write_packet).with('_e{4,3}:fooh|baz')
+    StatsD.event('fooh', 'baz', i_am_not_supported: 'not-supported')
+  end
+
+  def test_event_warns_when_not_using_datadog
+    @backend.implementation = :other
+    @backend.expects(:write_packet).never
+    @logger.expects(:warn)
+    StatsD.event('fooh', 'bar')
+  end
+
+  def test_service_check_on_datadog
+    @backend.implementation = :datadog
+    @backend.expects(:write_packet).with('_sc|fooh|baz|h:localhost:3000|@0.01|#foo')
+    StatsD.service_check('fooh', 'baz', hostname: 'localhost:3000', sample_rate: 0.01, tags: ["foo"])
+  end
+
+  def test_service_check_on_datadog_ignores_invalid_metadata
+    @backend.implementation = :datadog
+    @backend.expects(:write_packet).with('_sc|fooh|baz')
+    StatsD.service_check('fooh', 'baz', i_am_not_supported: 'not-supported')
+  end
+
+  def test_service_check_warns_when_not_using_datadog
+    @backend.implementation = :other
+    @backend.expects(:write_packet).never
+    @logger.expects(:warn)
+    StatsD.service_check('fooh', 'bar')
+  end
+
   def test_histogram_warns_if_not_using_datadog
     @backend.implementation = :other
     @backend.expects(:write_packet).never
@@ -106,13 +150,6 @@ class UDPBackendTest < Minitest::Test
     @backend.implementation = :datadog
     @backend.expects(:write_packet).with("fooc:3|c|#topic:foo,bar")
     StatsD.increment('fooc', 3, tags: ['topic:foo', 'bar'])
-  end
-
-  def test_warn_when_using_tags_and_not_on_datadog
-    @backend.implementation = :other
-    @backend.expects(:write_packet).with("fooc:1|c")
-    @logger.expects(:warn)
-    StatsD.increment('fooc', tags: ['ignored'])
   end
 
   def test_socket_error_should_not_raise_but_log
