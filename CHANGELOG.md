@@ -5,6 +5,8 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+- Add support for two new datadog specific metric types: events and service checks.
+
 ### Version 2.1.3
 
 - The `assert_statsd_calls` test helper will now raise an exception whenever a block isn't passed.
