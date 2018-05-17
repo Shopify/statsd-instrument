@@ -121,8 +121,7 @@ Events support additional metadata such as `date_happened`, `hostname`, `aggrega
 
 #### StatsD.service_check
 
-An event is a (title, text) tuple that can be used to correlate metrics with something that occured within the system.
-This is a good fit for instance to correlate response time variation with a deploy of the new code.
+An event is a (check_name, status) tuple that can be used to monitor the status of services your application depends on.
 
 ```ruby
 StatsD.service_check('shipit.redis_connection', 'ok')

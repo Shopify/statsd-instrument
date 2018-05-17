@@ -3,7 +3,7 @@ require 'monitor'
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
 
-    class DatadogStatsDProtocol
+    class DogStatsDProtocol
       EVENT_OPTIONS = {
         date_happened: 'd',
         hostname: 'h',
@@ -91,10 +91,9 @@ module StatsD::Instrument::Backends
     end
 
     def implementation=(value)
-      @packet_factory =
-        case value
+      @packet_factory = case value
         when :datadog
-          DatadogStatsDProtocol.new
+          DogStatsDProtocol.new
         when :statsite
           StatsiteStatsDProtocol.new
         else
