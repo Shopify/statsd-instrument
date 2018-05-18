@@ -339,6 +339,21 @@ module StatsD
     collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
   end
 
+   # Emits a distribution metric.
+  # @param key [String] The name of the metric.
+  # @param value [Numeric] The value to record.
+  # @param metric_options [Hash] (default: {}) Metric options
+  # @return (see #collect_metric)
+  # @note Supported by the datadog implementation only (in beta)
+  def distribution(key, value, *metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = value.fetch(:value, nil)
+    end
+
+    collect_metric(hash_argument(metric_options).merge(type: :d, name: key, value: value))
+  end
+
   # Emits a key/value metric.
   # @param key [String] The name of the metric.
   # @param value [Numeric] The value to record.

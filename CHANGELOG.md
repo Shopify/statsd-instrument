@@ -5,6 +5,8 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+- Add support for beta, datadog specifc distribution metrics
+
 ### Version 2.2.0
 
 - Add support for two new datadog specific metric types: events and service checks.

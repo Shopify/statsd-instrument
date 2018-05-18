@@ -49,6 +49,7 @@ class StatsD::Instrument::MetricExpectation
       ms: 'measure',
       g:  'gauge',
       h:  'histogram',
+      d:  'distribution',
       kv: 'key/value',
       s:  'set',
   }
