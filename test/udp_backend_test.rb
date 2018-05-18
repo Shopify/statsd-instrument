@@ -76,6 +76,12 @@ class UDPBackendTest < Minitest::Test
     StatsD.histogram('fooh', 42.4)
   end
 
+   def test_distribution_syntax_on_datadog
+    @backend.implementation = :datadog
+    @backend.expects(:write_packet).with('fooh:42.4|d')
+    StatsD.distribution('fooh', 42.4)
+  end
+
   def test_event_on_datadog
     @backend.implementation = :datadog
     @backend.expects(:write_packet).with('_e{4,3}:fooh|baz|h:localhost:3000|@0.01|#foo')
@@ -125,6 +131,13 @@ class UDPBackendTest < Minitest::Test
     @backend.expects(:write_packet).never
     @logger.expects(:warn)
     StatsD.histogram('fooh', 42.4)
+  end
+
+  def test_distribution_warns_if_not_using_datadog
+    @backend.implementation = :other
+    @backend.expects(:write_packet).never
+    @logger.expects(:warn)
+    StatsD.distribution('fooh', 42.4)
   end
 
   def test_supports_key_value_syntax_on_statsite
