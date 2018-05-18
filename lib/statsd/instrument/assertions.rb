@@ -23,6 +23,10 @@ module StatsD::Instrument::Assertions
     assert_statsd_call(:h, metric_name, options, &block)
   end
 
+  def assert_statsd_distribution(metric_name, options = {}, &block)
+    assert_statsd_call(:d, metric_name, options, &block)
+  end
+
   def assert_statsd_set(metric_name, options = {}, &block)
     assert_statsd_call(:s, metric_name, options, &block)
   end

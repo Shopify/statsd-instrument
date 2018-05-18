@@ -20,7 +20,7 @@ module StatsD::Instrument::Backends
       }
 
       def supported?(metric)
-        [:c, :ms, :g, :h, :s, :_e, :_sc].include?(metric.type)
+        [:c, :ms, :g, :h, :d, :s, :_e, :_sc].include?(metric.type)
       end
 
       def generate_packet(metric)
