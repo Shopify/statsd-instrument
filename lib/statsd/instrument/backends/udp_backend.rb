@@ -3,6 +3,8 @@ require 'monitor'
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
 
+    BASE_SUPPORTED_METRIC_TYPES = { c: true, ms: true, g: true, s: true }
+
     class DogStatsDProtocol
       EVENT_OPTIONS = {
         date_happened: 'd',
@@ -19,9 +21,7 @@ module StatsD::Instrument::Backends
         message: 'm',
       }
 
-      def supported?(metric)
-        [:c, :ms, :g, :h, :s, :_e, :_sc].include?(metric.type)
-      end
+      SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES.merge(h: true, _e: true, _sc: true)
 
       def generate_packet(metric)
         packet = ""
@@ -54,9 +54,7 @@ module StatsD::Instrument::Backends
     end
 
     class StatsiteStatsDProtocol
-      def supported?(metric)
-        [:c, :ms, :g, :s, :kv].include?(metric.type)
-      end
+      SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES.merge(kv: true)
 
       def generate_packet(metric)
         packet = "#{metric.name}:#{metric.value}|#{metric.type}"
@@ -67,9 +65,7 @@ module StatsD::Instrument::Backends
     end
 
     class StatsDProtocol
-      def supported?(metric)
-        [:c, :ms, :g, :s].include?(metric.type)
-      end
+      SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES
 
       def generate_packet(metric)
         packet = "#{metric.name}:#{metric.value}|#{metric.type}"
@@ -103,7 +99,7 @@ module StatsD::Instrument::Backends
     end
 
     def collect_metric(metric)
-      unless @packet_factory.supported?(metric)
+      unless @packet_factory.class::SUPPORTED_METRIC_TYPES[metric.type]
         StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} not supported on #{implementation} implementation.")
         return false
       end
