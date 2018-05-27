@@ -56,19 +56,21 @@ module StatsD
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
     end
 
+    def self.duration
+      start = current_timestamp
+      yield
+      current_timestamp - start
+    end
+
     if Process.respond_to?(:clock_gettime)
       # @private
-      def self.duration
-        start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        yield
-        Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+      def self.current_timestamp
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
     else
       # @private
-      def self.duration
-        start = Time.now
-        yield
-        Time.now - start
+      def self.current_timestamp
+        Time.now
       end
     end
 
@@ -206,7 +208,42 @@ module StatsD
       remove_from_method(method, name, :measure)
     end
 
+    def self.count_method(
+      method_name,
+      on_success: DEFAULT_ON_SUCCESS,
+      on_exception: DEFAULT_ON_EXCEPTION,
+      **metric_options
+    )
+      metric = StatsD::Instrument::Metric.new(metric_options.merge(type: :c))
+
+      StatsD::Instrument::MethodCounter.new(
+        method_name,
+        metric,
+        on_success: on_success,
+        on_exception: on_exception,
+      )
+    end
+
+    def self.measure_method(
+      method_name,
+      on_success: DEFAULT_ON_SUCCESS,
+      on_exception: DEFAULT_ON_EXCEPTION,
+      **metric_options
+    )
+      metric = StatsD::Instrument::Metric.new(metric_options.merge(type: :ms, value: 0))
+
+      StatsD::Instrument::MethodMeasurer.new(
+        method_name,
+        metric,
+        on_success: on_success,
+        on_exception: on_exception,
+      )
+    end
+
     private
+
+    DEFAULT_ON_SUCCESS = -> (_metric, _result) {}
+    DEFAULT_ON_EXCEPTION = -> (metric, _ex) { metric.discard }
 
     def statsd_instrumentation_for(method, name, action)
       unless statsd_instrumentations.key?([method, name, action])
@@ -433,5 +470,7 @@ require 'statsd/instrument/environment'
 require 'statsd/instrument/helpers'
 require 'statsd/instrument/assertions'
 require 'statsd/instrument/metric_expectation'
+require 'statsd/instrument/method_counter'
+require 'statsd/instrument/method_measurer'
 require 'statsd/instrument/matchers' if defined?(::RSpec)
 require 'statsd/instrument/railtie' if defined?(Rails)
