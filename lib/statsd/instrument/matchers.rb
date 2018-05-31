@@ -7,6 +7,7 @@ module StatsD::Instrument::Matchers
     measure: :ms,
     gauge: :g,
     histogram: :h,
+    distribution: :d,
     set: :s,
     key_value: :kv
   }

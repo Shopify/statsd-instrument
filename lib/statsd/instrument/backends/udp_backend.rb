@@ -21,7 +21,7 @@ module StatsD::Instrument::Backends
         message: 'm',
       }
 
-      SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES.merge(h: true, _e: true, _sc: true)
+      SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES.merge(h: true, _e: true, _sc: true, d: true)
 
       def generate_packet(metric)
         packet = ""

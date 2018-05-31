@@ -117,6 +117,15 @@ class StatsDTest < Minitest::Test
     assert_equal 42, metric.value
   end
 
+  def test_statsd_distribution
+    result = nil
+    metric = capture_statsd_call { result = StatsD.distribution('values.foobar', 42) }
+    assert_equal metric, result
+    assert_equal :d, metric.type
+    assert_equal 'values.foobar', metric.name
+    assert_equal 42, metric.value
+  end
+
   def test_statsd_key_value
     result = nil
     metric = capture_statsd_call { result = StatsD.key_value('values.foobar', 42) }

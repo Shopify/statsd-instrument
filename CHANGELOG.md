@@ -5,6 +5,10 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+### Version 2.3.0.beta
+
+- Add support for beta, datadog specifc distribution metrics
+
 ### Version 2.2.1
 
 - Fix performance regression from v2.2.0
