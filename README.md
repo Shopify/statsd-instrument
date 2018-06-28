@@ -106,6 +106,16 @@ StatsD.set('GoogleBase.customers', "12345", sample_rate: 1.0)
 
 Because you are counting unique values, the results of using a sampling value less than 1.0 can lead to unexpected, hard to interpret results.
 
+#### StatsD.distribution
+
+A modified gauge that submits a distribution of values over a sample period. Arithmetic and statistical calculations (percetiles, average, etc.) on the data set are peformed server side rather than client side like a histogram.
+
+```ruby
+StatsD.distribution('shipit.redis_connection', 3)
+```
+
+*Note: This is only supported by the beta datadog implementatation.*
+
 #### StatsD.event
 
 An event is a (title, text) tuple that can be used to correlate metrics with something that occured within the system.

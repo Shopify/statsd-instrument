@@ -263,6 +263,8 @@ module StatsD
   #   @param key [String] The name of the metric.
   #   @param value [Float] The measured duration in milliseconds
   #   @param metric_options [Hash] Options for the metric
+  #     the key :as_dist will submit the value as a distribution instead of a timing
+  #     (only supported by DataDog's implementation)
   #   @return [StatsD::Instrument::Metric] The metric that was sent to the backend.
   #
   # @overload measure(key, metric_options = {}, &block)
@@ -270,7 +272,9 @@ module StatsD
   #   block passed to this method.
   #   @param key [String] The name of the metric.
   #   @param metric_options [Hash] Options for the metric
-  #   @yield The method will yield the block that was passed to this emthod to measure its duration.
+  #     the key :as_dist sets the metric type to a 'distribution' instead of a 'timing'
+  #     (only supported by DataDog's implementation)
+  #   @yield The method will yield the block that was passed to this method to measure its duration.
   #   @return The value that was returns by the block passed to this method.
   #
   #   @example
@@ -282,10 +286,11 @@ module StatsD
       metric_options = [value]
       value = value.fetch(:value, nil)
     end
+    type = (!metric_options.empty? && metric_options.first[:as_dist] ? :d : :ms)
 
     result = nil
     value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
-    metric = collect_metric(hash_argument(metric_options).merge(type: :ms, name: key, value: value))
+    metric = collect_metric(hash_argument(metric_options).merge(type: type, name: key, value: value))
     result = metric unless block_given?
     result
   end
@@ -339,7 +344,7 @@ module StatsD
     collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
   end
 
-   # Emits a distribution metric.
+  # Emits a distribution metric.
   # @param key [String] The name of the metric.
   # @param value [Numeric] The value to record.
   # @param metric_options [Hash] (default: {}) Metric options
