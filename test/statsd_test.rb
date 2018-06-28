@@ -17,6 +17,11 @@ class StatsDTest < Minitest::Test
     assert_equal :ms, metric.type
   end
 
+  def test_statsd_measure_with_explicit_value_and_distribution_override
+    metric = capture_statsd_call { result = StatsD.measure('values.foobar', 42, as_dist: true) }
+    assert_equal :d, metric.type
+  end
+
   def test_statsd_measure_with_explicit_value_as_keyword_argument
     result = nil
     metric = capture_statsd_call { result = StatsD.measure('values.foobar', value: 42) }
@@ -24,6 +29,11 @@ class StatsDTest < Minitest::Test
     assert_equal 'values.foobar', metric.name
     assert_equal 42, metric.value
     assert_equal :ms, metric.type
+  end
+
+  def test_statsd_measure_with_explicit_value_keyword_and_distribution_override
+    metric = capture_statsd_call { result = StatsD.measure('values.foobar', value: 42, as_dist: true) }
+    assert_equal :d, metric.type
   end
 
   def test_statsd_measure_without_value_or_block
@@ -41,6 +51,13 @@ class StatsDTest < Minitest::Test
       StatsD.measure('values.foobar') { 'foo' }
     end
     assert_equal 1120.0, metric.value
+  end
+
+  def test_statsd_measure_use_distribution_override_for_a_block
+    metric = capture_statsd_call do
+      StatsD.measure('values.foobar', as_dist: true) { 'foo' }
+    end
+    assert_equal :d, metric.type
   end
 
   def test_statsd_measure_returns_return_value_of_block
