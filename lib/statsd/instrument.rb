@@ -263,6 +263,8 @@ module StatsD
   #   @param key [String] The name of the metric.
   #   @param value [Float] The measured duration in milliseconds
   #   @param metric_options [Hash] Options for the metric
+  #     the key :as_dist will submit the value as a distribution instead of a timing
+  #     (only supported by DataDog's implementation)
   #   @return [StatsD::Instrument::Metric] The metric that was sent to the backend.
   #
   # @overload measure(key, metric_options = {}, &block)
@@ -270,6 +272,8 @@ module StatsD
   #   block passed to this method.
   #   @param key [String] The name of the metric.
   #   @param metric_options [Hash] Options for the metric
+  #     the key :as_dist sets the metric type to a 'distribution' instead of a 'timing'
+  #     (only supported by DataDog's implementation)
   #   @yield The method will yield the block that was passed to this method to measure its duration.
   #   @return The value that was returns by the block passed to this method.
   #
