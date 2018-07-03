@@ -82,7 +82,7 @@ module StatsD
     def statsd_measure(method, name, *metric_options)
       add_to_method(method, name, :measure) do
         define_method(method) do |*args, &block|
-          StatsD.measure(StatsD::Instrument.generate_metric_name(name, self, *args), nil, *metric_options) { super(*args, &block) }
+          StatsD.measure(StatsD::Instrument.generate_metric_name(name, self, *args), *metric_options) { super(*args, &block) }
         end
       end
     end
