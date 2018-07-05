@@ -290,7 +290,7 @@ module StatsD
 
     result = nil
     value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
-    metric = collect_metric(hash_argument(metric_options).merge(type: type, name: key, value: value))
+    metric = collect_metric(type, key, value, metric_options)
     result = metric unless block_given?
     result
   end
@@ -307,12 +307,7 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   def increment(key, value = 1, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, 1)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :c, name: key, value: value))
+    collect_metric(:c, key, value, metric_options)
   end
 
   # Emits a gauge metric.
@@ -321,12 +316,7 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   def gauge(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :g, name: key, value: value))
+    collect_metric(:g, key, value, metric_options)
   end
 
   # Emits a histogram metric.
@@ -336,12 +326,7 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
   def histogram(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :h, name: key, value: value))
+    collect_metric(:h, key, value, metric_options)
   end
 
   # Emits a distribution metric.
@@ -351,12 +336,7 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only (in beta)
   def distribution(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :d, name: key, value: value))
+    collect_metric(:d, key, value, metric_options)
   end
 
   # Emits a key/value metric.
@@ -366,12 +346,7 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the statsite implementation only.
   def key_value(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :kv, name: key, value: value))
+    collect_metric(:kv, key, value, metric_options)
   end
 
   # Emits a set metric.
@@ -381,12 +356,7 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
   def set(key, value, *metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :s, name: key, value: value))
+    collect_metric(:s, key, value, metric_options)
   end
 
   # Emits an event metric.
@@ -396,12 +366,7 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
   def event(title, text, *metric_options)
-    if text.is_a?(Hash) && metric_options.empty?
-      metric_options = [text]
-      text = text.fetch(:text, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :_e, name: title, value: text))
+    collect_metric(:_e, title, text, metric_options)
   end
 
   # Emits a service check metric.
@@ -411,12 +376,7 @@ module StatsD
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
   def service_check(name, status, *metric_options)
-    if status.is_a?(Hash) && metric_options.empty?
-      metric_options = [status]
-      status = status.fetch(:status, nil)
-    end
-
-    collect_metric(hash_argument(metric_options).merge(type: :_sc, name: name, value: status))
+    collect_metric(:_sc, name, status, metric_options)
   end
 
   private
@@ -440,7 +400,13 @@ module StatsD
   # Instantiates a metric, and sends it to the backend for further processing.
   # @param options (see StatsD::Instrument::Metric#initialize)
   # @return [StatsD::Instrument::Metric] The meric that was sent to the backend.
-  def collect_metric(options)
+  def collect_metric(type, name, value, metric_options)
+    if value.is_a?(Hash) && metric_options.empty?
+      metric_options = [value]
+      value = value.fetch(:value, nil)
+    end
+
+    options = hash_argument(metric_options).merge(type: type, name: name, value: value)
     backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
     metric
   end
