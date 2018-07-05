@@ -282,17 +282,13 @@ module StatsD
   #        HTTP.get(url)
   #      end
   def measure(key, value = nil, *metric_options, &block)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
+    value, metric_options = parse_options(value, metric_options)
     type = (!metric_options.empty? && metric_options.first[:as_dist] ? :d : :ms)
 
     result = nil
     value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
     metric = collect_metric(type, key, value, metric_options)
-    result = metric unless block_given?
-    result
+    (result || metric)
   end
 
   # Emits a counter metric.
@@ -335,8 +331,12 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only (in beta)
-  def distribution(key, value, *metric_options)
-    collect_metric(:d, key, value, metric_options)
+  def distribution(key, value=nil, *metric_options, &block)
+    value, metric_options = parse_options(value, metric_options)
+    result = nil
+    value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
+    metric = collect_metric(:d, key, value, metric_options)
+    (result || metric)
   end
 
   # Emits a key/value metric.
@@ -397,14 +397,19 @@ module StatsD
     return hash
   end
 
-  # Instantiates a metric, and sends it to the backend for further processing.
-  # @param options (see StatsD::Instrument::Metric#initialize)
-  # @return [StatsD::Instrument::Metric] The meric that was sent to the backend.
-  def collect_metric(type, name, value, metric_options)
+  def parse_options(value, metric_options)
     if value.is_a?(Hash) && metric_options.empty?
       metric_options = [value]
       value = value.fetch(:value, nil)
     end
+    [value, metric_options]
+  end
+
+  # Instantiates a metric, and sends it to the backend for further processing.
+  # @param options (see StatsD::Instrument::Metric#initialize)
+  # @return [StatsD::Instrument::Metric] The meric that was sent to the backend.
+  def collect_metric(type, name, value, metric_options)
+    value, metric_options = parse_options(value, metric_options)
 
     options = hash_argument(metric_options).merge(type: type, name: name, value: value)
     backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
