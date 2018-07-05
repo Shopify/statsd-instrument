@@ -331,6 +331,20 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only (in beta)
+  #
+  # @overload distribution(key, metric_options = {}, &block)
+  #   Emits a distribution metric, after measuring the execution duration of the
+  #   block passed to this method.
+  #   @param key [String] The name of the metric.
+  #   @param metric_options [Hash] Options for the metric
+  #   @yield The method will yield the block that was passed to this method to measure its duration.
+  #   @return The value that was returns by the block passed to this method.
+  #   @note Supported by the datadog implementation only.
+  #
+  #   @example
+  #      http_response = StatsD.distribution('HTTP.call.duration') do
+  #        HTTP.get(url)
+  #      end
   def distribution(key, value=nil, *metric_options, &block)
     value, metric_options = parse_options(value, metric_options)
     result = nil
