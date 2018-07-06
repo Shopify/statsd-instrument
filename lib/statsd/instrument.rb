@@ -72,7 +72,7 @@ module StatsD
       end
     end
 
-    # Adds execution duration instrumentation to a method.
+    # Adds execution duration instrumentation to a method as a timing.
     #
     # @param method [Symbol] The name of the method to instrument.
     # @param name [String, #call] The name of the metric to use. You can also pass in a
@@ -83,6 +83,22 @@ module StatsD
       add_to_method(method, name, :measure) do
         define_method(method) do |*args, &block|
           StatsD.measure(StatsD::Instrument.generate_metric_name(name, self, *args), *metric_options) { super(*args, &block) }
+        end
+      end
+    end
+
+    # Adds execution duration instrumentation to a method as a distribution.
+    #
+    # @param method [Symbol] The name of the method to instrument.
+    # @param name [String, #call] The name of the metric to use. You can also pass in a
+    #    callable to dynamically generate a metric name
+    # @param metric_options (see StatsD#measure)
+    # @return [void]
+    # @note Supported by the datadog implementation only (in beta)
+    def statsd_distribution(method, name, *metric_options)
+      add_to_method(method, name, :distribution) do
+        define_method(method) do |*args, &block|
+          StatsD.distribution(StatsD::Instrument.generate_metric_name(name, self, *args), *metric_options) { super(*args, &block) }
         end
       end
     end
@@ -204,6 +220,15 @@ module StatsD
     # @see #statsd_measure
     def statsd_remove_measure(method, name)
       remove_from_method(method, name, :measure)
+    end
+
+    # Removes StatsD distribution instrumentation from a method
+    # @param method (see #statsd_remove_count)
+    # @param name (see #statsd_remove_count)
+    # @return [void]
+    # @see #statsd_measure
+    def statsd_remove_distribution(method, name)
+      remove_from_method(method, name, :distribution)
     end
 
     private
