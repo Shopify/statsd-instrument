@@ -313,7 +313,8 @@ module StatsD
     result = nil
     value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
     metric = collect_metric(type, key, value, metric_options)
-    (result || metric)
+    result = metric unless block_given?
+    result
   end
 
   # Emits a counter metric.
@@ -375,7 +376,8 @@ module StatsD
     result = nil
     value  = 1000 * StatsD::Instrument.duration { result = block.call } if block_given?
     metric = collect_metric(:d, key, value, metric_options)
-    (result || metric)
+    result = metric unless block_given?
+    result
   end
 
   # Emits a key/value metric.

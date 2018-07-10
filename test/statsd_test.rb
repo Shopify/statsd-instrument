@@ -65,6 +65,11 @@ class StatsDTest < Minitest::Test
     assert_equal 'sarah', return_value
   end
 
+  def test_statsd_measure_returns_return_value_of_block_even_if_nil
+    return_value = StatsD.measure('values.foobar', as_dist: true) { nil }
+    assert_nil return_value
+  end
+
   def test_statsd_increment
     result = nil
     metric = capture_statsd_call { result = StatsD.increment('values.foobar', 3) }
@@ -166,6 +171,11 @@ class StatsDTest < Minitest::Test
   def test_statsd_distribution_returns_return_value_of_block
     return_value = StatsD.distribution('values.foobar') { 'sarah' }
     assert_equal 'sarah', return_value
+  end
+
+  def test_statsd_measure_returns_return_value_of_block_even_if_nil
+    return_value = StatsD.distribution('values.foobar') { nil }
+    assert_nil return_value
   end
 
   def test_statsd_key_value
