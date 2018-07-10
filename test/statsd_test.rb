@@ -143,6 +143,31 @@ class StatsDTest < Minitest::Test
     assert_equal 42, metric.value
   end
 
+  def test_statsd_distribution_with_benchmarked_block_duration
+    StatsD::Instrument.stubs(:duration).returns(1.12)
+    metric = capture_statsd_call do
+      StatsD.distribution('values.foobar') { 'foo' }
+    end
+    assert_equal :d, metric.type
+    assert_equal 1120.0, metric.value
+  end
+
+  def test_statsd_distribution_with_block_and_options
+    StatsD::Instrument.stubs(:duration).returns(1.12)
+    metric = capture_statsd_call do
+      StatsD.distribution('values.foobar', :tags => ['test'], :sample_rate => 0.9) { 'foo' }
+    end
+    assert_equal 1120.0, metric.value
+    assert_equal 'values.foobar', metric.name
+    assert_equal 0.9, metric.sample_rate
+    assert_equal ['test'], metric.tags
+  end
+
+  def test_statsd_distribution_returns_return_value_of_block
+    return_value = StatsD.distribution('values.foobar') { 'sarah' }
+    assert_equal 'sarah', return_value
+  end
+
   def test_statsd_key_value
     result = nil
     metric = capture_statsd_call { result = StatsD.key_value('values.foobar', 42) }

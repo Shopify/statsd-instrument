@@ -265,6 +265,64 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
   end
 
+
+  def test_statsd_distribution
+    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3
+
+    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3) do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
+  ensure
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  end
+
+  def test_statsd_distribution_uses_normalized_metric_name
+    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+
+    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post') do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
+  ensure
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+  end
+
+  def test_statsd_distribution_yells_without_block
+    err = assert_raises(ArgumentError) do
+      assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post')
+    end
+    assert_equal "block must be given", err.to_s
+  end
+
+  def test_statsd_distribution_with_method_receiving_block
+    ActiveMerchant::Base.statsd_distribution :post_with_block, 'ActiveMerchant.Base.post_with_block'
+
+    assert_statsd_distribution('ActiveMerchant.Base.post_with_block') do
+      assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
+    end
+  ensure
+    ActiveMerchant::Base.statsd_remove_distribution :post_with_block, 'ActiveMerchant.Base.post_with_block'
+  end
+
+  def test_statsd_distribution_with_value
+    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 1
+
+    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post') do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
+  ensure
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  end
+
+  def test_statsd_distribution_with_value_and_options
+    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 1, sample_rate: 0.45
+
+    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.45) do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
+  ensure
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  end
+
   def test_instrumenting_class_method
     ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
     ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
