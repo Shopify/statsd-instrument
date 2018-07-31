@@ -5,6 +5,29 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+## Version 2.3.3
+
+- Capture measure and distribution metrics on exception and early return (#134)
+
+NOTE: Now that exceptions are measured statistics may behave differently. An exception example:
+```
+StatsD.measure('myhttpcall') do
+  my_http_object.invoke
+end
+```
+Version 2.3.2 and below did not track metrics whenever a HTTP Timeout exception was raised.
+2.3.3 and above will include those metrics which may increase the values included.
+
+A return example:
+```
+StatsD.measure('myexpensivecalculation') do
+  return if expensive_calculation_disabled?
+  expensive_calculation
+end
+```
+If `expensive_calculation_disabled?` is true 50% of the time version 2.3.2 will drop the
+average metric considerably.
+
 ## Version 2.3.2
 
 - Add option to override global prefix for metrics (#148)
