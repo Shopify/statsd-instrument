@@ -207,4 +207,17 @@ class UDPBackendTest < Minitest::Test
 
     assert $?.success?, 'socket did not write on exit'
   end
+
+  def test_socket_error_should_invalidate_socket
+    seq = sequence('fail_then_succeed')
+
+    @socket.expects(:connect).with('localhost', 8125)
+    @socket.expects(:send).raises(Errno::EDESTADDRREQ).in_sequence(seq)
+
+    @socket.expects(:send).returns(1).in_sequence(seq)
+    @logger.expects(:error)
+
+    StatsD.increment('fail')
+    StatsD.increment('succeed')
+  end
 end
