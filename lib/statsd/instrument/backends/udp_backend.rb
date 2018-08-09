@@ -146,6 +146,7 @@ module StatsD::Instrument::Backends
       socket.send(command, 0) > 0
     rescue SocketError, IOError, SystemCallError, Errno::ECONNREFUSED => e
       StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
+      invalidate_socket
     end
 
     def invalidate_socket

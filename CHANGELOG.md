@@ -8,6 +8,7 @@ please at an entry to the "unreleased changes" section below.
 ### Version 2.3.0.beta
 
 - Add support for beta, datadog specifc distribution metrics
+- Invalidate socket on connectivity issues
 
 ### Version 2.2.1
 
