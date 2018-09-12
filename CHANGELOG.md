@@ -5,6 +5,32 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+### Version 2.3.0
+
+- No changes from `beta6`, distribtions are GA at DataDog so making the distribution changes GA in gem
+
+### Version 2.3.0.beta6
+
+- Fix invalidate socket on connectivity issues in UDP (#135)
+
+### Version 2.3.0.beta5
+
+- Fixes bug in return value for blocks used in distributions (#132)
+
+### Version 2.3.0.beta4
+
+- Add support for distribution to accept a block
+- Add class method for defining and removing a distribution from a method (same as a measure)
+- Refactor most instrument methods to reduce code duplication
+
+### Version 2.3.0.beta3
+
+- fix for `:as_dist` parameter in the `statsd_measure` class method
+
+### Version 2.3.0.beta2
+
+- Add support for specifying a measure to emit as a distribution using `:as_dist` parameter
+
 ### Version 2.3.0.beta
 
 - Add support for beta, datadog specifc distribution metrics
