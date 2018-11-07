@@ -150,7 +150,9 @@ module StatsD::Instrument::Backends
     end
 
     def invalidate_socket
-      @socket = nil
+      synchronize do
+        @socket = nil
+      end
     end
   end
 end
