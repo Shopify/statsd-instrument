@@ -448,7 +448,7 @@ module StatsD
 
   # Instantiates a metric, and sends it to the backend for further processing.
   # @param options (see StatsD::Instrument::Metric#initialize)
-  # @return [StatsD::Instrument::Metric] The meric that was sent to the backend.
+  # @return [StatsD::Instrument::Metric] The metric that was sent to the backend.
   def collect_metric(type, name, value, metric_options)
     value, metric_options = parse_options(value, metric_options)
 
