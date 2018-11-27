@@ -455,8 +455,7 @@ module StatsD
     options = metric_options.merge(
       type: type,
       name: name,
-      value: value,
-      prefix: metric_options[:prefix]
+      value: value
     )
     backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
     metric
