@@ -52,8 +52,9 @@ class StatsD::Instrument::Metric
     @name = if options[:prefix]
       "#{options[:prefix]}.#{@name}"
     else
-      StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
+      StatsD.prefix && !options[:no_prefix] ? "#{StatsD.prefix}.#{@name}" : @name
     end
+
     @value       = options[:value] || default_value
     @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
     @tags        = StatsD::Instrument::Metric.normalize_tags(options[:tags])
