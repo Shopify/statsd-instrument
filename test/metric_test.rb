@@ -25,6 +25,9 @@ class MetricTest < Minitest::Test
 
     m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', prefix: "foobar")
     assert_equal 'foobar.counter', m.name
+
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', prefix: "foobar", no_prefix: true)
+    assert_equal 'counter', m.name
   end
 
   def test_bad_metric_name

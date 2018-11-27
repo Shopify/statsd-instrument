@@ -5,7 +5,8 @@
 # @!attribute name
 #   @return [String] The name of the metric. {StatsD.prefix} will automatically be applied
 #     to the metric in the constructor, unless the <tt>:no_prefix</tt> option is set or is 
-#     overridden by the <tt>:prefix</tt> option.
+#     overridden by the <tt>:prefix</tt> option. Note that <tt>:no_prefix</tt> has greater
+#     precedence than <tt>:prefix</tt>.
 # @!attribute value
 #   @see #default_value
 #   @return [Numeric, String] The value to collect for the metric. Depending on the metric
@@ -49,10 +50,12 @@ class StatsD::Instrument::Metric
     @type = options[:type] or raise ArgumentError, "Metric :type is required."
     @name = options[:name] or raise ArgumentError, "Metric :name is required."
     @name = normalize_name(@name)
-    @name = if options[:prefix]
-      "#{options[:prefix]}.#{@name}"
-    else
-      StatsD.prefix && !options[:no_prefix] ? "#{StatsD.prefix}.#{@name}" : @name
+    unless options[:no_prefix]
+      @name = if options[:prefix]
+        "#{options[:prefix]}.#{@name}"
+      else
+        StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name
+      end
     end
 
     @value       = options[:value] || default_value
