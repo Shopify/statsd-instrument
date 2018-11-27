@@ -456,7 +456,7 @@ module StatsD
       type: type,
       name: name,
       value: value,
-      prefix: metric_options[:prefix] || prefix
+      prefix: metric_options[:prefix]
     )
     backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
     metric

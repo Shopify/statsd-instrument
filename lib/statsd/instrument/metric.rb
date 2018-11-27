@@ -3,8 +3,9 @@
 # @!attribute type
 #   @return [Symbol] The metric type. Must be one of {StatsD::Instrument::Metric::TYPES}
 # @!attribute name
-#   @return [String] The name of the metric. <tt>:prefix</tt> option will automatically be applied
-#     to the metric in the constructor, unless the <tt>:no_prefix</tt> option is set.
+#   @return [String] The name of the metric. {StatsD.prefix} will automatically be applied
+#     to the metric in the constructor, unless the <tt>:no_prefix</tt> option is set or is 
+#     overridden by the <tt>:prefix</tt> option.
 # @!attribute value
 #   @see #default_value
 #   @return [Numeric, String] The value to collect for the metric. Depending on the metric
@@ -36,7 +37,7 @@ class StatsD::Instrument::Metric
   #
   # @option options [Symbol] :type The type of the metric.
   # @option options [String] :name The name of the metric without prefix.
-  # @option options [String] :prefix The prefix of the metric.
+  # @option options [String] :prefix Override the default StatsD prefix.
   # @option options [Boolean] :no_prefix Set to <tt>true</tt> if you don't want to apply prefix
   # @option options [Numeric, String, nil] :value The value to collect for the metric. If set to
   #   <tt>nil>/tt>, {#default_value} will be used.
@@ -48,8 +49,11 @@ class StatsD::Instrument::Metric
     @type = options[:type] or raise ArgumentError, "Metric :type is required."
     @name = options[:name] or raise ArgumentError, "Metric :name is required."
     @name = normalize_name(@name)
-    @name = options[:prefix] ? "#{options[:prefix]}.#{@name}" : @name unless options[:no_prefix]
-
+    @name = if options[:prefix]
+      "#{options[:prefix]}.#{@name}"
+    else
+      StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
+    end
     @value       = options[:value] || default_value
     @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
     @tags        = StatsD::Instrument::Metric.normalize_tags(options[:tags])
