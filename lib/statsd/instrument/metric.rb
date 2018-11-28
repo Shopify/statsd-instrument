@@ -3,7 +3,7 @@
 # @!attribute type
 #   @return [Symbol] The metric type. Must be one of {StatsD::Instrument::Metric::TYPES}
 # @!attribute name
-#   @return [String] The name of the metric. {StatsD.prefix} will automatically be applied
+#   @return [String] The name of the metric. {StatsD#prefix} will automatically be applied
 #     to the metric in the constructor, unless the <tt>:no_prefix</tt> option is set or is 
 #     overridden by the <tt>:prefix</tt> option. Note that <tt>:no_prefix</tt> has greater
 #     precedence than <tt>:prefix</tt>.
@@ -39,7 +39,7 @@ class StatsD::Instrument::Metric
   # @option options [Symbol] :type The type of the metric.
   # @option options [String] :name The name of the metric without prefix.
   # @option options [String] :prefix Override the default StatsD prefix.
-  # @option options [Boolean] :no_prefix Set to <tt>true</tt> if you don't want to apply prefix
+  # @option options [Boolean] :no_prefix Set to <tt>true</tt> if you don't want to apply a prefix.
   # @option options [Numeric, String, nil] :value The value to collect for the metric. If set to
   #   <tt>nil>/tt>, {#default_value} will be used.
   # @option options [Numeric, nil] :sample_rate The sample rate to use. If not set, it will use
