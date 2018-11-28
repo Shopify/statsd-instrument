@@ -451,12 +451,7 @@ module StatsD
   # @return [StatsD::Instrument::Metric] The metric that was sent to the backend.
   def collect_metric(type, name, value, metric_options)
     value, metric_options = parse_options(value, metric_options)
-    metric_options = hash_argument(metric_options)
-    options = metric_options.merge(
-      type: type,
-      name: name,
-      value: value
-    )
+    options = hash_argument(metric_options).merge(type: type, name: name, value: value)
     backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
     metric
   end
