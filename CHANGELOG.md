@@ -5,6 +5,14 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+## Version 2.3.2
+
+- Add option to override global prefix for metrics (#148)
+
+## Version 2.3.1
+
+- Add mutex around UDP socket invalidation (#147)
+
 ### Version 2.3.0
 
 - No changes from `beta6`, distribtions are GA at DataDog so making the distribution changes GA in gem
