@@ -46,7 +46,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_benchmarked_block_duration
-    StatsD::Instrument.stubs(:duration).returns(1.12)
+    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
     metric = capture_statsd_call do
       StatsD.measure('values.foobar') { 'foo' }
     end
@@ -68,6 +68,40 @@ class StatsDTest < Minitest::Test
   def test_statsd_measure_returns_return_value_of_block_even_if_nil
     return_value = StatsD.measure('values.foobar', as_dist: true) { nil }
     assert_nil return_value
+  end
+
+  def test_statsd_measure_with_return_in_block_still_captures
+    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 6.12)
+    result = nil
+    metric = capture_statsd_call do
+      lambda = -> do
+        StatsD.measure('values.foobar') { return 'from lambda'}
+      end
+
+      result = lambda.call
+    end
+
+    assert_equal 'from lambda', result
+    assert_equal 1120.0, metric.value
+  end
+
+  def test_statsd_measure_with_exception_in_block_still_captures
+    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 6.12)
+    result = nil
+    metric = capture_statsd_call do
+      lambda = -> do
+        StatsD.measure('values.foobar') { raise 'from lambda'}
+      end
+
+      begin
+        result = lambda.call
+      rescue
+      end
+
+    end
+
+    assert_nil result
+    assert_equal 1120.0, metric.value
   end
 
   def test_statsd_increment
@@ -149,7 +183,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_distribution_with_benchmarked_block_duration
-    StatsD::Instrument.stubs(:duration).returns(1.12)
+    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
     metric = capture_statsd_call do
       StatsD.distribution('values.foobar') { 'foo' }
     end
@@ -157,8 +191,44 @@ class StatsDTest < Minitest::Test
     assert_equal 1120.0, metric.value
   end
 
+  def test_statsd_distribution_with_return_in_block_still_captures
+    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
+    result = nil
+    metric = capture_statsd_call do
+      lambda = -> do
+        StatsD.distribution('values.foobar') { return 'from lambda'}
+      end
+
+      result = lambda.call
+    end
+
+    assert_equal 'from lambda', result
+    assert_equal :d, metric.type
+    assert_equal 1120.0, metric.value
+  end
+
+  def test_statsd_distribution_with_exception_in_block_still_captures
+    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
+    result = nil
+    metric = capture_statsd_call do
+      lambda = -> do
+        StatsD.distribution('values.foobar') { raise 'from lambda'}
+      end
+
+      begin
+        result = lambda.call
+      rescue
+      end
+
+    end
+
+    assert_nil result
+    assert_equal :d, metric.type
+    assert_equal 1120.0, metric.value
+  end
+
   def test_statsd_distribution_with_block_and_options
-    StatsD::Instrument.stubs(:duration).returns(1.12)
+    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
     metric = capture_statsd_call do
       StatsD.distribution('values.foobar', :tags => ['test'], :sample_rate => 0.9) { 'foo' }
     end
