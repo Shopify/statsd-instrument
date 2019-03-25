@@ -333,7 +333,7 @@ end
 
 ### Compatibility
 
-Tested using Travis CI against Ruby 2.0, 2.1, 2.2, Rubinius, and JRuby.
+Tested using Travis CI against Ruby 2.1, 2.2, 2.3, 2.4, 2.5, and 2.6.
 
 ### Reliance on DNS
 
