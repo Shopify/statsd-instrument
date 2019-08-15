@@ -83,7 +83,7 @@ class StatsD::Instrument::Metric
   def to_s
     str = "#{TYPES[type]} #{name}:#{value}"
     str << " @#{sample_rate}" if sample_rate != 1.0
-    str << " " << tags.map { |t| "##{t}"}.join(' ') if tags
+    tags.each { |tag| str << " ##{tag}" } if tags
     str
   end
 

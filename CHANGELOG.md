@@ -5,6 +5,8 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+- Improve performance of `Metric#to_s`
+
 ## Version 2.3.3
 
 - Capture measure and distribution metrics on exception and early return (#134)
