@@ -43,50 +43,12 @@ class StatsD::Instrument::Metric
     using RubyBackports
   end
 
-  attr_accessor :type, :name, :value, :sample_rate, :tags, :metadata
-
-  # Initializes a new metric instance.
-  # Normally, you don't want to call this method directly, but use one of the metric collection
-  # methods on the {StatsD} module.
-  #
-  # @option options [Symbol] :type The type of the metric.
-  # @option options [String] :name The name of the metric without prefix.
-  # @option options [String] :prefix Override the default StatsD prefix.
-  # @option options [Boolean] :no_prefix Set to <tt>true</tt> if you don't want to apply a prefix.
-  # @option options [Numeric, String, nil] :value The value to collect for the metric. If set to
-  #   <tt>nil>/tt>, {#default_value} will be used.
-  # @option options [Numeric, nil] :sample_rate The sample rate to use. If not set, it will use
-  #   {StatsD#default_sample_rate}.
-  # @option options [Array<String>, Hash<String, String>, nil] :tags The tags to apply to this metric.
-  #   See {.normalize_tags} for more information.
-  def initialize(options = {})
-    if options[:type]
-      @type = options[:type]
-    else
-      raise ArgumentError, "Metric :type is required."
-    end
-
-    if options[:name]
-      @name = normalize_name(options[:name])
-    else
-      raise ArgumentError, "Metric :name is required."
-    end
-
-    unless options[:no_prefix]
-      @name = if options[:prefix]
-        "#{options[:prefix]}.#{@name}"
-      else
-        StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name
-      end
-    end
-
-    @value = options[:value] || default_value
-    @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
-    @tags = StatsD::Instrument::Metric.normalize_tags(options[:tags])
-    if StatsD.default_tags
-      @tags = Array(@tags) + StatsD.default_tags
-    end
-    @metadata = options.reject { |k, _| [:type, :name, :value, :sample_rate, :tags].include?(k) }
+  def self.new(
+    type:, name:, value: default_value(type), sample_rate: StatsD.default_sample_rate, tags: nil, metadata: nil
+  )
+    # pass keyword arguments as positional arguments for performance reasons,
+    # since MRI's C implementation of new turns keyword arguments into a hash
+    super(type, name, value, sample_rate, tags, metadata)
   end
 
   # The default value for this metric, which will be used if it is not set.
@@ -94,13 +56,46 @@ class StatsD::Instrument::Metric
   # A default value is only defined for counter metrics (<tt>1</tt>). For all other
   # metric types, this emthod will raise an <tt>ArgumentError</tt>.
   #
+  #
+  # A default value is only defined for counter metrics (<tt>1</tt>). For all other
+  # metric types, this emthod will raise an <tt>ArgumentError</tt>.
+  #
   # @return [Numeric, String] The default value for this metric.
   # @raise ArgumentError if the metric type doesn't have a default value
-  def default_value
+  def self.default_value(type)
     case type
     when :c then 1
     else raise ArgumentError, "A value is required for metric type #{type.inspect}."
     end
+  end
+
+  attr_accessor :type, :name, :value, :sample_rate, :tags, :metadata
+
+  # Initializes a new metric instance.
+  # Normally, you don't want to call this method directly, but use one of the metric collection
+  # methods on the {StatsD} module.
+  #
+  # @param type [Symbol] The type of the metric.
+  # @option name [String] :name The name of the metric without prefix.
+  # @option value [Numeric, String, nil] The value to collect for the metric.
+  # @option sample_rate [Numeric, nil] The sample rate to use. If not set, it will use
+  #   {StatsD#default_sample_rate}.
+  # @option tags [Array<String>, Hash<String, String>, nil] :tags The tags to apply to this metric.
+  #   See {.normalize_tags} for more information.
+  def initialize(type, name, value, sample_rate, tags, metadata) # rubocop:disable Metrics/ParameterLists
+    raise ArgumentError, "Metric :type is required." unless type
+    raise ArgumentError, "Metric :name is required." unless name
+    raise ArgumentError, "Metric :value is required." unless value
+
+    @type = type
+    @name = normalize_name(name)
+    @value = value
+    @sample_rate = sample_rate
+    @tags = StatsD::Instrument::Metric.normalize_tags(tags)
+    if StatsD.default_tags
+      @tags = Array(@tags) + StatsD.default_tags
+    end
+    @metadata = metadata
   end
 
   # @private

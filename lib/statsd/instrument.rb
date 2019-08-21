@@ -346,11 +346,17 @@ module StatsD
   #      http_response = StatsD.measure('HTTP.call.duration') do
   #        HTTP.get(url)
   #      end
-  def measure(key, value = nil, *metric_options, &block)
-    value, metric_options = parse_options(value, metric_options)
-    type = (!metric_options.empty? && metric_options.first[:as_dist] ? :d : :ms)
-
-    return collect_metric(type, key, value, metric_options) unless block_given?
+  def measure(
+    key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false, as_dist: false,
+    &block
+  )
+    prefix = nil if no_prefix
+    type = as_dist ? :d : :ms
+    unless block_given?
+      return collect_metric(type, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix, &block)
+    end
 
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     begin
@@ -358,7 +364,7 @@ module StatsD
     ensure
       # Ensure catches both a raised exception and a return in the invoked block
       value = 1000.0 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
-      collect_metric(type, key, value, metric_options)
+      collect_metric(type, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
     end
   end
 
@@ -372,9 +378,14 @@ module StatsD
   #   should know how to handle it.
   #
   # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  def increment(key, value = 1, *metric_options)
-    collect_metric(:c, key, value, metric_options)
+  # @return [void]
+  def increment(
+    key, value_arg = 1, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false
+  )
+    prefix = nil if no_prefix
+    collect_metric(:c, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
   end
 
   # Emits a gauge metric.
@@ -382,8 +393,13 @@ module StatsD
   # @param value [Numeric] The current value to record.
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
-  def gauge(key, value, *metric_options)
-    collect_metric(:g, key, value, metric_options)
+  def gauge(
+    key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false
+  )
+    prefix = nil if no_prefix
+    collect_metric(:g, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
   end
 
   # Emits a histogram metric.
@@ -392,8 +408,13 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
-  def histogram(key, value, *metric_options)
-    collect_metric(:h, key, value, metric_options)
+  def histogram(
+    key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false
+  )
+    prefix = nil if no_prefix
+    collect_metric(:h, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
   end
 
   # Emits a distribution metric.
@@ -416,18 +437,14 @@ module StatsD
   #      http_response = StatsD.distribution('HTTP.call.duration') do
   #        HTTP.get(url)
   #      end
-  def distribution(key, value = nil, *metric_options, &block)
-    value, metric_options = parse_options(value, metric_options)
-
-    return collect_metric(:d, key, value, metric_options) unless block_given?
-
-    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    begin
-      block.call
-    ensure
-      value = 1000.0 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
-      collect_metric(:d, key, value, metric_options)
-    end
+  def distribution(
+    key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false,
+    &block
+  )
+    prefix = nil if no_prefix
+    measure(key, value, as_dist: true, sample_rate: sample_rate, tags: tags, prefix: prefix, &block)
   end
 
   # Emits a key/value metric.
@@ -436,8 +453,12 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   # @note Supported by the statsite implementation only.
-  def key_value(key, value, *metric_options)
-    collect_metric(:kv, key, value, metric_options)
+  def key_value(
+    key, value_arg = nil, deprecated_sample_rate_arg = nil,
+    value: value_arg, sample_rate: deprecated_sample_rate_arg, no_prefix: false
+  )
+    prefix = nil if no_prefix
+    collect_metric(:kv, key, value, sample_rate: sample_rate, prefix: prefix)
   end
 
   # Emits a set metric.
@@ -446,8 +467,13 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
-  def set(key, value, *metric_options)
-    collect_metric(:s, key, value, metric_options)
+  def set(
+    key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false
+  )
+    prefix = nil if no_prefix
+    collect_metric(:s, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
   end
 
   # Emits an event metric.
@@ -456,8 +482,14 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
-  def event(title, text, *metric_options)
-    collect_metric(:_e, title, text, metric_options)
+  def event(
+    title, text,
+    deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false, **metadata
+  )
+    prefix = nil if no_prefix
+    collect_metric(:_e, title, text, sample_rate: sample_rate, tags: tags, prefix: prefix, metadata: metadata)
   end
 
   # Emits a service check metric.
@@ -466,43 +498,28 @@ module StatsD
   # @param metric_options [Hash] (default: {}) Metric options
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
-  def service_check(name, status, *metric_options)
-    collect_metric(:_sc, name, status, metric_options)
+  def service_check(
+    name, status,
+    deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false, **metadata
+  )
+    prefix = nil if no_prefix
+    collect_metric(:_sc, name, status, sample_rate: sample_rate, tags: tags, prefix: prefix, metadata: metadata)
   end
 
   private
 
-  # Converts old-style ordered arguments in an argument hash for backwards compatibility.
-  # @param args [Array] The list of non-required arguments.
-  # @return [Hash] The hash of optional arguments.
-  def hash_argument(args)
-    return {} if args.empty?
-    return args.first if args.length == 1 && args.first.is_a?(Hash)
-
-    order = [:sample_rate, :tags]
-    hash = {}
-    args.each_with_index do |value, index|
-      hash[order[index]] = value
-    end
-    hash
-  end
-
-  def parse_options(value, metric_options)
-    if value.is_a?(Hash) && metric_options.empty?
-      metric_options = [value]
-      value = value.fetch(:value, nil)
-    end
-    [value, metric_options]
-  end
-
   # Instantiates a metric, and sends it to the backend for further processing.
   # @param options (see StatsD::Instrument::Metric#initialize)
-  # @return [StatsD::Instrument::Metric] The metric that was sent to the backend.
-  def collect_metric(type, name, value, metric_options)
-    value, metric_options = parse_options(value, metric_options)
+  # @return [void]
+  def collect_metric(type, name, value, sample_rate:, tags: nil, prefix:, metadata: nil)
+    sample_rate ||= default_sample_rate
+    name = "#{prefix}.#{name}" if prefix
 
-    options = hash_argument(metric_options).merge(type: type, name: name, value: value)
-    backend.collect_metric(metric = StatsD::Instrument::Metric.new(options))
+    metric = StatsD::Instrument::Metric.new(type: type, name: name, value: value,
+      sample_rate: sample_rate, tags: tags, metadata: metadata)
+    backend.collect_metric(metric)
     metric
   end
 end

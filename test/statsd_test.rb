@@ -277,6 +277,21 @@ class StatsDTest < Minitest::Test
     assert_equal ['first_tag:first_value', 'second_tag:second_value'], StatsD.default_tags
   end
 
+  def test_name_prefix
+    StatsD.stubs(:prefix).returns('prefix')
+    m = capture_statsd_call { StatsD.increment('counter') }
+    assert_equal 'prefix.counter', m.name
+
+    m = capture_statsd_call { StatsD.increment('counter', no_prefix: true) }
+    assert_equal 'counter', m.name
+
+    m = capture_statsd_call { StatsD.increment('counter', prefix: "foobar") }
+    assert_equal 'foobar.counter', m.name
+
+    m = capture_statsd_call { StatsD.increment('counter', prefix: "foobar", no_prefix: true) }
+    assert_equal 'counter', m.name
+  end
+
   protected
 
   def capture_statsd_call(&block)
