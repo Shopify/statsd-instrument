@@ -90,8 +90,8 @@ class UDPBackendTest < Minitest::Test
 
   def test_event_on_datadog_escapes_newlines
     @backend.implementation = :datadog
-    @backend.expects(:write_packet).with('_e{8,5}:fooh\\n\\n|baz\\n')
-    StatsD.event('fooh\n\n', 'baz\n')
+    @backend.expects(:write_packet).with("_e{8,5}:fooh\\n\\n|baz\\n")
+    StatsD.event("fooh\n\n", "baz\n")
   end
 
   def test_event_on_datadog_ignores_invalid_metadata
