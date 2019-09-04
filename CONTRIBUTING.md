@@ -11,7 +11,7 @@ This project is MIT licensed.
 
 Report issues using the [Github issues tracker](https://github.com/Shopify/statsd-instrument/issues/new).
 
-When reporting issues, please incldue the following information:
+When reporting issues, please include the following information:
 
 - Your Ruby interpreter version.
 - The statsd-instrument version. **Note:** only the latest version is supported.
