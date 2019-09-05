@@ -27,8 +27,8 @@ module StatsD::Instrument::Backends
         packet = ""
 
         if metric.type == :_e
-          escaped_title = metric.name.tr('\n', '\\n')
-          escaped_text = metric.value.tr('\n', '\\n')
+          escaped_title = metric.name.gsub("\n", "\\n")
+          escaped_text = metric.value.gsub("\n", "\\n")
 
           packet << "_e{#{escaped_title.size},#{escaped_text.size}}:#{escaped_title}|#{escaped_text}"
           packet << generate_metadata(metric, EVENT_OPTIONS)
