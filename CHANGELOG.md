@@ -5,7 +5,10 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
-- Improve performance of `Metric#to_s`
+## Version 2.3.4
+
+- Improve performance of `Metric#to_s` (#152)
+- Fix bug in escaping newlines for events with Datadog Backend (#153)
 
 ## Version 2.3.3
 
