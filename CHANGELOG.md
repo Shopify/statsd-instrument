@@ -9,6 +9,7 @@ please at an entry to the "unreleased changes" section below.
 
 - Improve performance of `Metric#to_s` (#152)
 - Fix bug in escaping newlines for events with Datadog Backend (#153)
+- **Breaking change:** Remove `StatsD::Instrument#duration`
 
 ## Version 2.3.3
 
