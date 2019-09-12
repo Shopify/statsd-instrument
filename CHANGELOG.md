@@ -5,6 +5,10 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+## Version 2.3.5
+
+- Re-add `StatsD::Instrument.duration`, which was accidentally removed since verison 2.5.3 (#157)
+
 ## Version 2.3.4
 
 - Improve performance of `Metric#to_s` (#152)
