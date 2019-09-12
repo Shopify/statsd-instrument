@@ -257,6 +257,17 @@ class StatsDTest < Minitest::Test
     assert_equal 42, metric.value
   end
 
+  def test_statsd_durarion_returns_time_in_seconds
+    duration = StatsD::Instrument.duration {}
+    assert_kind_of Float, duration
+  end
+
+  def test_statsd_durarion_does_not_swallow_exceptions
+    assert_raises(RuntimeError) do
+      StatsD::Instrument.duration { raise "Foo" }
+    end
+  end
+
   protected
 
   def capture_statsd_call(&block)
