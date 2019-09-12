@@ -68,6 +68,16 @@ module StatsD
       end
     end
 
+    # Even though this method is considered private, and is no longer used internally,
+    # applications in the wild rely on it. As a result, we cannot remove this method
+    # until the next major version.
+    # @private
+    def self.duration
+      start = current_timestamp
+      yield
+      current_timestamp - start
+    end
+
     # Adds execution duration instrumentation to a method as a timing.
     #
     # @param method [Symbol] The name of the method to instrument.
