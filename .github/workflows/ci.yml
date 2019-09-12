@@ -1,0 +1,26 @@
+name: CI
+
+on: push
+
+jobs:
+  test:
+    name: Ruby ${{ matrix.ruby }}
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        ruby: ['2.3', '2.4', '2.5', '2.6']
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup Ruby
+      uses: actions/setup-ruby@v1
+      with:
+        version: ${{ matrix.ruby }}
+        architecture: 'x64'
+
+    - name: Run test suite
+      run: |
+        gem install bundler
+        bundle install --jobs 4 --retry 3
+        bundle exec rake
