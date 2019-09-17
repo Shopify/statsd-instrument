@@ -3,6 +3,10 @@ require 'test_helper'
 class StatsDTest < Minitest::Test
   include StatsD::Instrument::Assertions
 
+  def teardown
+    StatsD.default_tags = nil
+  end
+
   def test_statsd_passed_collections_to_backend
     StatsD.backend.expects(:collect_metric).with(instance_of(StatsD::Instrument::Metric))
     StatsD.increment('test')
@@ -266,6 +270,11 @@ class StatsDTest < Minitest::Test
     assert_raises(RuntimeError) do
       StatsD::Instrument.duration { raise "Foo" }
     end
+  end
+
+  def test_statsd_default_tags_get_normalized
+    StatsD.default_tags = {:first_tag => 'first_value', :second_tag => 'second_value'}
+    assert_equal ['first_tag:first_value', 'second_tag:second_value'], StatsD.default_tags
   end
 
   protected
