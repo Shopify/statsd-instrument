@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'logger'
 
 # The environment module is used to detect, and initialize the environment in

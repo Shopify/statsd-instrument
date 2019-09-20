@@ -1,15 +1,31 @@
+# frozen_string_literal: true
+
 # @private
 class StatsD::Instrument::MetricExpectation
-
   attr_accessor :times, :type, :name, :value, :sample_rate, :tags
   attr_reader :ignore_tags
 
   def initialize(options = {})
-    @type = options[:type] or raise ArgumentError, "Metric :type is required."
-    @name = options[:name] or raise ArgumentError, "Metric :name is required."
+    if options[:type]
+      @type = options[:type]
+    else
+      raise ArgumentError, "Metric :type is required."
+    end
+
+    if options[:name]
+      @name = options[:name]
+    else
+      raise ArgumentError, "Metric :name is required."
+    end
+
+    if options[:times]
+      @times = options[:times]
+    else
+      raise ArgumentError, "Metric :times is required."
+    end
+
     @name = StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
     @tags = StatsD::Instrument::Metric.normalize_tags(options[:tags])
-    @times = options[:times] or raise ArgumentError, "Metric :times is required."
     @sample_rate = options[:sample_rate]
     @value = options[:value]
     @ignore_tags = StatsD::Instrument::Metric.normalize_tags(options[:ignore_tags])
@@ -29,7 +45,7 @@ class StatsD::Instrument::MetricExpectation
         actual_tags -= ignored_tags
 
         if ignore_tags.is_a?(Array)
-          actual_tags.delete_if{ |key| ignore_tags.include?(key.split(":").first) }
+          actual_tags.delete_if { |key| ignore_tags.include?(key.split(":").first) }
         end
       end
 
@@ -39,30 +55,28 @@ class StatsD::Instrument::MetricExpectation
   end
 
   def default_value
-    case type
-      when :c; 1
-    end
+    1 if type == :c
   end
 
   TYPES = {
-      c:  'increment',
-      ms: 'measure',
-      g:  'gauge',
-      h:  'histogram',
-      d:  'distribution',
-      kv: 'key/value',
-      s:  'set',
+    c: 'increment',
+    ms: 'measure',
+    g: 'gauge',
+    h: 'histogram',
+    d: 'distribution',
+    kv: 'key/value',
+    s: 'set',
   }
 
   def to_s
-    str = "#{TYPES[type]} #{name}:#{value}"
+    str = +"#{TYPES[type]} #{name}:#{value}"
     str << " @#{sample_rate}" if sample_rate != 1.0
-    str << " " << tags.map { |t| "##{t}"}.join(' ') if tags
+    str << " " << tags.map { |t| "##{t}" }.join(' ') if tags
     str << " times:#{times}" if times > 1
     str
   end
 
   def inspect
-    "#<StatsD::Instrument::MetricExpectation #{self.to_s}>"
+    "#<StatsD::Instrument::MetricExpectation #{self}>"
   end
 end

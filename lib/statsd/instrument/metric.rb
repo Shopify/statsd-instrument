@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 # The Metric class represents a metric sample to be send by a backend.
 #
 # @!attribute type
 #   @return [Symbol] The metric type. Must be one of {StatsD::Instrument::Metric::TYPES}
 # @!attribute name
 #   @return [String] The name of the metric. {StatsD#prefix} will automatically be applied
-#     to the metric in the constructor, unless the <tt>:no_prefix</tt> option is set or is 
+#     to the metric in the constructor, unless the <tt>:no_prefix</tt> option is set or is
 #     overridden by the <tt>:prefix</tt> option. Note that <tt>:no_prefix</tt> has greater
 #     precedence than <tt>:prefix</tt>.
 # @!attribute value
@@ -29,7 +31,6 @@
 # @see StatsD::Instrument::Backend A StatsD::Instrument::Backend is used to collect metrics.
 #
 class StatsD::Instrument::Metric
-
   attr_accessor :type, :name, :value, :sample_rate, :tags, :metadata
 
   # Initializes a new metric instance.
@@ -47,9 +48,18 @@ class StatsD::Instrument::Metric
   # @option options [Array<String>, Hash<String, String>, nil] :tags The tags to apply to this metric.
   #   See {.normalize_tags} for more information.
   def initialize(options = {})
-    @type = options[:type] or raise ArgumentError, "Metric :type is required."
-    @name = options[:name] or raise ArgumentError, "Metric :name is required."
-    @name = normalize_name(@name)
+    if options[:type]
+      @type = options[:type]
+    else
+      raise ArgumentError, "Metric :type is required."
+    end
+
+    if options[:name]
+      @name = normalize_name(options[:name])
+    else
+      raise ArgumentError, "Metric :name is required."
+    end
+
     unless options[:no_prefix]
       @name = if options[:prefix]
         "#{options[:prefix]}.#{@name}"
@@ -58,13 +68,13 @@ class StatsD::Instrument::Metric
       end
     end
 
-    @value       = options[:value] || default_value
+    @value = options[:value] || default_value
     @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
-    @tags        = StatsD::Instrument::Metric.normalize_tags(options[:tags])
+    @tags = StatsD::Instrument::Metric.normalize_tags(options[:tags])
     if StatsD.default_tags
-      @tags      = Array(@tags) | StatsD.default_tags
+      @tags = Array(@tags) | StatsD.default_tags
     end
-    @metadata    = options.reject { |k, _| [:type, :name, :value, :sample_rate, :tags].include?(k) }
+    @metadata = options.reject { |k, _| [:type, :name, :value, :sample_rate, :tags].include?(k) }
   end
 
   # The default value for this metric, which will be used if it is not set.
@@ -76,36 +86,36 @@ class StatsD::Instrument::Metric
   # @raise ArgumentError if the metric type doesn't have a default value
   def default_value
     case type
-      when :c; 1
-      else raise ArgumentError, "A value is required for metric type #{type.inspect}."
+    when :c then 1
+    else raise ArgumentError, "A value is required for metric type #{type.inspect}."
     end
   end
 
   # @private
   # @return [String]
   def to_s
-    str = "#{TYPES[type]} #{name}:#{value}"
+    str = +"#{TYPES[type]} #{name}:#{value}"
     str << " @#{sample_rate}" if sample_rate != 1.0
-    tags.each { |tag| str << " ##{tag}" } if tags
+    tags&.each { |tag| str << " ##{tag}" }
     str
   end
 
   # @private
   # @return [String]
   def inspect
-    "#<StatsD::Instrument::Metric #{self.to_s}>"
+    "#<StatsD::Instrument::Metric #{self}>"
   end
 
   # The metric types that are supported by this library. Note that every StatsD server
   # implementation only supports a subset of them.
   TYPES = {
-    c:  'increment',
+    c: 'increment',
     ms: 'measure',
-    g:  'gauge',
-    h:  'histogram',
-    d:  'distribution',
+    g: 'gauge',
+    h: 'histogram',
+    d: 'distribution',
     kv: 'key/value',
-    s:  'set',
+    s: 'set',
   }
 
   # Strip metric names of special characters used by StatsD line protocol, replace with underscore
@@ -113,7 +123,7 @@ class StatsD::Instrument::Metric
   # @param name [String]
   # @return [String]
   def normalize_name(name)
-    name.tr(':|@'.freeze, '_')
+    name.tr(':|@', '_')
   end
 
   # Utility function to convert tags to the canonical form.
@@ -125,7 +135,7 @@ class StatsD::Instrument::Metric
   # @return [Array<String>, nil] the list of tags in canonical form.
   def self.normalize_tags(tags)
     return unless tags
-    tags = tags.map { |k, v| k.to_s + ":".freeze + v.to_s } if tags.is_a?(Hash)
-    tags.map { |tag| tag.tr('|,'.freeze, ''.freeze) }
+    tags = tags.map { |k, v| k.to_s + ":" + v.to_s } if tags.is_a?(Hash)
+    tags.map { |tag| tag.tr('|,', '') }
   end
 end

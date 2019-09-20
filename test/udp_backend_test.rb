@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class UDPBackendTest < Minitest::Test
@@ -76,7 +78,7 @@ class UDPBackendTest < Minitest::Test
     StatsD.histogram('fooh', 42.4)
   end
 
-   def test_distribution_syntax_on_datadog
+  def test_distribution_syntax_on_datadog
     @backend.implementation = :datadog
     @backend.expects(:write_packet).with('fooh:42.4|d')
     StatsD.distribution('fooh', 42.4)
@@ -181,31 +183,6 @@ class UDPBackendTest < Minitest::Test
     @socket.stubs(:send).raises(IOError)
     @logger.expects(:error)
     StatsD.increment('fail')
-  end
-
-  def test_synchronize_in_exit_handler_handles_thread_error_and_exits_cleanly
-    pid = fork do
-      Signal.trap('TERM') do
-        $sent_packet = false
-
-        class << @backend.socket
-          def send(command, *args)
-            $sent_packet = true if command == 'exiting:1|c'
-            command.length
-          end
-        end
-
-        StatsD.increment('exiting')
-        Process.exit!($sent_packet)
-      end
-
-      sleep 100
-    end
-
-    Process.kill('TERM', pid)
-    Process.waitpid(pid)
-
-    assert $?.success?, 'socket did not write on exit'
   end
 
   def test_socket_error_should_invalidate_socket

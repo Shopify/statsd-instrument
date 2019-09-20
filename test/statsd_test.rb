@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class StatsDTest < Minitest::Test
@@ -22,7 +24,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_explicit_value_and_distribution_override
-    metric = capture_statsd_call { result = StatsD.measure('values.foobar', 42, as_dist: true) }
+    metric = capture_statsd_call { StatsD.measure('values.foobar', 42, as_dist: true) }
     assert_equal :d, metric.type
   end
 
@@ -36,7 +38,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_explicit_value_keyword_and_distribution_override
-    metric = capture_statsd_call { result = StatsD.measure('values.foobar', value: 42, as_dist: true) }
+    metric = capture_statsd_call { StatsD.measure('values.foobar', value: 42, as_dist: true) }
     assert_equal :d, metric.type
   end
 
@@ -45,7 +47,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_explicit_value_and_sample_rate
-    metric = capture_statsd_call { StatsD.measure('values.foobar', 42, :sample_rate => 0.1) }
+    metric = capture_statsd_call { StatsD.measure('values.foobar', 42, sample_rate: 0.1) }
     assert_equal 0.1, metric.sample_rate
   end
 
@@ -69,7 +71,7 @@ class StatsDTest < Minitest::Test
     assert_equal 'sarah', return_value
   end
 
-  def test_statsd_measure_returns_return_value_of_block_even_if_nil
+  def test_statsd_measure_as_distribution_returns_return_value_of_block_even_if_nil
     return_value = StatsD.measure('values.foobar', as_dist: true) { nil }
     assert_nil return_value
   end
@@ -79,7 +81,7 @@ class StatsDTest < Minitest::Test
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
-        StatsD.measure('values.foobar') { return 'from lambda'}
+        StatsD.measure('values.foobar') { return 'from lambda' }
       end
 
       result = lambda.call
@@ -94,14 +96,13 @@ class StatsDTest < Minitest::Test
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
-        StatsD.measure('values.foobar') { raise 'from lambda'}
+        StatsD.measure('values.foobar') { raise 'from lambda' }
       end
 
       begin
         result = lambda.call
-      rescue
+      rescue # rubocop:disable Lint/HandleExceptions:
       end
-
     end
 
     assert_nil result
@@ -118,14 +119,14 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_increment_with_hash_argument
-    metric = capture_statsd_call { StatsD.increment('values.foobar', :tags => ['test']) }
+    metric = capture_statsd_call { StatsD.increment('values.foobar', tags: ['test']) }
     assert_equal StatsD.default_sample_rate, metric.sample_rate
     assert_equal ['test'], metric.tags
     assert_equal 1, metric.value
   end
 
   def test_statsd_increment_with_value_as_keyword_argument
-    metric = capture_statsd_call { StatsD.increment('values.foobar', :value => 2) }
+    metric = capture_statsd_call { StatsD.increment('values.foobar', value: 2) }
     assert_equal StatsD.default_sample_rate, metric.sample_rate
     assert_equal 2, metric.value
   end
@@ -200,7 +201,7 @@ class StatsDTest < Minitest::Test
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
-        StatsD.distribution('values.foobar') { return 'from lambda'}
+        StatsD.distribution('values.foobar') { return 'from lambda' }
       end
 
       result = lambda.call
@@ -216,14 +217,13 @@ class StatsDTest < Minitest::Test
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
-        StatsD.distribution('values.foobar') { raise 'from lambda'}
+        StatsD.distribution('values.foobar') { raise 'from lambda' }
       end
 
       begin
         result = lambda.call
-      rescue
+      rescue # rubocop:disable Lint/HandleExceptions
       end
-
     end
 
     assert_nil result
@@ -234,7 +234,7 @@ class StatsDTest < Minitest::Test
   def test_statsd_distribution_with_block_and_options
     StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
     metric = capture_statsd_call do
-      StatsD.distribution('values.foobar', :tags => ['test'], :sample_rate => 0.9) { 'foo' }
+      StatsD.distribution('values.foobar', tags: ['test'], sample_rate: 0.9) { 'foo' }
     end
     assert_equal 1120.0, metric.value
     assert_equal 'values.foobar', metric.name

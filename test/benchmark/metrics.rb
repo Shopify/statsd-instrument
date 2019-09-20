@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 require 'statsd-instrument'
 require 'benchmark/ips'
 
-def helperFunction()
-    a = 10
-    a += a
-    a -= a
-    a *= a
+def helper_function
+  a = 10
+  a += a
+  a -= a
+  a * a
 end
 
 Benchmark.ips do |bench|
@@ -14,8 +16,8 @@ Benchmark.ips do |bench|
   end
 
   bench.report("measure metric benchmark") do
-    StatsD.measure('helperFunction') do
-        helperFunction()
+    StatsD.measure('helper_function') do
+      helper_function
     end
   end
 
@@ -34,5 +36,4 @@ Benchmark.ips do |bench|
   bench.report("service check metric benchmark") do
     StatsD.service_check('shipit.redis_connection', 'ok')
   end
-
 end
