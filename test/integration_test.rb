@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class IntegrationTest < Minitest::Test
@@ -5,7 +7,7 @@ class IntegrationTest < Minitest::Test
   def setup
     @old_backend, StatsD.backend = StatsD.backend, StatsD::Instrument::Backends::UDPBackend.new("localhost:31798")
   end
-  
+
   def teardown
     StatsD.backend = @old_backend
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # @private
 class StatsD::Instrument::MetricExpectation
 
@@ -55,7 +57,7 @@ class StatsD::Instrument::MetricExpectation
   }
 
   def to_s
-    str = "#{TYPES[type]} #{name}:#{value}"
+    str = +"#{TYPES[type]} #{name}:#{value}"
     str << " @#{sample_rate}" if sample_rate != 1.0
     str << " " << tags.map { |t| "##{t}"}.join(' ') if tags
     str << " times:#{times}" if times > 1

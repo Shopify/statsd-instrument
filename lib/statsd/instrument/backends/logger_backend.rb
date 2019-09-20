@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module StatsD::Instrument::Backends
 
   # The logger backend simply logs every metric to a logger

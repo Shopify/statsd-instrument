@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This abstract class specifies the interface a backend implementation should conform to.
 # @abstract
 class StatsD::Instrument::Backend

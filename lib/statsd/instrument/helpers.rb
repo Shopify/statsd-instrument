@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module StatsD::Instrument::Helpers
   def capture_statsd_calls(&block)
     mock_backend = StatsD::Instrument::Backends::CaptureBackend.new

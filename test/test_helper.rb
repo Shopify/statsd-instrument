@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 ENV['ENV'] = 'test'
 
 require 'minitest/autorun'

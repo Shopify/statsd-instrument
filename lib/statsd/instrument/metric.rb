@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 # The Metric class represents a metric sample to be send by a backend.
 #
 # @!attribute type
 #   @return [Symbol] The metric type. Must be one of {StatsD::Instrument::Metric::TYPES}
 # @!attribute name
 #   @return [String] The name of the metric. {StatsD#prefix} will automatically be applied
-#     to the metric in the constructor, unless the <tt>:no_prefix</tt> option is set or is 
+#     to the metric in the constructor, unless the <tt>:no_prefix</tt> option is set or is
 #     overridden by the <tt>:prefix</tt> option. Note that <tt>:no_prefix</tt> has greater
 #     precedence than <tt>:prefix</tt>.
 # @!attribute value
@@ -81,7 +83,7 @@ class StatsD::Instrument::Metric
   # @private
   # @return [String]
   def to_s
-    str = "#{TYPES[type]} #{name}:#{value}"
+    str = +"#{TYPES[type]} #{name}:#{value}"
     str << " @#{sample_rate}" if sample_rate != 1.0
     tags.each { |tag| str << " ##{tag}" } if tags
     str
