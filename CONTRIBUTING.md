@@ -17,21 +17,41 @@ When reporting issues, please include the following information:
 - The statsd-instrument version. **Note:** only the latest version is supported.
 - The StatsD backend you are using.
 
-## Pull request
+## Opening pull requests
 
 1. Fork the repository, and create a branch.
 2. Implement the feature or bugfix, and add tests that cover the changed functionality.
-3. Create a pull request. Make sure that you get Travis CI passes.
+3. Create a pull request. Make sure that you get a green CI status on your commit.
 
 Some notes:
 
-- Make sure to follow to coding style.
+- Make sure to follow to coding style. This is enforced by Rubocop
 - Make sure your changes are properly documented using [yardoc syntax](http://www.rubydoc.info/gems/yard/file/docs/GettingStarted.md).
 - Add an entry to the "unreleased changes" section of [CHANGELOG.md](./CHANGELOG.md).
 - **Do not** update `StatsD::Instrument::VERSION`. This will be done during the release prodecure.
 
-> **Important:** if you change anything in the hot code path (sending a StatsD metric), please
-> include benchmarks to show the performance impact of your changes.
+### On perfomance & benchmarking
+
+This gem is used in production at Shopify, and is used to instrument some of
+our hottest code paths. This means that we are very careful about not
+introducing performance regressions in this library.
+
+**Important:** Whenever you make changes to the metric emission code path in this library,
+you **must** include benchmark results to show the impact of your changes.
+
+The `test/benchmark/` folder contains some example benchmark script that you
+can use, or can serve as a starting point. Please run your benchmark on your
+pull request revision, as well as the latest revision on `master`.
+
+### On backwards compatibility
+
+Shopify's codebases are heavily instrumented using this library. As a result, we cannot
+accept changes that are backwards incompatible:
+
+- Changes that will require us to update our codebases.
+- Changes that will cause metrics emitted by this library to change in form or shape.
+
+This means that we may not be able to accept fixes for what you consider a bug.
 
 ## Release procedure
 
