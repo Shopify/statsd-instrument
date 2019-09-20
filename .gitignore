@@ -5,3 +5,4 @@ doc
 Gemfile.lock
 pkg/*
 vendor/
+tmp/*
