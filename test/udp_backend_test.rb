@@ -185,31 +185,6 @@ class UDPBackendTest < Minitest::Test
     StatsD.increment('fail')
   end
 
-  def test_synchronize_in_exit_handler_handles_thread_error_and_exits_cleanly
-    pid = fork do
-      Signal.trap('TERM') do
-        $sent_packet = false
-
-        class << @backend.socket
-          def send(command, *args)
-            $sent_packet = true if command == 'exiting:1|c'
-            command.length
-          end
-        end
-
-        StatsD.increment('exiting')
-        Process.exit!($sent_packet)
-      end
-
-      sleep 100
-    end
-
-    Process.kill('TERM', pid)
-    Process.waitpid(pid)
-
-    assert $?.success?, 'socket did not write on exit'
-  end
-
   def test_socket_error_should_invalidate_socket
     seq = sequence('fail_then_succeed')
 
