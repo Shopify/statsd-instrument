@@ -13,7 +13,7 @@ class ActiveMerchant::Base
   end
 
   def post_with_block(&block)
-    yield if block_given?
+    block.call if block_given?
   end
 end
 
@@ -36,7 +36,7 @@ end
 
 class ActiveMerchant::UniqueGateway < ActiveMerchant::Base
   def ssl_post(arg)
-    { :success => arg }
+    { success: arg }
   end
 
   def purchase(arg)
@@ -413,10 +413,9 @@ class StatsDInstrumentationTest < Minitest::Test
   private
 
   def assert_scope(klass, method, expected_scope)
-    method_scope = case
-    when klass.private_method_defined?(method)
+    method_scope = if klass.private_method_defined?(method)
       :private
-    when klass.protected_method_defined?(method)
+    elsif klass.protected_method_defined?(method)
       :protected
     else
       :public

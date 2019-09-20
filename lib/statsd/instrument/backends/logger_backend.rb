@@ -14,7 +14,7 @@ module StatsD::Instrument::Backends
     # @param metric [StatsD::Instrument::Metric]
     # @return [void]
     def collect_metric(metric)
-      logger.info "[StatsD] #{metric}"
+      logger.info("[StatsD] #{metric}")
     end
   end
 end

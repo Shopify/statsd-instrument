@@ -7,7 +7,7 @@ def helper_function
   a = 10
   a += a
   a -= a
-  a *= a
+  a * a
 end
 
 Benchmark.ips do |bench|

@@ -311,7 +311,7 @@ class AssertionsTest < Minitest::Test
   def assert_no_assertion_triggered(&block)
     block.call
   rescue MiniTest::Assertion => assertion
-    flunk "No assertion trigger expected, but one was triggered with message #{assertion.message}."
+    flunk("No assertion trigger expected, but one was triggered with message #{assertion.message}.")
   else
     pass
   end
@@ -320,12 +320,12 @@ class AssertionsTest < Minitest::Test
     block.call
   rescue MiniTest::Assertion => assertion
     if message
-      assert_equal message, assertion.message, "Assertion triggered, but message was not what was expected."
+      assert_equal(message, assertion.message, "Assertion triggered, but message was not what was expected.")
     else
       pass
     end
     assertion
   else
-    flunk "No assertion was triggered, but one was expected."
+    flunk("No assertion was triggered, but one was expected.")
   end
 end

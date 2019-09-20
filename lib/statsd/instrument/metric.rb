@@ -48,9 +48,18 @@ class StatsD::Instrument::Metric
   # @option options [Array<String>, Hash<String, String>, nil] :tags The tags to apply to this metric.
   #   See {.normalize_tags} for more information.
   def initialize(options = {})
-    @type = options[:type] or raise ArgumentError, "Metric :type is required."
-    @name = options[:name] or raise ArgumentError, "Metric :name is required."
-    @name = normalize_name(@name)
+    if options[:type]
+      @type = options[:type]
+    else
+      raise ArgumentError, "Metric :type is required."
+    end
+
+    if options[:name]
+      @name = normalize_name(options[:name])
+    else
+      raise ArgumentError, "Metric :name is required."
+    end
+
     unless options[:no_prefix]
       @name = if options[:prefix]
         "#{options[:prefix]}.#{@name}"
@@ -74,8 +83,8 @@ class StatsD::Instrument::Metric
   # @raise ArgumentError if the metric type doesn't have a default value
   def default_value
     case type
-      when :c; 1
-      else raise ArgumentError, "A value is required for metric type #{type.inspect}."
+    when :c then 1
+    else raise ArgumentError, "A value is required for metric type #{type.inspect}."
     end
   end
 
@@ -84,14 +93,14 @@ class StatsD::Instrument::Metric
   def to_s
     str = +"#{TYPES[type]} #{name}:#{value}"
     str << " @#{sample_rate}" if sample_rate != 1.0
-    tags.each { |tag| str << " ##{tag}" } if tags
+    tags&.each { |tag| str << " ##{tag}" }
     str
   end
 
   # @private
   # @return [String]
   def inspect
-    "#<StatsD::Instrument::Metric #{self.to_s}>"
+    "#<StatsD::Instrument::Metric #{self}>"
   end
 
   # The metric types that are supported by this library. Note that every StatsD server

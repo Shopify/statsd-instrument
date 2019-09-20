@@ -102,7 +102,8 @@ module StatsD::Instrument::Backends
 
     def collect_metric(metric)
       unless @packet_factory.class::SUPPORTED_METRIC_TYPES[metric.type]
-        StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} not supported on #{implementation} implementation.")
+        StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} is not supported " \
+          "on #{implementation} implementation.")
         return false
       end
 
@@ -141,13 +142,13 @@ module StatsD::Instrument::Backends
       synchronize do
         socket.send(command, 0) > 0
       end
-    rescue ThreadError => e
+    rescue ThreadError
       # In cases where a TERM or KILL signal has been sent, and we send stats as
       # part of a signal handler, locks cannot be acquired, so we do our best
       # to try and send the command without a lock.
       socket.send(command, 0) > 0
-    rescue SocketError, IOError, SystemCallError, Errno::ECONNREFUSED => e
-      StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
+    rescue SocketError, IOError, SystemCallError => e
+      StatsD.logger.error("[StatsD] #{e.class.name}: #{e.message}")
       invalidate_socket
     end
 

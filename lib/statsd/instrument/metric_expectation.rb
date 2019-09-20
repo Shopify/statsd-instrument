@@ -6,11 +6,26 @@ class StatsD::Instrument::MetricExpectation
   attr_reader :ignore_tags
 
   def initialize(options = {})
-    @type = options[:type] or raise ArgumentError, "Metric :type is required."
-    @name = options[:name] or raise ArgumentError, "Metric :name is required."
+    if options[:type]
+      @type = options[:type]
+    else
+      raise ArgumentError, "Metric :type is required."
+    end
+
+    if options[:name]
+      @name = options[:name]
+    else
+      raise ArgumentError, "Metric :name is required."
+    end
+
+    if options[:times]
+      @times = options[:times]
+    else
+      raise ArgumentError, "Metric :times is required."
+    end
+
     @name = StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
     @tags = StatsD::Instrument::Metric.normalize_tags(options[:tags])
-    @times = options[:times] or raise ArgumentError, "Metric :times is required."
     @sample_rate = options[:sample_rate]
     @value = options[:value]
     @ignore_tags = StatsD::Instrument::Metric.normalize_tags(options[:ignore_tags])
@@ -40,9 +55,7 @@ class StatsD::Instrument::MetricExpectation
   end
 
   def default_value
-    case type
-      when :c; 1
-    end
+    1 if type == :c
   end
 
   TYPES = {
@@ -64,6 +77,6 @@ class StatsD::Instrument::MetricExpectation
   end
 
   def inspect
-    "#<StatsD::Instrument::MetricExpectation #{self.to_s}>"
+    "#<StatsD::Instrument::MetricExpectation #{self}>"
   end
 end

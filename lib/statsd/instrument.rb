@@ -90,7 +90,8 @@ module StatsD
     def statsd_measure(method, name, *metric_options)
       add_to_method(method, name, :measure) do
         define_method(method) do |*args, &block|
-          StatsD.measure(StatsD::Instrument.generate_metric_name(name, self, *args), *metric_options) { super(*args, &block) }
+          metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
+          StatsD.measure(metric_name, *metric_options) { super(*args, &block) }
         end
       end
     end
@@ -106,7 +107,8 @@ module StatsD
     def statsd_distribution(method, name, *metric_options)
       add_to_method(method, name, :distribution) do
         define_method(method) do |*args, &block|
-          StatsD.distribution(StatsD::Instrument.generate_metric_name(name, self, *args), *metric_options) { super(*args, &block) }
+          metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
+          StatsD.distribution(metric_name, *metric_options) { super(*args, &block) }
         end
       end
     end
@@ -135,20 +137,27 @@ module StatsD
             truthiness = false
             raise
           else
-            truthiness = (yield(result) rescue false) if block_given?
+            if block_given?
+              begin
+                truthiness = yield(result)
+              rescue
+                truthiness = false
+              end
+            end
             result
           ensure
             suffix = truthiness == false ? 'failure' : 'success'
-            StatsD.increment("#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}", 1, *metric_options)
+            metric_name = "#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}"
+            StatsD.increment(metric_name, 1, *metric_options)
           end
         end
       end
     end
 
-    # Adds success and failure counter instrumentation to a method.
+    # Adds success counter instrumentation to a method.
     #
     # A method call will be considered successful if it does not raise an exception, and the result is true-y.
-    # Only for successful calls, the metric will be icnremented
+    # Only for successful calls, the metric will be incremented.
     #
     # @param method (see #statsd_measure)
     # @param name (see #statsd_measure)
@@ -167,10 +176,19 @@ module StatsD
             truthiness = false
             raise
           else
-            truthiness = (yield(result) rescue false) if block_given?
+            if block_given?
+              begin
+                truthiness = yield(result)
+              rescue
+                truthiness = false
+              end
+            end
             result
           ensure
-            StatsD.increment(StatsD::Instrument.generate_metric_name(name, self, *args), *metric_options) if truthiness
+            if truthiness
+              metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
+              StatsD.increment(metric_name, *metric_options)
+            end
           end
         end
       end
@@ -188,7 +206,8 @@ module StatsD
     def statsd_count(method, name, *metric_options)
       add_to_method(method, name, :count) do
         define_method(method) do |*args, &block|
-          StatsD.increment(StatsD::Instrument.generate_metric_name(name, self, *args), 1, *metric_options)
+          metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
+          StatsD.increment(metric_name, 1, *metric_options)
           super(*args, &block)
         end
       end
@@ -256,8 +275,13 @@ module StatsD
     def add_to_method(method, name, action, &block)
       instrumentation_module = statsd_instrumentation_for(method, name, action)
 
-      raise ArgumentError, "already instrumented #{method} for #{self.name}" if instrumentation_module.method_defined?(method)
-      raise ArgumentError, "could not find method #{method} for #{self.name}" unless method_defined?(method) || private_method_defined?(method)
+      if instrumentation_module.method_defined?(method)
+        raise ArgumentError, "Already instrumented #{method} for #{self.name}"
+      end
+
+      unless method_defined?(method) || private_method_defined?(method)
+        raise ArgumentError, "could not find method #{method} for #{self.name}"
+      end
 
       method_scope = method_visibility(method)
 
@@ -271,10 +295,9 @@ module StatsD
     end
 
     def method_visibility(method)
-      case
-      when private_method_defined?(method)
+      if private_method_defined?(method)
         :private
-      when protected_method_defined?(method)
+      elsif protected_method_defined?(method)
         :protected
       else
         :public
@@ -444,7 +467,7 @@ module StatsD
   # @param args [Array] The list of non-required arguments.
   # @return [Hash] The hash of optional arguments.
   def hash_argument(args)
-    return {} if args.length == 0
+    return {} if args.empty?
     return args.first if args.length == 1 && args.first.is_a?(Hash)
 
     order = [:sample_rate, :tags]
@@ -452,8 +475,7 @@ module StatsD
     args.each_with_index do |value, index|
       hash[order[index]] = value
     end
-
-    return hash
+    hash
   end
 
   def parse_options(value, metric_options)
