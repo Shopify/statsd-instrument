@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'monitor'
 
 module StatsD::Instrument::Backends
@@ -24,7 +26,7 @@ module StatsD::Instrument::Backends
       SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES.merge(h: true, _e: true, _sc: true, d: true)
 
       def generate_packet(metric)
-        packet = ""
+        packet = StringIO.new
 
         if metric.type == :_e
           escaped_title = metric.name.gsub("\n", "\\n")
@@ -41,7 +43,7 @@ module StatsD::Instrument::Backends
 
         packet << "|@#{metric.sample_rate}" if metric.sample_rate < 1
         packet << "|##{metric.tags.join(',')}" if metric.tags
-        packet
+        packet.string
       end
 
       private
@@ -57,10 +59,11 @@ module StatsD::Instrument::Backends
       SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES.merge(kv: true)
 
       def generate_packet(metric)
-        packet = "#{metric.name}:#{metric.value}|#{metric.type}"
+        packet = StringIO.new
+        packet << "#{metric.name}:#{metric.value}|#{metric.type}"
         packet << "|@#{metric.sample_rate}" unless metric.sample_rate == 1
         packet << "\n"
-        packet
+        packet.string
       end
     end
 
@@ -68,9 +71,10 @@ module StatsD::Instrument::Backends
       SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES
 
       def generate_packet(metric)
-        packet = "#{metric.name}:#{metric.value}|#{metric.type}"
+        packet = StringIO.new
+        packet << "#{metric.name}:#{metric.value}|#{metric.type}"
         packet << "|@#{metric.sample_rate}" if metric.sample_rate < 1
-        packet
+        packet.string
       end
     end
 

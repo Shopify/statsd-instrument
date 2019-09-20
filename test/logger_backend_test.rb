@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class LoggerBackendTest < Minitest::Test
@@ -11,10 +13,10 @@ class LoggerBackendTest < Minitest::Test
 
   def test_logs_metrics
     @backend.collect_metric(@metric1)
-    assert_equal @io.string, "[StatsD] increment mock.counter:1 #a:b #c:d\n"
-    @io.string = ""
-
     @backend.collect_metric(@metric2)
-    assert_equal @io.string, "[StatsD] measure mock.measure:123 @0.3\n"
+    assert_equal <<~LOG, @io.string
+      [StatsD] increment mock.counter:1 #a:b #c:d
+      [StatsD] measure mock.measure:123 @0.3
+    LOG
   end
 end

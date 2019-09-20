@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module StatsD::Instrument::Assertions
   include StatsD::Instrument::Helpers
 
