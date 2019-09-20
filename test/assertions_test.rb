@@ -165,6 +165,15 @@ class AssertionsTest < Minitest::Test
     end
   end
 
+  def test_tags_friendly_error
+    @test_case.assert_statsd_increment('counter', tags: { class: "AnotherJob" }) do
+      StatsD.increment('counter', tags: { class: "MyJob" })
+    end
+  rescue MiniTest::Assertion => assertion
+    assert_match(/Captured metrics with the same key/, assertion.message)
+    assert_match(/MyJob/, assertion.message)
+  end
+
   def test_multiple_metrics_are_not_order_dependent
     assert_no_assertion_triggered do
       foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
