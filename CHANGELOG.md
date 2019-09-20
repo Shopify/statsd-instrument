@@ -5,6 +5,15 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+## Version 2.4.0
+
+- Add `StatsD.default_tags` to specify tags that should be included in all metrics. (#159)
+- Improve assertion message when assertying metrics whose tags do not match. (#100)
+- Enforce the Shopify Ruby style guide. (#164)
+- Migrate CI to Github actions. (#158)
+- Make the library frozen string literal-compatible. (#161, #163)
+- Fix all Ruby warnings. (#162)
+
 ## Version 2.3.5
 
 - Re-add `StatsD::Instrument.duration`, which was accidentally removed since verison 2.5.3 (#157)
