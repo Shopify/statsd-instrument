@@ -74,6 +74,17 @@ module StatsD::Instrument::Backends
       end
     end
 
+    class CloudWatchStatsDProtocol
+      SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES
+
+      def generate_packet(metric)
+        packet = "#{metric.name}:#{metric.value}|#{metric.type}"
+        packet << "|@#{metric.sample_rate}" if metric.sample_rate < 1
+        packet << "|##{metric.tags.join(',')}" if metric.tags
+        packet
+      end
+    end
+
     DEFAULT_IMPLEMENTATION = :statsd
 
     include MonitorMixin
@@ -92,6 +103,8 @@ module StatsD::Instrument::Backends
           DogStatsDProtocol.new
         when :statsite
           StatsiteStatsDProtocol.new
+        when :cloudwatch
+          CloudWatchStatsDProtocol.new
         else
           StatsDProtocol.new
         end

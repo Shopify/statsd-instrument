@@ -165,6 +165,12 @@ class UDPBackendTest < Minitest::Test
     StatsD.increment('fooc', 3, tags: ['topic:foo', 'bar'])
   end
 
+  def test_support_tags_syntax_on_cloudwatch
+    @backend.implementation = :cloudwatch
+    @backend.expects(:write_packet).with("fooc:3|c|#topic:foo,bar")
+    StatsD.increment('fooc', 3, tags: ['topic:foo', 'bar'])
+  end
+
   def test_socket_error_should_not_raise_but_log
     @socket.stubs(:connect).raises(SocketError)
     @logger.expects(:error)
