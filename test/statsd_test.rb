@@ -18,7 +18,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_explicit_value_and_distribution_override
-    metric = capture_statsd_call { result = StatsD.measure('values.foobar', 42, as_dist: true) }
+    metric = capture_statsd_call { StatsD.measure('values.foobar', 42, as_dist: true) }
     assert_equal :d, metric.type
   end
 
@@ -32,7 +32,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_explicit_value_keyword_and_distribution_override
-    metric = capture_statsd_call { result = StatsD.measure('values.foobar', value: 42, as_dist: true) }
+    metric = capture_statsd_call { StatsD.measure('values.foobar', value: 42, as_dist: true) }
     assert_equal :d, metric.type
   end
 
@@ -65,7 +65,7 @@ class StatsDTest < Minitest::Test
     assert_equal 'sarah', return_value
   end
 
-  def test_statsd_measure_returns_return_value_of_block_even_if_nil
+  def test_statsd_measure_as_distribution_returns_return_value_of_block_even_if_nil
     return_value = StatsD.measure('values.foobar', as_dist: true) { nil }
     assert_nil return_value
   end
