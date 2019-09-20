@@ -57,6 +57,6 @@ class MetricTest < Minitest::Test
 
     StatsD.stubs(:default_tags).returns(['tag:value'])
     m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: { tag: 'value' })
-    assert_equal ['tag:value'], m.tags
+    assert_equal ['tag:value', 'tag:value'], m.tags # we don't care about duplicates
   end
 end
