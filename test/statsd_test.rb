@@ -273,7 +273,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_default_tags_get_normalized
-    StatsD.default_tags = {:first_tag => 'first_value', :second_tag => 'second_value'}
+    StatsD.default_tags = { first_tag: 'first_value', second_tag: 'second_value' }
     assert_equal ['first_tag:first_value', 'second_tag:second_value'], StatsD.default_tags
   end
 

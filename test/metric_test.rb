@@ -52,11 +52,11 @@ class MetricTest < Minitest::Test
 
   def test_default_tags
     StatsD.stubs(:default_tags).returns(['default_tag:default_value'])
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: {:tag => 'value'})
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: { tag: 'value' })
     assert_equal ['tag:value', 'default_tag:default_value'], m.tags
 
     StatsD.stubs(:default_tags).returns(['tag:value'])
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: {:tag => 'value'})
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: { tag: 'value' })
     assert_equal ['tag:value'], m.tags
   end
 end
