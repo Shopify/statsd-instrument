@@ -112,7 +112,7 @@ class StatsD::Instrument::Metric
   # @param name [String]
   # @return [String]
   def normalize_name(name)
-    name.tr(':|@'.freeze, '_')
+    name.tr(':|@', '_')
   end
 
   # Utility function to convert tags to the canonical form.
@@ -124,7 +124,7 @@ class StatsD::Instrument::Metric
   # @return [Array<String>, nil] the list of tags in canonical form.
   def self.normalize_tags(tags)
     return unless tags
-    tags = tags.map { |k, v| k.to_s + ":".freeze + v.to_s } if tags.is_a?(Hash)
-    tags.map { |tag| tag.tr('|,'.freeze, ''.freeze) }
+    tags = tags.map { |k, v| k.to_s + ":" + v.to_s } if tags.is_a?(Hash)
+    tags.map { |tag| tag.tr('|,', '') }
   end
 end
