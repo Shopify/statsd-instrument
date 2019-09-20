@@ -71,6 +71,9 @@ class StatsD::Instrument::Metric
     @value = options[:value] || default_value
     @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
     @tags = StatsD::Instrument::Metric.normalize_tags(options[:tags])
+    if StatsD.default_tags
+      @tags = Array(@tags) + StatsD.default_tags
+    end
     @metadata = options.reject { |k, _| [:type, :name, :value, :sample_rate, :tags].include?(k) }
   end
 

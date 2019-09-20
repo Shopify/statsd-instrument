@@ -30,6 +30,10 @@ require 'logger'
 #   The logger to use in case of any errors. The logger is also used as default logger
 #   for the LoggerBackend (although this can be overwritten).
 #
+# @!attribute default_tags
+#   The tags to apply to all metrics.
+#   @return [Array<String>, Hash<String, String>, nil] The default tags, or <tt>nil</tt> when no default tags is used
+#
 #   @see StatsD::Instrument::Backends::LoggerBackend
 #   @return [Logger]
 #
@@ -307,6 +311,11 @@ module StatsD
 
   attr_accessor :logger, :default_sample_rate, :prefix
   attr_writer :backend
+  attr_reader :default_tags
+
+  def default_tags=(tags)
+    @default_tags = StatsD::Instrument::Metric.normalize_tags(tags)
+  end
 
   def backend
     @backend ||= StatsD::Instrument::Environment.default_backend

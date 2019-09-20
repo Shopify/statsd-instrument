@@ -49,4 +49,14 @@ class MetricTest < Minitest::Test
     assert_equal ['tag:value'], StatsD::Instrument::Metric.normalize_tags(tag: 'value')
     assert_equal ['tag1:v1', 'tag2:v2'], StatsD::Instrument::Metric.normalize_tags(tag1: 'v1', tag2: 'v2')
   end
+
+  def test_default_tags
+    StatsD.stubs(:default_tags).returns(['default_tag:default_value'])
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: { tag: 'value' })
+    assert_equal ['tag:value', 'default_tag:default_value'], m.tags
+
+    StatsD.stubs(:default_tags).returns(['tag:value'])
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: { tag: 'value' })
+    assert_equal ['tag:value', 'tag:value'], m.tags # we don't care about duplicates
+  end
 end
