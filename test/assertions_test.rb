@@ -264,7 +264,7 @@ class AssertionsTest < Minitest::Test
   def test_assert_statsd_call_with_wrong_sample_rate_type
     assert_assertion_triggered "Unexpected sample rate type for metric counter, must be numeric" do
       @test_case.assert_statsd_increment('counter', tags: ['a', 'b']) do
-        StatsD.increment('counter', sample_rate: 'abc', tags:  ['a', 'b'])
+        StatsD.increment('counter', sample_rate: 'abc', tags: ['a', 'b'])
       end
     end
   end

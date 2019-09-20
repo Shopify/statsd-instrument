@@ -2,7 +2,6 @@
 
 # @private
 class StatsD::Instrument::MetricExpectation
-
   attr_accessor :times, :type, :name, :value, :sample_rate, :tags
   attr_reader :ignore_tags
 
@@ -31,7 +30,7 @@ class StatsD::Instrument::MetricExpectation
         actual_tags -= ignored_tags
 
         if ignore_tags.is_a?(Array)
-          actual_tags.delete_if{ |key| ignore_tags.include?(key.split(":").first) }
+          actual_tags.delete_if { |key| ignore_tags.include?(key.split(":").first) }
         end
       end
 
@@ -47,19 +46,19 @@ class StatsD::Instrument::MetricExpectation
   end
 
   TYPES = {
-      c:  'increment',
-      ms: 'measure',
-      g:  'gauge',
-      h:  'histogram',
-      d:  'distribution',
-      kv: 'key/value',
-      s:  'set',
+    c: 'increment',
+    ms: 'measure',
+    g: 'gauge',
+    h: 'histogram',
+    d: 'distribution',
+    kv: 'key/value',
+    s: 'set',
   }
 
   def to_s
     str = +"#{TYPES[type]} #{name}:#{value}"
     str << " @#{sample_rate}" if sample_rate != 1.0
-    str << " " << tags.map { |t| "##{t}"}.join(' ') if tags
+    str << " " << tags.map { |t| "##{t}" }.join(' ') if tags
     str << " times:#{times}" if times > 1
     str
   end

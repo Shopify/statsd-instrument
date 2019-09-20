@@ -5,9 +5,9 @@ require 'test_helper'
 class LoggerBackendTest < Minitest::Test
   def setup
     logger = Logger.new(@io = StringIO.new)
-    logger.formatter = lambda { |_,_,_, msg| "#{msg}\n" }
+    logger.formatter = lambda { |_, _, _, msg| "#{msg}\n" }
     @backend = StatsD::Instrument::Backends::LoggerBackend.new(logger)
-    @metric1 = StatsD::Instrument::Metric::new(type: :c, name: 'mock.counter', tags: { a: 'b', c: 'd'})
+    @metric1 = StatsD::Instrument::Metric::new(type: :c, name: 'mock.counter', tags: { a: 'b', c: 'd' })
     @metric2 = StatsD::Instrument::Metric::new(type: :ms, name: 'mock.measure', value: 123, sample_rate: 0.3)
   end
 

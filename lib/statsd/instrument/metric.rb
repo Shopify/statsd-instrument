@@ -31,7 +31,6 @@
 # @see StatsD::Instrument::Backend A StatsD::Instrument::Backend is used to collect metrics.
 #
 class StatsD::Instrument::Metric
-
   attr_accessor :type, :name, :value, :sample_rate, :tags, :metadata
 
   # Initializes a new metric instance.
@@ -60,10 +59,10 @@ class StatsD::Instrument::Metric
       end
     end
 
-    @value       = options[:value] || default_value
+    @value = options[:value] || default_value
     @sample_rate = options[:sample_rate] || StatsD.default_sample_rate
-    @tags        = StatsD::Instrument::Metric.normalize_tags(options[:tags])
-    @metadata    = options.reject { |k, _| [:type, :name, :value, :sample_rate, :tags].include?(k) }
+    @tags = StatsD::Instrument::Metric.normalize_tags(options[:tags])
+    @metadata = options.reject { |k, _| [:type, :name, :value, :sample_rate, :tags].include?(k) }
   end
 
   # The default value for this metric, which will be used if it is not set.
@@ -98,13 +97,13 @@ class StatsD::Instrument::Metric
   # The metric types that are supported by this library. Note that every StatsD server
   # implementation only supports a subset of them.
   TYPES = {
-    c:  'increment',
+    c: 'increment',
     ms: 'measure',
-    g:  'gauge',
-    h:  'histogram',
-    d:  'distribution',
+    g: 'gauge',
+    h: 'histogram',
+    d: 'distribution',
     kv: 'key/value',
-    s:  'set',
+    s: 'set',
   }
 
   # Strip metric names of special characters used by StatsD line protocol, replace with underscore

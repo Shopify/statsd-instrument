@@ -1,12 +1,10 @@
 # frozen_string_literal: true
 
 module StatsD::Instrument::Backends
-
   # The logger backend simply logs every metric to a logger
   # @!attribute logger
   #    @return [Logger]
   class LoggerBackend < StatsD::Instrument::Backend
-
     attr_accessor :logger
 
     def initialize(logger)

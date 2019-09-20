@@ -36,7 +36,7 @@ end
 
 class ActiveMerchant::UniqueGateway < ActiveMerchant::Base
   def ssl_post(arg)
-    {:success => arg}
+    { :success => arg }
   end
 
   def purchase(arg)
@@ -89,7 +89,7 @@ class StatsDInstrumentationTest < Minitest::Test
     end
 
     assert_statsd_increment('ActiveMerchant.Base.post_with_block') do
-      assert_equal 'true',  ActiveMerchant::Base.new.post_with_block { 'true' }
+      assert_equal 'true', ActiveMerchant::Base.new.post_with_block { 'true' }
       assert_equal 'false', ActiveMerchant::Base.new.post_with_block { 'false' }
     end
   ensure
@@ -266,7 +266,6 @@ class StatsDInstrumentationTest < Minitest::Test
   ensure
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
   end
-
 
   def test_statsd_distribution
     ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3

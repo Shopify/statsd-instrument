@@ -4,7 +4,6 @@ require 'monitor'
 
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
-
     BASE_SUPPORTED_METRIC_TYPES = { c: true, ms: true, g: true, s: true }
 
     class DogStatsDProtocol
@@ -91,13 +90,13 @@ module StatsD::Instrument::Backends
 
     def implementation=(value)
       @packet_factory = case value
-        when :datadog
-          DogStatsDProtocol.new
-        when :statsite
-          StatsiteStatsDProtocol.new
-        else
-          StatsDProtocol.new
-        end
+      when :datadog
+        DogStatsDProtocol.new
+      when :statsite
+        StatsiteStatsDProtocol.new
+      else
+        StatsDProtocol.new
+      end
       @implementation = value
     end
 

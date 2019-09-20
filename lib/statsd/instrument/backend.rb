@@ -3,7 +3,6 @@
 # This abstract class specifies the interface a backend implementation should conform to.
 # @abstract
 class StatsD::Instrument::Backend
-
   # Collects a metric.
   #
   # @param metric [StatsD::Instrument::Metric] The metric to collect

@@ -77,7 +77,7 @@ class StatsDTest < Minitest::Test
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
-        StatsD.measure('values.foobar') { return 'from lambda'}
+        StatsD.measure('values.foobar') { return 'from lambda' }
       end
 
       result = lambda.call
@@ -92,14 +92,13 @@ class StatsDTest < Minitest::Test
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
-        StatsD.measure('values.foobar') { raise 'from lambda'}
+        StatsD.measure('values.foobar') { raise 'from lambda' }
       end
 
       begin
         result = lambda.call
       rescue
       end
-
     end
 
     assert_nil result
@@ -198,7 +197,7 @@ class StatsDTest < Minitest::Test
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
-        StatsD.distribution('values.foobar') { return 'from lambda'}
+        StatsD.distribution('values.foobar') { return 'from lambda' }
       end
 
       result = lambda.call
@@ -214,14 +213,13 @@ class StatsDTest < Minitest::Test
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
-        StatsD.distribution('values.foobar') { raise 'from lambda'}
+        StatsD.distribution('values.foobar') { raise 'from lambda' }
       end
 
       begin
         result = lambda.call
       rescue
       end
-
     end
 
     assert_nil result

@@ -3,7 +3,6 @@
 require 'test_helper'
 
 class IntegrationTest < Minitest::Test
-
   def setup
     @old_backend, StatsD.backend = StatsD.backend, StatsD::Instrument::Backends::UDPBackend.new("localhost:31798")
   end

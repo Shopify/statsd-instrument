@@ -5,7 +5,6 @@ require 'test_helper'
 module Rails; end
 
 class EnvironmentTest < Minitest::Test
-
   def setup
     ENV['STATSD_ADDR'] = nil
     ENV['IMPLEMENTATION'] = nil

@@ -384,7 +384,7 @@ module StatsD
   #      http_response = StatsD.distribution('HTTP.call.duration') do
   #        HTTP.get(url)
   #      end
-  def distribution(key, value=nil, *metric_options, &block)
+  def distribution(key, value = nil, *metric_options, &block)
     value, metric_options = parse_options(value, metric_options)
 
     return collect_metric(:d, key, value, metric_options) unless block_given?

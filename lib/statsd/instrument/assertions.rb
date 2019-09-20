@@ -68,9 +68,9 @@ module StatsD::Instrument::Assertions
       end
 
       assert expected_metric_times_remaining == 0,
-          "Metric expected #{expected_metric_times} times but seen"\
-          " #{expected_metric_times-expected_metric_times_remaining}"\
-          " times: #{expected_metric.inspect}"
+        "Metric expected #{expected_metric_times} times but seen " \
+        "#{expected_metric_times - expected_metric_times_remaining} " \
+        "times: #{expected_metric.inspect}"
     end
     expected_metrics -= matched_expected_metrics
 
