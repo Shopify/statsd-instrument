@@ -83,11 +83,10 @@ class StatsD::Instrument::Metric
   # @private
   # @return [String]
   def to_s
-    str = StringIO.new
-    str << "#{TYPES[type]} #{name}:#{value}"
+    str = +"#{TYPES[type]} #{name}:#{value}"
     str << " @#{sample_rate}" if sample_rate != 1.0
     tags.each { |tag| str << " ##{tag}" } if tags
-    str.string
+    str
   end
 
   # @private
