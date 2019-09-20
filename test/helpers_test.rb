@@ -23,4 +23,3 @@ class HelpersTest < Minitest::Test
     assert_equal 12, metrics[1].value
   end
 end
-

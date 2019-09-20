@@ -264,7 +264,7 @@ class AssertionsTest < Minitest::Test
   def test_assert_statsd_call_with_wrong_sample_rate_type
     assert_assertion_triggered "Unexpected sample rate type for metric counter, must be numeric" do
       @test_case.assert_statsd_increment('counter', tags: ['a', 'b']) do
-        StatsD.increment('counter', sample_rate: 'abc', tags:  ['a', 'b'])
+        StatsD.increment('counter', sample_rate: 'abc', tags: ['a', 'b'])
       end
     end
   end
@@ -311,7 +311,7 @@ class AssertionsTest < Minitest::Test
   def assert_no_assertion_triggered(&block)
     block.call
   rescue MiniTest::Assertion => assertion
-    flunk "No assertion trigger expected, but one was triggered with message #{assertion.message}."
+    flunk("No assertion trigger expected, but one was triggered with message #{assertion.message}.")
   else
     pass
   end
@@ -320,12 +320,12 @@ class AssertionsTest < Minitest::Test
     block.call
   rescue MiniTest::Assertion => assertion
     if message
-      assert_equal message, assertion.message, "Assertion triggered, but message was not what was expected."
+      assert_equal(message, assertion.message, "Assertion triggered, but message was not what was expected.")
     else
       pass
     end
     assertion
   else
-    flunk "No assertion was triggered, but one was expected."
+    flunk("No assertion was triggered, but one was expected.")
   end
 end

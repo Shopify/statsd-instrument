@@ -1,0 +1,21 @@
+inherit_from:
+  - https://shopify.github.io/ruby-style-guide/rubocop.yml
+
+AllCops:
+  TargetRubyVersion: 2.3
+  UseCache: true
+  CacheRootDirectory: tmp/rubocop
+  Exclude:
+    - statsd-instrument.gemspec
+
+Naming/FileName:
+  Enabled: true
+  Exclude:
+    - lib/statsd-instrument.rb
+
+Style/ClassAndModuleChildren:
+  Enabled: false # TODO: enable later
+
+
+Style/MethodCallWithArgsParentheses:
+  Enabled: false # TODO: enable later

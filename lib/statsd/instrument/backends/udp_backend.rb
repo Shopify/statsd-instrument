@@ -4,7 +4,6 @@ require 'monitor'
 
 module StatsD::Instrument::Backends
   class UDPBackend < StatsD::Instrument::Backend
-
     BASE_SUPPORTED_METRIC_TYPES = { c: true, ms: true, g: true, s: true }
 
     class DogStatsDProtocol
@@ -91,19 +90,20 @@ module StatsD::Instrument::Backends
 
     def implementation=(value)
       @packet_factory = case value
-        when :datadog
-          DogStatsDProtocol.new
-        when :statsite
-          StatsiteStatsDProtocol.new
-        else
-          StatsDProtocol.new
-        end
+      when :datadog
+        DogStatsDProtocol.new
+      when :statsite
+        StatsiteStatsDProtocol.new
+      else
+        StatsDProtocol.new
+      end
       @implementation = value
     end
 
     def collect_metric(metric)
       unless @packet_factory.class::SUPPORTED_METRIC_TYPES[metric.type]
-        StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} not supported on #{implementation} implementation.")
+        StatsD.logger.warn("[StatsD] Metric type #{metric.type.inspect} is not supported " \
+          "on #{implementation} implementation.")
         return false
       end
 
@@ -142,13 +142,13 @@ module StatsD::Instrument::Backends
       synchronize do
         socket.send(command, 0) > 0
       end
-    rescue ThreadError => e
+    rescue ThreadError
       # In cases where a TERM or KILL signal has been sent, and we send stats as
       # part of a signal handler, locks cannot be acquired, so we do our best
       # to try and send the command without a lock.
       socket.send(command, 0) > 0
-    rescue SocketError, IOError, SystemCallError, Errno::ECONNREFUSED => e
-      StatsD.logger.error "[StatsD] #{e.class.name}: #{e.message}"
+    rescue SocketError, IOError, SystemCallError => e
+      StatsD.logger.error("[StatsD] #{e.class.name}: #{e.message}")
       invalidate_socket
     end
 

@@ -5,8 +5,8 @@ require 'test_helper'
 class CaptureBackendTest < Minitest::Test
   def setup
     @backend = StatsD::Instrument::Backends::CaptureBackend.new
-    @metric1 = StatsD::Instrument::Metric::new(type: :c, name: 'mock.counter')
-    @metric2 = StatsD::Instrument::Metric::new(type: :ms, name: 'mock.measure', value: 123)
+    @metric1 = StatsD::Instrument::Metric.new(type: :c, name: 'mock.counter')
+    @metric2 = StatsD::Instrument::Metric.new(type: :ms, name: 'mock.measure', value: 123)
   end
 
   def test_collecting_metric

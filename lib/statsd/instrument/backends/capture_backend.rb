@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module StatsD::Instrument::Backends
-
   # The capture backend is used to capture the metrics that are collected, so you can
   # run assertions on them.
   #

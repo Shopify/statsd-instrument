@@ -19,8 +19,13 @@ jobs:
         version: ${{ matrix.ruby }}
         architecture: 'x64'
 
-    - name: Run test suite
+    - name: Install dependencies
       run: |
         gem install bundler
         bundle install --jobs 4 --retry 3
-        bundle exec rake
+
+    - name: Run test suite
+      run: bundle exec rake
+
+    - name: Run Rubocop
+      run: bundle exec rubocop
