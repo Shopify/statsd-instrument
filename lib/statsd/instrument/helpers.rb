@@ -1,18 +1,22 @@
 # frozen_string_literal: true
 
 module StatsD::Instrument::Helpers
-  def capture_statsd_calls(&block)
-    mock_backend = StatsD::Instrument::Backends::CaptureBackend.new
-    old_backend = StatsD.backend
-    StatsD.backend = mock_backend
-
-    block.call
-    mock_backend.collected_metrics
-  ensure
-    if old_backend.is_a?(StatsD::Instrument::Backends::CaptureBackend)
-      old_backend.collected_metrics.concat(mock_backend.collected_metrics)
+  def with_capture_backend(backend, &block)
+    if StatsD.backend.is_a?(StatsD::Instrument::Backends::CaptureBackend)
+      backend.parent = StatsD.backend
     end
 
+    old_backend = StatsD.backend
+    StatsD.backend = backend
+
+    block.call
+  ensure
     StatsD.backend = old_backend
+  end
+
+  def capture_statsd_calls(&block)
+    capture_backend = StatsD::Instrument::Backends::CaptureBackend.new
+    with_capture_backend(capture_backend, &block)
+    capture_backend.collected_metrics
   end
 end

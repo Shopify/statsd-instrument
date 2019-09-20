@@ -9,6 +9,7 @@ module StatsD::Instrument::Backends
   # @see StatsD::Instrument::Assertions
   class CaptureBackend < StatsD::Instrument::Backend
     attr_reader :collected_metrics
+    attr_accessor :parent
 
     def initialize
       reset
@@ -18,6 +19,7 @@ module StatsD::Instrument::Backends
     # @param metric [StatsD::Instrument::Metric]  The metric to collect.
     # @return [void]
     def collect_metric(metric)
+      parent&.collect_metric(metric)
       @collected_metrics << metric
     end
 
