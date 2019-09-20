@@ -76,7 +76,7 @@ class UDPBackendTest < Minitest::Test
     StatsD.histogram('fooh', 42.4)
   end
 
-   def test_distribution_syntax_on_datadog
+  def test_distribution_syntax_on_datadog
     @backend.implementation = :datadog
     @backend.expects(:write_packet).with('fooh:42.4|d')
     StatsD.distribution('fooh', 42.4)
