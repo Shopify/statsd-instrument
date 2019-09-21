@@ -52,7 +52,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_benchmarked_block_duration
-    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
+    Process.stubs(:clock_gettime).returns(5.0, 5.0 + 1.12)
     metric = capture_statsd_call do
       StatsD.measure('values.foobar') { 'foo' }
     end
@@ -77,7 +77,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_return_in_block_still_captures
-    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 6.12)
+    Process.stubs(:clock_gettime).returns(5.0, 6.12)
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
@@ -92,7 +92,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_measure_with_exception_in_block_still_captures
-    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 6.12)
+    Process.stubs(:clock_gettime).returns(5.0, 6.12)
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
@@ -188,7 +188,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_distribution_with_benchmarked_block_duration
-    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
+    Process.stubs(:clock_gettime).returns(5.0, 5.0 + 1.12)
     metric = capture_statsd_call do
       StatsD.distribution('values.foobar') { 'foo' }
     end
@@ -197,7 +197,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_distribution_with_return_in_block_still_captures
-    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
+    Process.stubs(:clock_gettime).returns(5.0, 5.0 + 1.12)
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
@@ -213,7 +213,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_distribution_with_exception_in_block_still_captures
-    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
+    Process.stubs(:clock_gettime).returns(5.0, 5.0 + 1.12)
     result = nil
     metric = capture_statsd_call do
       lambda = -> do
@@ -232,7 +232,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_distribution_with_block_and_options
-    StatsD::Instrument.stubs(:current_timestamp).returns(5.0, 5.0 + 1.12)
+    Process.stubs(:clock_gettime).returns(5.0, 5.0 + 1.12)
     metric = capture_statsd_call do
       StatsD.distribution('values.foobar', tags: ['test'], sample_rate: 0.9) { 'foo' }
     end
