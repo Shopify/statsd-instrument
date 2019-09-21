@@ -36,5 +36,8 @@ class IntegrationTest < Minitest::Test
     Process.waitpid(pid)
 
     assert_equal "exiting:1|c", @server.recvfrom(100).first
+
+  rescue NotImplementedError
+    pass("Fork is not implemented on #{RUBY_PLATFORM}")
   end
 end
