@@ -357,7 +357,7 @@ module StatsD
       block.call
     ensure
       # Ensure catches both a raised exception and a return in the invoked block
-      value = 1000 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
+      value = 1000.0 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
       collect_metric(type, key, value, metric_options)
     end
   end
@@ -425,7 +425,7 @@ module StatsD
     begin
       block.call
     ensure
-      value = 1000 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
+      value = 1000.0 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
       collect_metric(:d, key, value, metric_options)
     end
   end
