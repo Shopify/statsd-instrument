@@ -3,7 +3,7 @@
 require 'statsd-instrument'
 require 'benchmark/ips'
 
-StatsD.logger = Logger.new('/dev/null')
+StatsD.logger = Logger.new(File::NULL)
 
 class Suite
   def warming(*args)

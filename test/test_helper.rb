@@ -9,4 +9,4 @@ require 'set'
 require 'logger'
 require 'statsd-instrument'
 
-StatsD.logger = Logger.new('/dev/null')
+StatsD.logger = Logger.new(File::NULL)
