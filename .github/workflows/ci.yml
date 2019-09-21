@@ -4,11 +4,30 @@ on: push
 
 jobs:
   test:
-    name: Ruby ${{ matrix.ruby }}
-    runs-on: ubuntu-18.04
+    name: Ruby ${{ matrix.ruby }} on ${{ matrix.platform }}
+    runs-on: ${{ matrix.platform }}
     strategy:
+      fail-fast: false
       matrix:
-        ruby: ['2.3', '2.4', '2.5', '2.6']
+        platform: [ubuntu-18.04, windows-2019, macOS-10.14]
+        ruby: [2.3, 2.4, 2.5, 2.6]
+
+        exclude:
+        # The Windows environment does not support older Ruby versions. We only test against the latest version
+        - platform: windows-2019
+          ruby: 2.3
+        - platform: windows-2019
+          ruby: 2.4
+        - platform: windows-2019
+          ruby: 2.5
+
+        # On macOS, we only test against the Ruby version macOS ships with (2.3)
+        - platform: macOS-10.14
+          ruby: 2.4
+        - platform: macOS-10.14
+          ruby: 2.5
+        - platform: macOS-10.14
+          ruby: 2.6
 
     steps:
     - uses: actions/checkout@v1
@@ -16,13 +35,10 @@ jobs:
     - name: Setup Ruby
       uses: actions/setup-ruby@v1
       with:
-        version: ${{ matrix.ruby }}
-        architecture: 'x64'
+        ruby-version: ${{ matrix.ruby }}
 
     - name: Install dependencies
-      run: |
-        gem install bundler
-        bundle install --jobs 4 --retry 3
+      run: gem install bundler && bundle install --jobs 4 --retry 3
 
     - name: Run test suite
       run: bundle exec rake
