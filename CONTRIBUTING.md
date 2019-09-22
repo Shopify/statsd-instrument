@@ -36,12 +36,13 @@ This gem is used in production at Shopify, and is used to instrument some of
 our hottest code paths. This means that we are very careful about not
 introducing performance regressions in this library.
 
-**Important:** Whenever you make changes to the metric emission code path in this library,
-you **must** include benchmark results to show the impact of your changes.
+**Important:** Whenever you make changes to the metric emission code path in
+this library, you **must** include benchmark results to show the impact of
+your changes.
 
-The `test/benchmark/` folder contains some example benchmark script that you
-can use, or can serve as a starting point. Please run your benchmark on your
-pull request revision, as well as the latest revision on `master`.
+The `benchmark/` folder contains some example benchmark script that you can
+use, or can serve as a starting point. The [benchmark README](benchmark/README.md)
+has instructions on how to benchmark your changes.
 
 ### On backwards compatibility
 
@@ -51,7 +52,8 @@ accept changes that are backwards incompatible:
 - Changes that will require us to update our codebases.
 - Changes that will cause metrics emitted by this library to change in form or shape.
 
-This means that we may not be able to accept fixes for what you consider a bug.
+This means that we may not be able to accept fixes for what you consider a bug, because
+we are depending on the current behavior of the library.
 
 ## Release procedure
 
