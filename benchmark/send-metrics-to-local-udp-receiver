@@ -5,8 +5,14 @@ require 'bundler/setup'
 require 'benchmark/ips'
 require 'socket'
 
-branch = %x(git rev-parse --abbrev-ref HEAD).rstrip
-revision = %x(git rev-parse HEAD).rstrip[0, 7]
+revision = %x(git rev-parse HEAD).rstrip
+master_revision = %x(git rev-parse origin/master).rstrip
+branch = if revision == master_revision
+  'master'
+else
+  %x(git rev-parse --abbrev-ref HEAD).rstrip
+end
+
 intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}"
 FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
 
@@ -21,7 +27,7 @@ ENV['STATSD_IMPLEMENTATION'] ||= 'datadog'
 require 'statsd-instrument'
 
 report = Benchmark.ips do |bench|
-  bench.report("StatsD metrics to local UDP receiver (branch: #{branch}, sha: #{revision})") do
+  bench.report("StatsD metrics to local UDP receiver (branch: #{branch}, sha: #{revision[0, 7]})") do
     StatsD.increment('StatsD.increment', 10)
     StatsD.measure('StatsD.measure') { 1 + 1 }
     StatsD.gauge('StatsD.gauge', 12.0, tags: ["foo:bar", "quc"])
