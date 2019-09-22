@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'benchmark/ips'
+require 'socket'
+
+branch = %x(git rev-parse --abbrev-ref HEAD).rstrip
+revision = %x(git rev-parse HEAD).rstrip[0, 7]
+intermediate_results_filename = "tmp/#{File.basename($PROGRAM_NAME)}-intermediate-results"
+
+# Set up an UDP listener to which we can send StatsD packets
+receiver = UDPSocket.new
+receiver.bind('localhost', 0)
+
+ENV['ENV'] = "production"
+ENV['STATSD_ADDR'] = "#{receiver.addr[2]}:#{receiver.addr[1]}"
+ENV['STATSD_IMPLEMENTATION'] ||= 'datadog'
+
+require 'statsd-instrument'
+
+report = Benchmark.ips do |bench|
+  bench.report("StatsD metrics to local UDP receiver (branch: #{branch}, sha: #{revision})") do
+    StatsD.increment('StatsD.increment', 10)
+    StatsD.measure('StatsD.measure') { 1 + 1 }
+    StatsD.gauge('StatsD.gauge', 12.0, tags: ["foo:bar", "quc"])
+    StatsD.set('StatsD.set', 'value', tags: { foo: 'bar', baz: 'quc' })
+    if StatsD.backend.implementation == :datadog
+      StatsD.event('StasD.event', "12345")
+      StatsD.service_check("StatsD.service_check", "ok")
+    end
+  end
+
+  # Store the results in between runs
+  bench.save!(intermediate_results_filename)
+  bench.compare!
+end
+
+receiver.close
+
+if report.entries.length == 1
+  puts
+  puts "To compare the performance of this revision against another revision (e.g. master),"
+  puts "check out a different branch and run this benchmark script again."
+elsif ENV['KEEP_RESULTS']
+  puts
+  puts "The intermediate results have been stored in #{intermediate_results_filename}"
+else
+  File.unlink(intermediate_results_filename)
+end
