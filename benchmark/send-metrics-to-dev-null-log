@@ -7,7 +7,8 @@ require 'logger'
 
 branch = %x(git rev-parse --abbrev-ref HEAD).rstrip
 revision = %x(git rev-parse HEAD).rstrip[0, 7]
-intermediate_results_filename = "tmp/#{File.basename($PROGRAM_NAME)}-intermediate-results"
+intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}"
+FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
 
 ENV['ENV'] = "development"
 require 'statsd-instrument'
