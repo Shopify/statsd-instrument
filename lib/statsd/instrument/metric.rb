@@ -31,6 +31,18 @@
 # @see StatsD::Instrument::Backend A StatsD::Instrument::Backend is used to collect metrics.
 #
 class StatsD::Instrument::Metric
+  unless Regexp.method_defined?(:match?) # for ruby 2.3
+    module RubyBackports
+      refine Regexp do
+        def match?(str)
+          (self =~ str) != nil
+        end
+      end
+    end
+
+    using RubyBackports
+  end
+
   attr_accessor :type, :name, :value, :sample_rate, :tags, :metadata
 
   # Initializes a new metric instance.
@@ -124,7 +136,7 @@ class StatsD::Instrument::Metric
   # @return [String]
   def normalize_name(name)
     # fast path when no normalization is needed to avoid copying the string
-    return name unless name.match?(/[:|@]/)
+    return name unless /[:|@]/.match?(name)
 
     name.tr(':|@', '_')
   end
@@ -141,7 +153,7 @@ class StatsD::Instrument::Metric
     tags = tags.map { |k, v| k.to_s + ":" + v.to_s } if tags.is_a?(Hash)
 
     # fast path when no string replacement is needed
-    return tags unless tags.any? { |tag| tag.match?(/[|,]/) }
+    return tags unless tags.any? { |tag| /[|,]/.match?(tag) }
 
     tags.map { |tag| tag.tr('|,', '') }
   end
