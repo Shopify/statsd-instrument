@@ -21,6 +21,12 @@ module Rubocop
       assert_no_offenses("StatsD.increment('foo', 2, &block)")
     end
 
+    def test_no_offense_for_now
+      assert_no_offenses("StatsD.increment 'foo', value: 3")
+      assert_no_offenses("StatsD.increment 'foo', value: 3, sample_rate: 0.5")
+      assert_no_offenses("StatsD.increment('foo', value: 3, tags: ['foo']) { foo }")
+    end
+
     def test_autocorrect_only_sample_rate
       corrected = autocorrect_source("StatsD.increment('foo', 2, 0.5)")
       assert_equal "StatsD.increment('foo', 2, sample_rate: 0.5)", corrected
