@@ -33,9 +33,10 @@ class IntegrationTest < Minitest::Test
     end
 
     Process.kill('TERM', pid)
-    Process.waitpid(pid)
+    _, exit_status = Process.waitpid2(pid)
 
-    assert_equal "exiting:1|c", @server.recvfrom(100).first
+    assert_equal 0, exit_status, "The foked process did not exit cleanly"
+    assert_equal "exiting:1|c", @server.recvfrom_nonblock(100).first
 
   rescue NotImplementedError
     pass("Fork is not implemented on #{RUBY_PLATFORM}")
