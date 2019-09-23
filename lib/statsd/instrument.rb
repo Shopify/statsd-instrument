@@ -520,12 +520,13 @@ module StatsD
   # @return [void]
   def collect_metric(type, name, value, sample_rate:, tags: nil, prefix:, metadata: nil)
     sample_rate ||= default_sample_rate
+    return unless backend.sample?(sample_rate)
     name = "#{prefix}.#{name}" if prefix
 
     metric = StatsD::Instrument::Metric.new(type: type, name: name, value: value,
       sample_rate: sample_rate, tags: tags, metadata: metadata)
     backend.collect_metric(metric)
-    metric # TODO: return `nil` in the next major version
+    nil
   end
 end
 

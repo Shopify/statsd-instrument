@@ -107,10 +107,6 @@ module StatsD::Instrument::Backends
         return false
       end
 
-      if metric.sample_rate < 1.0 && rand > metric.sample_rate
-        return false
-      end
-
       write_packet(@packet_factory.generate_packet(metric))
     end
 

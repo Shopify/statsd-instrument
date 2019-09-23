@@ -10,6 +10,10 @@ class StatsD::Instrument::Backend
   def collect_metric(_metric)
     raise NotImplementedError, "Use a concerete backend implementation"
   end
+
+  def sample?(sample_rate)
+    sample_rate >= 1.0 || rand < sample_rate
+  end
 end
 
 require 'statsd/instrument/backends/logger_backend'

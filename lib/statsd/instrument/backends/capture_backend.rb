@@ -15,6 +15,10 @@ module StatsD::Instrument::Backends
       reset
     end
 
+    def sample?(_sample_rate)
+      true
+    end
+
     # Adds a metric to the ist of collected metrics.
     # @param metric [StatsD::Instrument::Metric]  The metric to collect.
     # @return [void]

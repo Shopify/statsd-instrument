@@ -11,6 +11,10 @@ module StatsD::Instrument::Backends
       @logger = logger
     end
 
+    def sample?(_sample_rate)
+      true
+    end
+
     # @param metric [StatsD::Instrument::Metric]
     # @return [void]
     def collect_metric(metric)
