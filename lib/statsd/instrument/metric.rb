@@ -123,6 +123,9 @@ class StatsD::Instrument::Metric
   # @param name [String]
   # @return [String]
   def normalize_name(name)
+    # fast path when no normalization is needed to avoid copying the string
+    return name unless name.match?(/[:|@]/)
+
     name.tr(':|@', '_')
   end
 
@@ -136,6 +139,10 @@ class StatsD::Instrument::Metric
   def self.normalize_tags(tags)
     return unless tags
     tags = tags.map { |k, v| k.to_s + ":" + v.to_s } if tags.is_a?(Hash)
+
+    # fast path when no string replacement is needed
+    return tags unless tags.any? { |tag| tag.match?(/[|,]/) }
+
     tags.map { |tag| tag.tr('|,', '') }
   end
 end
