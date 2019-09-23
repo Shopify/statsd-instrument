@@ -22,6 +22,15 @@ module StatsD::Instrument::Environment
     end
   end
 
+  def datagram_builder_class
+    case ENV['STATSD_IMPLEMENTATION']
+    when 'datadog', 'dogstatsd'
+      StatsD::Instrument::DogStatsDDatagramBuilder
+    else
+      StatsD::Instrument::StatsDDatagramBuilder
+    end
+  end
+
   # Detects the current environment, either by asking Rails, or by inspecting environment variables.
   #
   # - Within a Rails application, <tt>Rails.env</tt> is used.

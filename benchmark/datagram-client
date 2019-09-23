@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'benchmark/ips'
+require 'socket'
+
+# Set up an UDP listener to which we can send StatsD packets
+legacy_receiver = UDPSocket.new
+legacy_receiver.bind('localhost', 0)
+
+ENV['ENV'] = "production"
+ENV['STATSD_ADDR'] = "#{legacy_receiver.addr[2]}:#{legacy_receiver.addr[1]}"
+ENV['STATSD_IMPLEMENTATION'] ||= 'datadog'
+
+require 'statsd-instrument'
+require 'statsd/instrument/client'
+
+legacy_client = StatsD
+
+# Set up an UDP listener to which we can send StatsD packets
+new_client_receiver = UDPSocket.new
+new_client_receiver.bind('localhost', 0)
+
+udp_sink = StatsD::Instrument::UDPSink.new(new_client_receiver.addr[2], new_client_receiver.addr[1])
+new_client = StatsD::Instrument::Client.new(sink: udp_sink)
+
+Benchmark.ips do |bench|
+  bench.report("Legacy client") do
+    legacy_client.increment('StatsD.increment', 10)
+  end
+
+  bench.report("New client") do
+    new_client.increment('StatsD.increment', 10)
+  end
+
+  bench.compare!
+end
+
+legacy_receiver.close
+new_client_receiver.close
