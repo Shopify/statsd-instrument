@@ -315,6 +315,42 @@ class AssertionsTest < Minitest::Test
     end
   end
 
+  def test_assertion_with_exceptions
+    assert_no_assertion_triggered do
+      @test_case.assert_raises(RuntimeError) do
+        @test_case.assert_statsd_increment('counter') do
+          StatsD.increment('counter')
+          raise "foo"
+        end
+      end
+    end
+
+    assert_no_assertion_triggered do
+      @test_case.assert_statsd_increment('counter') do
+        @test_case.assert_raises(RuntimeError) do
+          StatsD.increment('counter')
+          raise "foo"
+        end
+      end
+    end
+
+    assert_assertion_triggered do
+      @test_case.assert_statsd_increment('counter') do
+        @test_case.assert_raises(RuntimeError) do
+          raise "foo"
+        end
+      end
+    end
+
+    assert_assertion_triggered do
+      @test_case.assert_raises(RuntimeError) do
+        @test_case.assert_statsd_increment('counter') do
+          raise "foo"
+        end
+      end
+    end
+  end
+
   private
 
   def assert_no_assertion_triggered(&block)

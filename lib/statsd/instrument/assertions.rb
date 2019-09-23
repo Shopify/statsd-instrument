@@ -39,47 +39,51 @@ module StatsD::Instrument::Assertions
 
   # @private
   def assert_statsd_calls(expected_metrics, &block)
-    unless block
-      raise ArgumentError, "block must be given"
-    end
+    raise ArgumentError, "block must be given" unless block_given?
 
-    metrics = capture_statsd_calls(&block)
-    matched_expected_metrics = []
+    capture_backend = StatsD::Instrument::Backends::CaptureBackend.new
+    with_capture_backend(capture_backend) do
+      begin
+        block.call
+      ensure
+        metrics = capture_backend.collected_metrics
+        matched_expected_metrics = []
+        expected_metrics.each do |expected_metric|
+          expected_metric_times = expected_metric.times
+          expected_metric_times_remaining = expected_metric.times
+          filtered_metrics = metrics.select { |m| m.type == expected_metric.type && m.name == expected_metric.name }
+          refute(filtered_metrics.empty?,
+            "No StatsD calls for metric #{expected_metric.name} of type #{expected_metric.type} were made.")
 
-    expected_metrics.each do |expected_metric|
-      expected_metric_times = expected_metric.times
-      expected_metric_times_remaining = expected_metric.times
-      filtered_metrics = metrics.select { |m| m.type == expected_metric.type && m.name == expected_metric.name }
-      refute(filtered_metrics.empty?,
-        "No StatsD calls for metric #{expected_metric.name} of type #{expected_metric.type} were made.")
+          filtered_metrics.each do |metric|
+            next unless expected_metric.matches(metric)
 
-      filtered_metrics.each do |metric|
-        next unless expected_metric.matches(metric)
+            assert(within_numeric_range?(metric.sample_rate),
+              "Unexpected sample rate type for metric #{metric.name}, must be numeric")
 
-        assert within_numeric_range?(metric.sample_rate),
-          "Unexpected sample rate type for metric #{metric.name}, must be numeric"
+            assert(expected_metric_times_remaining > 0,
+              "Unexpected StatsD call; number of times this metric was expected exceeded: #{expected_metric.inspect}")
 
-        assert(expected_metric_times_remaining > 0,
-          "Unexpected StatsD call; number of times this metric was expected exceeded: #{expected_metric.inspect}")
+            expected_metric_times_remaining -= 1
+            metrics.delete(metric)
+            if expected_metric_times_remaining == 0
+              matched_expected_metrics << expected_metric
+            end
+          end
 
-        expected_metric_times_remaining -= 1
-        metrics.delete(metric)
-        if expected_metric_times_remaining == 0
-          matched_expected_metrics << expected_metric
+          msg = +"Metric expected #{expected_metric_times} times but seen " \
+            "#{expected_metric_times - expected_metric_times_remaining} " \
+            "times: #{expected_metric.inspect}."
+          msg << "\nCaptured metrics with the same key: #{filtered_metrics}" if filtered_metrics.any?
+
+          assert(expected_metric_times_remaining == 0, msg)
         end
+        expected_metrics -= matched_expected_metrics
+
+        assert(expected_metrics.empty?,
+          "Unexpected StatsD calls; the following metric expectations were not satisfied: #{expected_metrics.inspect}")
       end
-
-      msg = +"Metric expected #{expected_metric_times} times but seen " \
-        "#{expected_metric_times - expected_metric_times_remaining} " \
-        "times: #{expected_metric.inspect}."
-      msg << "\nCaptured metrics with the same key: #{filtered_metrics}" if filtered_metrics.any?
-
-      assert(expected_metric_times_remaining == 0, msg)
     end
-    expected_metrics -= matched_expected_metrics
-
-    assert(expected_metrics.empty?,
-      "Unexpected StatsD calls; the following metric expectations were not satisfied: #{expected_metrics.inspect}")
   end
 
   private
