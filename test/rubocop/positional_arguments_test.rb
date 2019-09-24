@@ -19,9 +19,15 @@ module Rubocop
       assert_no_offenses("StatsD.increment('foo', 2, sample_rate: 0.1, tags: { foo: 'bar' })")
       assert_no_offenses("StatsD.increment('foo', 2) { foo }")
       assert_no_offenses("StatsD.increment('foo', 2, &block)")
+      assert_no_offenses("StatsD.gauge('foo', 2, **kwargs)")
     end
 
-    def test_no_offense_for_now
+    def test_test_autocorrect_third_argument_to_keyword_splat
+      corrected = autocorrect_source("StatsD.gauge('foo', 2, method_ruturning_a_hash)")
+      assert_equal "StatsD.gauge('foo', 2, **method_ruturning_a_hash)", corrected
+    end
+
+    def test_no_offense_for_now_when_using_value_keyword_argumenr
       assert_no_offenses("StatsD.increment 'foo', value: 3")
       assert_no_offenses("StatsD.increment 'foo', value: 3, sample_rate: 0.5")
       assert_no_offenses("StatsD.increment('foo', value: 3, tags: ['foo']) { foo }")
@@ -30,6 +36,11 @@ module Rubocop
     def test_autocorrect_only_sample_rate
       corrected = autocorrect_source("StatsD.increment('foo', 2, 0.5)")
       assert_equal "StatsD.increment('foo', 2, sample_rate: 0.5)", corrected
+    end
+
+    def test_autocorrect_only_sample_rate_as_int
+      corrected = autocorrect_source("StatsD.increment('foo', 2, 1)")
+      assert_equal "StatsD.increment('foo', 2, sample_rate: 1)", corrected
     end
 
     def test_autocorrect_only_tags
