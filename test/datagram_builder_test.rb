@@ -87,4 +87,34 @@ class DatagramBuilderTest < Minitest::Test
     datagram = @datagram_builder.d('foo', 10, 1, foo: 'bar', baz: 'quc')
     assert_equal "foo:10|d|#foo:bar,baz:quc", datagram
   end
+
+  def test_prefix
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new(prefix: 'foo')
+    datagram = datagram_builder.c('bar', 1, nil, nil)
+    assert_equal 'foo.bar:1|c', datagram
+
+    # The prefix should also be normalized
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new(prefix: 'foo|bar')
+    datagram = datagram_builder.c('baz', 1, nil, nil)
+    assert_equal 'foo_bar.baz:1|c', datagram
+  end
+
+  def test_default_tags
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new(default_tags: ['foo'])
+    datagram = datagram_builder.c('bar', 1, nil, nil)
+    assert_equal 'bar:1|c|#foo', datagram
+
+    datagram = datagram_builder.c('bar', 1, nil, a: 'b')
+    assert_equal 'bar:1|c|#a:b,foo', datagram
+
+    # We do not filter out duplicates, because detecting dupes is too time consuming.
+    # We let the server deal with the situation
+    datagram = datagram_builder.c('bar', 1, nil, ['foo'])
+    assert_equal 'bar:1|c|#foo,foo', datagram
+
+    # Default tags are also normalized
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new(default_tags: ['f,o|o'])
+    datagram = datagram_builder.c('bar', 1, nil, nil)
+    assert_equal 'bar:1|c|#foo', datagram
+  end
 end
