@@ -16,27 +16,12 @@ class MetricTest < Minitest::Test
     assert m.tags.nil?
   end
 
-  def test_name_prefix
-    StatsD.stubs(:prefix).returns('prefix')
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter')
-    assert_equal 'prefix.counter', m.name
-
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', no_prefix: true)
-    assert_equal 'counter', m.name
-
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', prefix: "foobar")
-    assert_equal 'foobar.counter', m.name
-
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', prefix: "foobar", no_prefix: true)
-    assert_equal 'counter', m.name
-  end
-
   def test_bad_metric_name
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'my:metric', no_prefix: true)
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'my:metric')
     assert_equal 'my_metric', m.name
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'my|metric', no_prefix: true)
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'my|metric')
     assert_equal 'my_metric', m.name
-    m = StatsD::Instrument::Metric.new(type: :c, name: 'my@metric', no_prefix: true)
+    m = StatsD::Instrument::Metric.new(type: :c, name: 'my@metric')
     assert_equal 'my_metric', m.name
   end
 

@@ -41,7 +41,7 @@ class MatchersTest < Minitest::Test
 
   def test_statsd_increment_with_times_not_matched
     refute StatsD::Instrument::Matchers::Increment.new(:c, 'counter', times: 2)
-      .matches?(lambda { StatsD.increment('counter', times: 3) })
+      .matches? lambda { 3.times { StatsD.increment('counter') } }
   end
 
   def test_statsd_increment_with_sample_rate_matched
