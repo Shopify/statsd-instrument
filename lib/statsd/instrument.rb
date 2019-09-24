@@ -62,26 +62,26 @@ module StatsD
       metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
     end
 
-    if Process.respond_to?(:clock_gettime)
-      # @private
-      def self.current_timestamp
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      end
-    else
-      # @private
-      def self.current_timestamp
-        Time.now
-      end
+    # Even though this method is considered private, and is no longer used internally,
+    # applications in the wild rely on it. As a result, we cannot remove this method
+    # until the next major version.
+    #
+    # @deprecated Use Process.clock_gettime(Process::CLOCK_MONOTONIC) instead.
+    def self.current_timestamp
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
     # Even though this method is considered private, and is no longer used internally,
     # applications in the wild rely on it. As a result, we cannot remove this method
     # until the next major version.
-    # @private
+    #
+    # @deprecated You can implement similar functionality yourself using
+    #   `Process.clock_gettime(Process::CLOCK_MONOTONIC)`. Think about what will
+    #   happen if an exception happens during the block execution though.
     def self.duration
-      start = current_timestamp
+      start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       yield
-      current_timestamp - start
+      Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
     end
 
     # Adds execution duration instrumentation to a method as a timing.
@@ -352,12 +352,12 @@ module StatsD
 
     return collect_metric(type, key, value, metric_options) unless block_given?
 
-    start = StatsD::Instrument.current_timestamp
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     begin
       block.call
     ensure
       # Ensure catches both a raised exception and a return in the invoked block
-      value = 1000 * (StatsD::Instrument.current_timestamp - start)
+      value = 1000.0 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
       collect_metric(type, key, value, metric_options)
     end
   end
@@ -421,11 +421,11 @@ module StatsD
 
     return collect_metric(:d, key, value, metric_options) unless block_given?
 
-    start = StatsD::Instrument.current_timestamp
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     begin
       block.call
     ensure
-      value = 1000 * (StatsD::Instrument.current_timestamp - start)
+      value = 1000.0 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
       collect_metric(:d, key, value, metric_options)
     end
   end
