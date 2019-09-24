@@ -7,6 +7,7 @@ require 'statsd/instrument/dogstatsd_datagram_builder'
 require 'statsd/instrument/null_sink'
 require 'statsd/instrument/udp_sink'
 require 'statsd/instrument/capture_sink'
+require 'statsd/instrument/log_sink'
 
 class StatsD::Instrument::Client
   attr_reader :sink, :datagram_builder_class, :prefix, :default_tags, :sampling_disabled, :default_sample_rate
