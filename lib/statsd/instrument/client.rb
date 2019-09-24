@@ -137,6 +137,6 @@ class StatsD::Instrument::Client
     if sample_rate == 1 || sampling_disabled || rand < sample_rate
       @sink << datagram
     end
-    datagram
+    nil
   end
 end
