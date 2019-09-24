@@ -5,16 +5,18 @@ class StatsD::Instrument::UDPSink
     @host = host
     @port = port
     @mutex = Mutex.new
+    @socket = nil
   end
 
   def <<(datagram)
     with_socket { |socket| socket.send(datagram, 0) > 0 }
+    self
 
   rescue ThreadError
     # In cases where a TERM or KILL signal has been sent, and we send stats as
     # part of a signal handler, locks cannot be acquired, so we do our best
-    # to try and send the command without a lock.
-    socket.send(command, 0) > 0
+    # to try and send the datagram without a lock.
+    socket.send(datagram, 0) > 0
 
   rescue SocketError, IOError, SystemCallError
     # TODO: log?
@@ -24,13 +26,15 @@ class StatsD::Instrument::UDPSink
   private
 
   def with_socket
-    @mutex.synchronize do
-      if @socket.nil?
-        @socket = UDPSocket.new
-        @socket.connect(@host, @port)
-      end
-      yield(@socket)
+    @mutex.synchronize { yield(socket) }
+  end
+
+  def socket
+    if @socket.nil?
+      @socket = UDPSocket.new
+      @socket.connect(@host, @port)
     end
+    @socket
   end
 
   def invalidate_socket

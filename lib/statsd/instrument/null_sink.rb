@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class StatsD::Instrument::NullSink
-  def <<(datagram)
-    # noop
+  def <<(_datagram)
+    self # noop
   end
 end

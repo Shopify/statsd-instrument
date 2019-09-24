@@ -11,6 +11,7 @@ class StatsD::Instrument::CaptureSink
   def <<(datagram)
     @datagrams << StatsD::Instrument::Datagram.new(datagram)
     parent << datagram
+    self
   end
 
   def clear
