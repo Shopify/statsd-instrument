@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'statsd/instrument/datagram'
+require 'statsd/instrument/datagram_builder'
 require 'statsd/instrument/statsd_datagram_builder'
 require 'statsd/instrument/dogstatsd_datagram_builder'
 require 'statsd/instrument/null_sink'
