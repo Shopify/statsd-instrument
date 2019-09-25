@@ -7,16 +7,25 @@ module RuboCop
         MSG = 'Use keyword arguments for StatsD calls'
 
         STATSD_SINGLETON_METHODS = %i{increment gauge measure set histogram distribution key_value}
+
         POSITIONAL_ARGUMENT_TYPES = Set[:int, :float, :nil]
-        UNKNOWN_ARGUMENT_TYPES = Set[:send, :const]
+        UNKNOWN_ARGUMENT_TYPES = Set[:send, :const, :lvar]
         REFUSED_ARGUMENT_TYPES = POSITIONAL_ARGUMENT_TYPES | UNKNOWN_ARGUMENT_TYPES
+
+        KEYWORD_ARGUMENT_TYPES = Set[:hash]
+        BLOCK_ARGUMENT_TYPES = Set[:block_pass]
+        ACCEPTED_ARGUMENT_TYPES = KEYWORD_ARGUMENT_TYPES | BLOCK_ARGUMENT_TYPES
 
         def on_send(node)
           if node.receiver&.type == :const && node.receiver&.const_name == "StatsD"
-            if STATSD_SINGLETON_METHODS.include?(node.method_name)
-              arguments = node.arguments
-              if arguments.length >= 3 && REFUSED_ARGUMENT_TYPES.include?(arguments[2].type)
+            if STATSD_SINGLETON_METHODS.include?(node.method_name) && node.arguments.length >= 3
+              case node.arguments[2].type
+              when *REFUSED_ARGUMENT_TYPES
                 add_offense(node)
+              when *ACCEPTED_ARGUMENT_TYPES
+                nil
+              else
+                $stderr.puts "[StatsD/PositionalArguments] Unhandled argument type: #{node.arguments[2].type.inspect}"
               end
             end
           end
@@ -72,9 +81,6 @@ module RuboCop
               unless keyword_arguments.empty?
                 corrector.insert_after(value_argument.source_range, ", #{keyword_arguments.join(', ')}")
               end
-
-            else
-              puts "Unknown arg type #{positial_arguments[0].type}"
             end
           end
         end

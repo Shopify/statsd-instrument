@@ -32,6 +32,14 @@ module Rubocop
       assert_offense("StatsD.gauge('foo', 2, method_ruturning_a_hash)")
     end
 
+    def test_offense_when_using_local_variable
+      assert_offense("lambda { |x| StatsD.gauge('foo', 2, x) }")
+      assert_offense(<<~RUBY)
+        x = foo
+        StatsD.gauge('foo', 2, x)
+      RUBY
+    end
+
     def test_no_autocorrect_when_using_method_or_constant
       assert_no_autocorrect("StatsD.gauge('foo', 2, SAMPLE_RATE_CONSTANT)")
       assert_no_autocorrect("StatsD.gauge('foo', 2, method_ruturning_a_hash)")
