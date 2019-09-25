@@ -26,18 +26,6 @@ class StatsDTest < Minitest::Test
     assert_equal :d, metric.type
   end
 
-  def test_statsd_measure_with_explicit_value_as_keyword_argument
-    metric = capture_statsd_call { StatsD.measure('values.foobar', value: 42) }
-    assert_equal 'values.foobar', metric.name
-    assert_equal 42, metric.value
-    assert_equal :ms, metric.type
-  end
-
-  def test_statsd_measure_with_explicit_value_keyword_and_distribution_override
-    metric = capture_statsd_call { StatsD.measure('values.foobar', value: 42, as_dist: true) }
-    assert_equal :d, metric.type
-  end
-
   def test_statsd_measure_without_value_or_block
     assert_raises(ArgumentError) { StatsD.measure('values.foobar', tags: 123) }
   end
@@ -119,12 +107,6 @@ class StatsDTest < Minitest::Test
     assert_equal 1, metric.value
   end
 
-  def test_statsd_increment_with_value_as_keyword_argument
-    metric = capture_statsd_call { StatsD.increment('values.foobar', value: 2) }
-    assert_equal StatsD.default_sample_rate, metric.sample_rate
-    assert_equal 2, metric.value
-  end
-
   def test_statsd_increment_with_multiple_arguments
     metric = capture_statsd_call { StatsD.increment('values.foobar', 12, nil, ['test']) }
     assert_equal StatsD.default_sample_rate, metric.sample_rate
@@ -137,13 +119,6 @@ class StatsDTest < Minitest::Test
     assert_equal :g, metric.type
     assert_equal 'values.foobar', metric.name
     assert_equal 12, metric.value
-  end
-
-  def test_statsd_gauge_with_keyword_argument
-    metric = capture_statsd_call { StatsD.gauge('values.foobar', value: 13) }
-    assert_equal :g, metric.type
-    assert_equal 'values.foobar', metric.name
-    assert_equal 13, metric.value
   end
 
   def test_statsd_gauge_without_value
