@@ -84,8 +84,6 @@ module StatsD
       Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
     end
 
-    # rubocop:disable StatsD/PositionalArguments
-
     # Adds execution duration instrumentation to a method as a timing.
     #
     # @param method [Symbol] The name of the method to instrument.
@@ -93,11 +91,17 @@ module StatsD
     #    callable to dynamically generate a metric name
     # @param metric_options (see StatsD#measure)
     # @return [void]
-    def statsd_measure(method, name, *metric_options)
+    def statsd_measure(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil, as_dist: false,
+      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg, prefix: StatsD.prefix, no_prefix: false)
+
       add_to_method(method, name, :measure) do
         define_method(method) do |*args, &block|
-          metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
-          StatsD.measure(metric_name, *metric_options) { super(*args, &block) }
+          key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          StatsD.measure(
+            key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix, as_dist: as_dist
+          ) do
+            super(*args, &block)
+          end
         end
       end
     end
@@ -110,11 +114,15 @@ module StatsD
     # @param metric_options (see StatsD#measure)
     # @return [void]
     # @note Supported by the datadog implementation only (in beta)
-    def statsd_distribution(method, name, *metric_options)
+    def statsd_distribution(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg, prefix: StatsD.prefix, no_prefix: false)
+
       add_to_method(method, name, :distribution) do
         define_method(method) do |*args, &block|
-          metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
-          StatsD.distribution(metric_name, *metric_options) { super(*args, &block) }
+          key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          StatsD.distribution(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix) do
+            super(*args, &block)
+          end
         end
       end
     end
@@ -134,7 +142,9 @@ module StatsD
     # @yieldreturn [Boolean] Return true iff the return value is consisered a success, false otherwise.
     # @return [void]
     # @see #statsd_count_if
-    def statsd_count_success(method, name, *metric_options)
+    def statsd_count_success(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg, prefix: StatsD.prefix, no_prefix: false)
+
       add_to_method(method, name, :count_success) do
         define_method(method) do |*args, &block|
           begin
@@ -153,8 +163,8 @@ module StatsD
             result
           ensure
             suffix = truthiness == false ? 'failure' : 'success'
-            metric_name = "#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}"
-            StatsD.increment(metric_name, 1, *metric_options)
+            key = "#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}"
+            StatsD.increment(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
           end
         end
       end
@@ -167,13 +177,14 @@ module StatsD
     #
     # @param method (see #statsd_measure)
     # @param name (see #statsd_measure)
-    # @param metric_options (see #statsd_measure)
     # @yield (see #statsd_count_success)
     # @yieldparam result (see #statsd_count_success)
     # @yieldreturn (see #statsd_count_success)
     # @return [void]
     # @see #statsd_count_success
-    def statsd_count_if(method, name, *metric_options)
+    def statsd_count_if(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg, prefix: StatsD.prefix, no_prefix: false)
+
       add_to_method(method, name, :count_if) do
         define_method(method) do |*args, &block|
           begin
@@ -192,9 +203,8 @@ module StatsD
             result
           ensure
             if truthiness
-              metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
-              # TODO: is this a bug, because 1 is missing?
-              StatsD.increment(metric_name, *metric_options)
+              key = StatsD::Instrument.generate_metric_name(name, self, *args)
+              StatsD.increment(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
             end
           end
         end
@@ -210,17 +220,17 @@ module StatsD
     # @param name (see #statsd_measure)
     # @param metric_options (see #statsd_measure)
     # @return [void]
-    def statsd_count(method, name, *metric_options)
+    def statsd_count(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg, prefix: StatsD.prefix, no_prefix: false)
+
       add_to_method(method, name, :count) do
         define_method(method) do |*args, &block|
-          metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
-          StatsD.increment(metric_name, 1, *metric_options)
+          key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          StatsD.increment(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
           super(*args, &block)
         end
       end
     end
-
-    # rubocop:enable StatsD/PositionalArguments
 
     # Removes StatsD counter instrumentation from a method
     # @param method [Symbol] The method to remove instrumentation from.
