@@ -61,15 +61,15 @@ class MatchersTest < Minitest::Test
 
   def test_statsd_increment_with_value_matched_when_multiple_metrics
     assert StatsD::Instrument::Matchers::Increment.new(:c, 'counter', value: 1).matches?(lambda {
-      StatsD.increment('counter', value: 2)
-      StatsD.increment('counter', value: 1)
+      StatsD.increment('counter', 2)
+      StatsD.increment('counter', 1)
     })
   end
 
   def test_statsd_increment_with_value_not_matched_when_multiple_metrics
     refute StatsD::Instrument::Matchers::Increment.new(:c, 'counter', value: 1).matches?(lambda {
-      StatsD.increment('counter', value: 2)
-      StatsD.increment('counter', value: 3)
+      StatsD.increment('counter', 2)
+      StatsD.increment('counter', 3)
     })
   end
 
@@ -90,15 +90,15 @@ class MatchersTest < Minitest::Test
 
   def test_statsd_increment_with_times_and_value_matched
     assert StatsD::Instrument::Matchers::Increment.new(:c, 'counter', times: 2, value: 1).matches?(lambda {
-      StatsD.increment('counter', value: 1)
-      StatsD.increment('counter', value: 1)
+      StatsD.increment('counter', 1)
+      StatsD.increment('counter', 1)
     })
   end
 
   def test_statsd_increment_with_times_and_value_not_matched
     refute StatsD::Instrument::Matchers::Increment.new(:c, 'counter', times: 2, value: 1).matches?(lambda {
-      StatsD.increment('counter', value: 1)
-      StatsD.increment('counter', value: 2)
+      StatsD.increment('counter', 1)
+      StatsD.increment('counter', 2)
     })
   end
 
