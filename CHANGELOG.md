@@ -6,8 +6,8 @@ please at an entry to the "unreleased changes" section below.
 ### Unreleased changes
 
 - **DEPRECATION**: Relying on the return value of the StatsD metric methods (e.g. `StatsD.increment`)
-  is deprecated. StatsD is a fire-and-forget protocol, so your code should not depend on the return'
-  value of this method.
+  is deprecated. StatsD is a fire-and-forget protocol, so your code should not depend on the return
+  value of these methods.
 
   The documentation of the methods has been updated to reflect this change. The behavior of the
   library is not changed for the time being, so you can safely upgrade to this version. However,
@@ -23,10 +23,30 @@ please at an entry to the "unreleased changes" section below.
 
   ```
 
+- **Performance improvements 🎉**: Several internal changes have made the library run singificantly
+  faster. The changes:
+
+  - Improve performance of duration calculations. (#168)
+  - Early exit when no changes are needed to bring tags and metric names to normalized form. (#173)
+  - Refactor method argument handling to reduce object allocations and processing. (#174)
+
+  A benchmark suite was added (#169) and it now runs as part of CI (#170) so we can more easily spot
+  performance regressions before they get merged into the library.
+
+  The result:
+
+  ```
+  Comparison:
+  StatsD metrics to local UDP receiver (branch: master, sha: 2f98046):    10344.9 i/s
+  StatsD metrics to local UDP receiver (branch: v2.4.0, sha: 371d22a):     8556.5 i/s - 1.21x  (± 0.00) slower
+  ```
+
+- _Bugfix:_ avoid deadlock when an error occurs in the integration test suite (#175)
+
 ## Version 2.4.0
 
 - Add `StatsD.default_tags` to specify tags that should be included in all metrics. (#159)
-- Improve assertion message when assertying metrics whose tags do not match. (#100)
+- Improve assertion message when asserting metrics whose tags do not match. (#100)
 - Enforce the Shopify Ruby style guide. (#164)
 - Migrate CI to Github actions. (#158)
 - Make the library frozen string literal-compatible. (#161, #163)
