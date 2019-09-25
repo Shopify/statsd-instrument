@@ -23,9 +23,13 @@ module RuboCop
         def on_send(node)
           if node.receiver&.type == :const && node.receiver&.const_name == "StatsD"
             if STATSD_METRIC_METHODS.include?(node.method_name)
-              arguments = node.arguments
-              arguments.pop if node.arguments.last.type == :block_pass
-              check_keyword_arguments_for_value_entry(node, arguments.pop) if arguments.last&.type == :hash
+              last_argument = if node.arguments.last&.type == :block_pass
+                node.arguments[node.arguments.length - 2]
+              else
+                node.arguments[node.arguments.length - 1]
+              end
+
+              check_keyword_arguments_for_value_entry(node, last_argument) if last_argument&.type == :hash
             end
           end
         end

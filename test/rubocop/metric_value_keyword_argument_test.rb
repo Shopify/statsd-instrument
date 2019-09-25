@@ -11,6 +11,10 @@ module Rubocop
       @cop = RuboCop::Cop::StatsD::MetricValueKeywordArgument.new
     end
 
+    def test_ok_for_method_without_arguments
+      assert_no_offenses("StatsD.increment")
+    end
+
     def test_ok_for_non_metric_method
       assert_no_offenses("StatsD.backend('foo', value: 1)")
     end
