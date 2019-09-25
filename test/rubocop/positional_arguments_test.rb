@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
 require 'test_helper'
-require 'rubocop'
 require 'statsd/instrument/rubocop/positional_arguments'
 
 module Rubocop
   class PositionalArgumentsTest < Minitest::Test
-    attr_reader :cop
+    include RubocopHelper
 
     def setup
       @cop = RuboCop::Cop::StatsD::PositionalArguments.new
@@ -22,15 +21,20 @@ module Rubocop
       assert_no_offenses("StatsD.gauge('foo', 2, **kwargs)")
     end
 
-    def test_test_autocorrect_third_argument_to_keyword_splat
-      corrected = autocorrect_source("StatsD.gauge('foo', 2, method_ruturning_a_hash)")
-      assert_equal "StatsD.gauge('foo', 2, **method_ruturning_a_hash)", corrected
-    end
-
     def test_no_offense_for_now_when_using_value_keyword_argumenr
       assert_no_offenses("StatsD.increment 'foo', value: 3")
       assert_no_offenses("StatsD.increment 'foo', value: 3, sample_rate: 0.5")
       assert_no_offenses("StatsD.increment('foo', value: 3, tags: ['foo']) { foo }")
+    end
+
+    def test_offense_when_using_method_or_constant
+      assert_offense("StatsD.gauge('foo', 2, SAMPLE_RATE_CONSTANT)")
+      assert_offense("StatsD.gauge('foo', 2, method_ruturning_a_hash)")
+    end
+
+    def test_no_autocorrect_when_using_method_or_constant
+      assert_no_autocorrect("StatsD.gauge('foo', 2, SAMPLE_RATE_CONSTANT)")
+      assert_no_autocorrect("StatsD.gauge('foo', 2, method_ruturning_a_hash)")
     end
 
     def test_autocorrect_only_sample_rate
@@ -89,35 +93,6 @@ module Rubocop
           foo
         end
       RUBY
-    end
-
-    private
-
-    def assert_no_offenses(source)
-      corrected = autocorrect_source(source)
-      assert_equal(source, corrected, "An unexpected offense was detected and corrected")
-    end
-
-    def autocorrect_source(source)
-      RuboCop::Formatter::DisabledConfigFormatter.config_to_allow_offenses = {}
-      RuboCop::Formatter::DisabledConfigFormatter.detected_styles = {}
-      cop.instance_variable_get(:@options)[:auto_correct] = true
-      processed_source = RuboCop::ProcessedSource.new(source, 2.3, nil)
-      investigate(cop, processed_source)
-
-      corrector = RuboCop::Cop::Corrector.new(processed_source.buffer, cop.corrections)
-      corrector.rewrite
-    end
-
-    def investigate(cop, processed_source)
-      forces = RuboCop::Cop::Force.all.each_with_object([]) do |klass, instances|
-        next unless cop.join_force?(klass)
-        instances << klass.new([cop])
-      end
-
-      commissioner = RuboCop::Cop::Commissioner.new([cop], forces, raise_error: true)
-      commissioner.investigate(processed_source)
-      commissioner
     end
   end
 end
