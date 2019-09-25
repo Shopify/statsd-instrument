@@ -26,6 +26,8 @@ ENV['STATSD_IMPLEMENTATION'] ||= 'datadog'
 
 require 'statsd-instrument'
 
+StatsD.default_sample_rate = 0.1
+
 report = Benchmark.ips do |bench|
   bench.report("StatsD metrics to local UDP receiver (branch: #{branch}, sha: #{revision[0, 7]})") do
     StatsD.increment('StatsD.increment', 10)
