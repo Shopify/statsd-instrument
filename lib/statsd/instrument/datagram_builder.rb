@@ -5,7 +5,7 @@ class StatsD::Instrument::DatagramBuilder
     module RubyBackports
       refine Regexp do
         def match?(str)
-          (self =~ str) != nil
+          match(str) != nil
         end
       end
     end

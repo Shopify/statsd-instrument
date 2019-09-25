@@ -10,12 +10,11 @@ require 'statsd/instrument/capture_sink'
 require 'statsd/instrument/log_sink'
 
 class StatsD::Instrument::Client
-  attr_reader :sink, :datagram_builder_class, :prefix, :default_tags, :sampling_disabled, :default_sample_rate
+  attr_reader :sink, :datagram_builder_class, :prefix, :default_tags, :default_sample_rate
 
   def initialize(
     sink: StatsD::Instrument::NullSink.new,
     prefix: nil,
-    sampling_disabled: false,
     default_sample_rate: 1,
     default_tags: nil,
     datagram_builder_class: StatsD::Instrument::Environment.datagram_builder_class
@@ -26,7 +25,6 @@ class StatsD::Instrument::Client
     @prefix = prefix
     @default_tags = default_tags
     @default_sample_rate = default_sample_rate
-    @sampling_disabled = sampling_disabled
   end
 
   # Emits a counter metric.
@@ -42,7 +40,8 @@ class StatsD::Instrument::Client
   # @param tags [Hash, Array] (default: nil)
   # @return StatsD::Instrument::Datagram
   def increment(name, value = 1, sample_rate: nil, tags: nil)
-    sample(sample_rate, datagram_builder.c(name, value, sample_rate, tags))
+    return unless sample?(sample_rate || @default_sample_rate)
+    emit(datagram_builder.c(name, value, sample_rate, tags))
   end
 
   # Emits a timing metric.
@@ -52,7 +51,8 @@ class StatsD::Instrument::Client
   # @param tags [Hash, Array] (default: nil)
   # @return StatsD::Instrument::Datagram
   def measure(name, value = nil, sample_rate: nil, tags: nil)
-    sample(sample_rate, datagram_builder.ms(name, value, sample_rate, tags))
+    return unless sample?(sample_rate || @default_sample_rate)
+    emit(datagram_builder.ms(name, value, sample_rate, tags))
   end
 
   # Emits a gauge metric.
@@ -62,7 +62,8 @@ class StatsD::Instrument::Client
   # @param tags [Hash, Array] (default: nil)
   # @return StatsD::Instrument::Datagram
   def gauge(name, value, sample_rate: nil, tags: nil)
-    sample(sample_rate, datagram_builder.g(name, value, sample_rate, tags))
+    return unless sample?(sample_rate || @default_sample_rate)
+    emit(datagram_builder.g(name, value, sample_rate, tags))
   end
 
   # Emits a set metric, which counts unique values.
@@ -72,7 +73,8 @@ class StatsD::Instrument::Client
   # @param tags [Hash, Array] (default: nil)
   # @return StatsD::Instrument::Datagram
   def set(name, value, sample_rate: nil, tags: nil)
-    sample(sample_rate, datagram_builder.s(name, value, sample_rate, tags))
+    return unless sample?(sample_rate || @default_sample_rate)
+    emit(datagram_builder.s(name, value, sample_rate, tags))
   end
 
   # Instantiates a new StatsD client that uses the settings of the current client,
@@ -80,12 +82,11 @@ class StatsD::Instrument::Client
   def with_options(
     sink: nil,
     prefix: nil,
-    sampling_disabled: nil,
     default_sample_rate: nil,
     default_tags: nil,
     datagram_builder_class: nil
   )
-    client = clone_with_options(sink: sink, prefix: prefix, sampling_disabled: sampling_disabled,
+    client = clone_with_options(sink: sink, prefix: prefix,
       default_sample_rate: default_sample_rate, default_tags: default_tags,
       datagram_builder_class: datagram_builder_class)
 
@@ -95,7 +96,6 @@ class StatsD::Instrument::Client
   def clone_with_options(
     sink: nil,
     prefix: nil,
-    sampling_disabled: nil,
     default_sample_rate: nil,
     default_tags: nil,
     datagram_builder_class: nil
@@ -103,7 +103,6 @@ class StatsD::Instrument::Client
     self.class.new(
       sink: sink || @sink,
       prefix: prefix || @prefix,
-      sampling_disabled: sampling_disabled || @sampling_disabled,
       default_sample_rate: default_sample_rate || @default_sample_rate,
       default_tags: default_tags || @default_tags,
       datagram_builder_class: datagram_builder_class || @datagram_builder_class,
@@ -132,11 +131,12 @@ class StatsD::Instrument::Client
     @datagram_builder ||= @datagram_builder_class.new(prefix: prefix, default_tags: default_tags)
   end
 
-  def sample(sample_rate, datagram)
-    sample_rate ||= @default_sample_rate
-    if sample_rate == 1 || sampling_disabled || rand < sample_rate
-      @sink << datagram
-    end
+  def sample?(sample_rate)
+    sample_rate == 1 || rand < sample_rate
+  end
+
+  def emit(datagram)
+    @sink << datagram
     nil
   end
 end
