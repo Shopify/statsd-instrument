@@ -148,11 +148,19 @@ class UDPBackendTest < Minitest::Test
     StatsD.key_value('fooy', 42)
   end
 
+  # For key_value metrics (only supported by statsite), the sample rate
+  # part of the datagram format is (ab)used to be set to a timestamp instead.
+  # Changing that to `sample_rate: timestamp` does not make sense, so we
+  # disable the rubocop rule for positional arguments for now,
+  # until we figure out how we want to handle this.
+
+  # rubocop:disable StatsD/PositionalArguments
   def test_supports_key_value_with_timestamp_on_statsite
     @backend.implementation = :statsite
     @backend.expects(:write_packet).with("fooy:42|kv|@123456\n")
     StatsD.key_value('fooy', 42, 123456)
   end
+  # rubocop:enable StatsD/PositionalArguments
 
   def test_warn_when_using_key_value_and_not_on_statsite
     @backend.implementation = :other

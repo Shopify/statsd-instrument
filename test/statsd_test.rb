@@ -107,13 +107,6 @@ class StatsDTest < Minitest::Test
     assert_equal 1, metric.value
   end
 
-  def test_statsd_increment_with_multiple_arguments
-    metric = capture_statsd_call { StatsD.increment('values.foobar', 12, nil, ['test']) }
-    assert_equal StatsD.default_sample_rate, metric.sample_rate
-    assert_equal ['test'], metric.tags
-    assert_equal 12, metric.value
-  end
-
   def test_statsd_gauge
     metric = capture_statsd_call { StatsD.gauge('values.foobar', 12) }
     assert_equal :g, metric.type
