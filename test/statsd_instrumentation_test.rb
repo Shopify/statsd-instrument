@@ -2,74 +2,74 @@
 
 require 'test_helper'
 
-module ActiveMerchant; end
-class ActiveMerchant::Base
-  def ssl_post(arg)
-    if arg
-      'OK'
-    else
-      raise 'Not OK'
+class StatsDInstrumentationTest < Minitest::Test
+  module ActiveMerchant
+    class Base
+      extend StatsD::Instrument
+
+      def ssl_post(arg)
+        if arg
+          'OK'
+        else
+          raise 'Not OK'
+        end
+      end
+
+      def post_with_block(&block)
+        block.call if block_given?
+      end
+    end
+
+    class Gateway < Base
+      def purchase(arg)
+        ssl_post(arg)
+        true
+      rescue
+        false
+      end
+
+      def self.sync
+        true
+      end
+    end
+
+    class UniqueGateway < Base
+      def ssl_post(arg)
+        { success: arg }
+      end
+
+      def purchase(arg)
+        ssl_post(arg)
+      end
     end
   end
 
-  def post_with_block(&block)
-    block.call if block_given?
-  end
-end
-
-class ActiveMerchant::Gateway < ActiveMerchant::Base
-  def purchase(arg)
-    ssl_post(arg)
-    true
-  rescue
-    false
+  class GatewaySubClass < ActiveMerchant::Gateway
+    def metric_name
+      'subgateway'
+    end
   end
 
-  def self.sync
-    true
+  class InstrumentedClass
+    extend StatsD::Instrument
+
+    def public_and_instrumented
+    end
+    statsd_count :public_and_instrumented, 'InstrumentedClass.public_and_instrumented'
+
+    protected
+
+    def protected_and_instrumented
+    end
+    statsd_count :protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented'
+
+    private
+
+    def private_and_instrumented
+    end
+    statsd_count :private_and_instrumented, 'InstrumentedClass.private_and_instrumented'
   end
 
-  def self.singleton_class
-    class << self; self; end
-  end
-end
-
-class ActiveMerchant::UniqueGateway < ActiveMerchant::Base
-  def ssl_post(arg)
-    { success: arg }
-  end
-
-  def purchase(arg)
-    ssl_post(arg)
-  end
-end
-
-class GatewaySubClass < ActiveMerchant::Gateway
-end
-
-class InstrumentedClass
-  extend StatsD::Instrument
-
-  def public_and_instrumented
-  end
-  statsd_count :public_and_instrumented, 'InstrumentedClass.public_and_instrumented'
-
-  protected
-
-  def protected_and_instrumented
-  end
-  statsd_count :protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented'
-
-  private
-
-  def private_and_instrumented
-  end
-  statsd_count :private_and_instrumented, 'InstrumentedClass.private_and_instrumented'
-end
-
-ActiveMerchant::Base.extend StatsD::Instrument
-
-class StatsDInstrumentationTest < Minitest::Test
   include StatsD::Instrument::Assertions
 
   def test_statsd_count_if
@@ -110,7 +110,7 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_count_success
-    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', 0.5
+    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', sample_rate: 0.5
 
     assert_statsd_increment('ActiveMerchant.Gateway.success', sample_rate: 0.5, times: 1) do
       ActiveMerchant::Gateway.new.purchase(true)
@@ -170,11 +170,11 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_count_with_name_as_lambda
-    metric_namer = lambda { |object, args| object.class.to_s.downcase + ".insert." + args.first.to_s }
+    metric_namer = lambda { |object, args| "#{object.metric_name}.#{args.first}" }
     ActiveMerchant::Gateway.statsd_count(:ssl_post, metric_namer)
 
-    assert_statsd_increment('gatewaysubclass.insert.true') do
-      GatewaySubClass.new.purchase(true)
+    assert_statsd_increment('subgateway.foo') do
+      GatewaySubClass.new.purchase('foo')
     end
   ensure
     ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
