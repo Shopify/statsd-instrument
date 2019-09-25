@@ -84,6 +84,8 @@ module StatsD
       Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
     end
 
+    # rubocop:disable StatsD/PositionalArguments
+
     # Adds execution duration instrumentation to a method as a timing.
     #
     # @param method [Symbol] The name of the method to instrument.
@@ -191,6 +193,7 @@ module StatsD
           ensure
             if truthiness
               metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
+              # TODO: is this a bug, because 1 is missing?
               StatsD.increment(metric_name, *metric_options)
             end
           end
@@ -216,6 +219,8 @@ module StatsD
         end
       end
     end
+
+    # rubocop:enable StatsD/PositionalArguments
 
     # Removes StatsD counter instrumentation from a method
     # @param method [Symbol] The method to remove instrumentation from.
