@@ -17,6 +17,11 @@ module RubocopHelper
     refute_predicate cop.offenses, :empty?, "Expected Rubocop to find offenses"
   end
 
+  def assert_no_autocorrect(source)
+    corrected = autocorrect_source(source)
+    assert_equal source, corrected
+  end
+
   def autocorrect_source(source)
     RuboCop::Formatter::DisabledConfigFormatter.config_to_allow_offenses = {}
     RuboCop::Formatter::DisabledConfigFormatter.detected_styles = {}
