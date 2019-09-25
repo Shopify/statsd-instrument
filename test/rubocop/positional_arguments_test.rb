@@ -40,6 +40,10 @@ module Rubocop
       RUBY
     end
 
+    def test_offense_when_using_splat
+      assert_offense("StatsD.gauge('foo', 2, *options)")
+    end
+
     def test_no_autocorrect_when_using_method_or_constant
       assert_no_autocorrect("StatsD.gauge('foo', 2, SAMPLE_RATE_CONSTANT)")
       assert_no_autocorrect("StatsD.gauge('foo', 2, method_ruturning_a_hash)")

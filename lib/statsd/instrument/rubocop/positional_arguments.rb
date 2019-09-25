@@ -9,7 +9,7 @@ module RuboCop
         STATSD_SINGLETON_METHODS = %i{increment gauge measure set histogram distribution key_value}
 
         POSITIONAL_ARGUMENT_TYPES = Set[:int, :float, :nil]
-        UNKNOWN_ARGUMENT_TYPES = Set[:send, :const, :lvar]
+        UNKNOWN_ARGUMENT_TYPES = Set[:send, :const, :lvar, :splat]
         REFUSED_ARGUMENT_TYPES = POSITIONAL_ARGUMENT_TYPES | UNKNOWN_ARGUMENT_TYPES
 
         KEYWORD_ARGUMENT_TYPES = Set[:hash]
