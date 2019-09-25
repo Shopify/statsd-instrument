@@ -3,6 +3,12 @@
 require 'test_helper'
 
 class DeprecationsTest < Minitest::Test
+  class InstrumentedClass
+    extend StatsD::Instrument
+    def foo; end
+    statsd_count :foo, 'metric', 0.5, ['tag']
+  end
+
   include StatsD::Instrument::Assertions
 
   # rubocop:disable StatsD/MetricValueKeywordArgument
@@ -52,6 +58,15 @@ class DeprecationsTest < Minitest::Test
     assert_equal StatsD.default_sample_rate, metric.sample_rate
   end
   # rubocop:enable StatsD/PositionalArguments
+
+  def test__deprecated__metaprogramming_method_with_positional_arguments
+    metric = capture_statsd_call { InstrumentedClass.new.foo }
+    assert_equal :c, metric.type
+    assert_equal 'metric', metric.name
+    assert_equal 1, metric.value
+    assert_equal 0.5, metric.sample_rate
+    assert_equal ["tag"], metric.tags
+  end
 
   protected
 
