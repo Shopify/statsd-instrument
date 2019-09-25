@@ -5,6 +5,7 @@ require 'test_helper'
 class DeprecationsTest < Minitest::Test
   include StatsD::Instrument::Assertions
 
+  # rubocop:disable StatsD/MetricValueKeywordArgument
   def test__deprecated__statsd_measure_with_explicit_value_as_keyword_argument
     metric = capture_statsd_call { StatsD.measure('values.foobar', value: 42) }
     assert_equal 'values.foobar', metric.name
@@ -30,6 +31,27 @@ class DeprecationsTest < Minitest::Test
     assert_equal 'values.foobar', metric.name
     assert_equal 13, metric.value
   end
+  # rubocop:enable StatsD/MetricValueKeywordArgument
+
+  # rubocop:disable StatsD/MetricReturnValue
+  def test__deprecated__statsd_increment_retuns_metric_instance
+    metric = StatsD.increment('key')
+    assert_kind_of StatsD::Instrument::Metric, metric
+    assert_equal 'key', metric.name
+    assert_equal :c, metric.type
+    assert_equal 1, metric.value
+  end
+  # rubocop:enable StatsD/MetricReturnValue
+
+  # rubocop:disable StatsD/PositionalArguments
+  def test__deprecated__statsd_increment_with_positional_argument_for_tags
+    metric = capture_statsd_call { StatsD.increment('values.foobar', 12, nil, ['test']) }
+    assert_equal StatsD.default_sample_rate, metric.sample_rate
+    assert_equal ['test'], metric.tags
+    assert_equal 12, metric.value
+    assert_equal StatsD.default_sample_rate, metric.sample_rate
+  end
+  # rubocop:enable StatsD/PositionalArguments
 
   protected
 
