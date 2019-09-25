@@ -27,31 +27,31 @@ class StatsD::Instrument::DatagramBuilder
   end
 
   def c(name, value, sample_rate, tags)
-    generate_generic_datagram(name, value, -'c', sample_rate, tags)
+    generate_generic_datagram(name, value, 'c', sample_rate, tags)
   end
 
   def g(name, value, sample_rate, tags)
-    generate_generic_datagram(name, value, -'g', sample_rate, tags)
+    generate_generic_datagram(name, value, 'g', sample_rate, tags)
   end
 
   def ms(name, value, sample_rate, tags)
-    generate_generic_datagram(name, value, -'ms', sample_rate, tags)
+    generate_generic_datagram(name, value, 'ms', sample_rate, tags)
   end
 
   def s(name, value, sample_rate, tags)
-    generate_generic_datagram(name, value, -'s', sample_rate, tags)
+    generate_generic_datagram(name, value, 's', sample_rate, tags)
   end
 
   def h(name, value, sample_rate, tags)
-    generate_generic_datagram(name, value, -'h', sample_rate, tags)
+    generate_generic_datagram(name, value, 'h', sample_rate, tags)
   end
 
   def d(name, value, sample_rate, tags)
-    generate_generic_datagram(name, value, -'d', sample_rate, tags)
+    generate_generic_datagram(name, value, 'd', sample_rate, tags)
   end
 
   def kv(name, value, sample_rate, tags)
-    generate_generic_datagram(name, value, -'kv', sample_rate, tags)
+    generate_generic_datagram(name, value, 'kv', sample_rate, tags)
   end
 
   protected
