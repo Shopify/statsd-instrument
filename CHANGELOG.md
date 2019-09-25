@@ -5,6 +5,24 @@ please at an entry to the "unreleased changes" section below.
 
 ### Unreleased changes
 
+- **DEPRECATION**: Relying on the return value of the StatsD metric methods (e.g. `StatsD.increment`)
+  is deprecated. StatsD is a fire-and-forget protocol, so your code should not depend on the return'
+  value of this method.
+
+  The documentation of the methods has been updated to reflect this change. The behavior of the
+  library is not changed for the time being, so you can safely upgrade to this version. However,
+  in a future major release, we will start to explicitly return `nil`.
+
+  This gem comes with a Rubocop rule that can help verify that your application is not relying
+  on the return value of the metric methods. To use this cop on your codebase, invoke Rubocop
+  with the following arguments:
+
+  ``` sh
+  rubocop --require /absolute/path/to/statsd-instrument/lib/statsd/instrument/rubocop/metric_return_value.rb \
+    --only StatsD/MetricReturnValue <file-name-or-pattern>
+
+  ```
+
 ## Version 2.4.0
 
 - Add `StatsD.default_tags` to specify tags that should be included in all metrics. (#159)

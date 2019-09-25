@@ -520,7 +520,7 @@ module StatsD
     metric = StatsD::Instrument::Metric.new(type: type, name: name, value: value,
       sample_rate: sample_rate, tags: tags, metadata: metadata)
     backend.collect_metric(metric)
-    metric
+    metric # TODO: return `nil` in the next major version
   end
 end
 
