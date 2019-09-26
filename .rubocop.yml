@@ -5,6 +5,7 @@ require:
   - ./lib/statsd/instrument/rubocop/metric_return_value.rb
   - ./lib/statsd/instrument/rubocop/metric_value_keyword_argument.rb
   - ./lib/statsd/instrument/rubocop/positional_arguments.rb
+  - ./lib/statsd/instrument/rubocop/splat_arguments.rb
 
 AllCops:
   TargetRubyVersion: 2.3
@@ -34,4 +35,7 @@ StatsD/MetricValueKeywordArgument:
   Enabled: true
 
 StatsD/PositionalArguments:
+  Enabled: true
+
+StatsD/SplatArguments:
   Enabled: true
