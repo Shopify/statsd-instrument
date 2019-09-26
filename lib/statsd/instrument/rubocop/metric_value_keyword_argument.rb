@@ -14,7 +14,6 @@ module RuboCop
       # value as the second argument, rather than a keyword argument.
       #
       # `StatsD.increment('foo', value: 3)` => `StatsD.increment('foo', 3)`
-      #
       class MetricValueKeywordArgument < Cop
         MSG = 'Do not use the value keyword argument, but use a positional argument'
 

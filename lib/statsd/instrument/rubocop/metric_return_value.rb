@@ -6,7 +6,7 @@ module RuboCop
       # This Rubocop will check for using the return value of StatsD metric calls, which is deprecated.
       # To check your codebase, use the following Rubocop invocation:
       #
-      #     rubocop --require `bundle show statsd-instrument`/lib/statsd/instrument/rubocop//metric_return_value.rb \
+      #     rubocop --require `bundle show statsd-instrument`/lib/statsd/instrument/rubocop/metric_return_value.rb \
       #       --only StatsD/MetricReturnValue
       #
       # This cop cannot autocorrect offenses. In production code, StatsD should be used in a fire-and-forget
