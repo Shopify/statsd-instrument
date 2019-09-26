@@ -271,6 +271,7 @@ class AssertionsTest < Minitest::Test
   end
 
   def test_assert_statsd_call_with_wrong_sample_rate_type
+    skip("In Strict mode, the StatsD.increment call will raise") if StatsD::Instrument.strict_mode_enabled?
     assert_assertion_triggered "Unexpected sample rate type for metric counter, must be numeric" do
       @test_case.assert_statsd_increment('counter', tags: ['a', 'b']) do
         StatsD.increment('counter', sample_rate: 'abc', tags: ['a', 'b'])

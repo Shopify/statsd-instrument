@@ -11,6 +11,10 @@ class DeprecationsTest < Minitest::Test
 
   include StatsD::Instrument::Assertions
 
+  def setup
+    skip("Deprecation are not supported in strict mode") if StatsD::Instrument.strict_mode_enabled?
+  end
+
   # rubocop:disable StatsD/MetricValueKeywordArgument
   def test__deprecated__statsd_measure_with_explicit_value_as_keyword_argument
     metric = capture_statsd_call { StatsD.measure('values.foobar', value: 42) }

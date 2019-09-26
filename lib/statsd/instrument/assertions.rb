@@ -43,8 +43,12 @@ module StatsD::Instrument::Assertions
 
     capture_backend = StatsD::Instrument::Backends::CaptureBackend.new
     with_capture_backend(capture_backend) do
+      exception_occurred = nil
       begin
         block.call
+      rescue => exception
+        exception_occurred = exception
+        raise
       ensure
         metrics = capture_backend.collected_metrics
         matched_expected_metrics = []
@@ -52,8 +56,11 @@ module StatsD::Instrument::Assertions
           expected_metric_times = expected_metric.times
           expected_metric_times_remaining = expected_metric.times
           filtered_metrics = metrics.select { |m| m.type == expected_metric.type && m.name == expected_metric.name }
-          refute(filtered_metrics.empty?,
-            "No StatsD calls for metric #{expected_metric.name} of type #{expected_metric.type} were made.")
+
+          if filtered_metrics.empty?
+            flunk_with_exception_info(exception_occurred, "No StatsD calls for metric #{expected_metric.name} " \
+              "of type #{expected_metric.type} were made.")
+          end
 
           filtered_metrics.each do |metric|
             next unless expected_metric.matches(metric)
@@ -61,8 +68,10 @@ module StatsD::Instrument::Assertions
             assert(within_numeric_range?(metric.sample_rate),
               "Unexpected sample rate type for metric #{metric.name}, must be numeric")
 
-            assert(expected_metric_times_remaining > 0,
-              "Unexpected StatsD call; number of times this metric was expected exceeded: #{expected_metric.inspect}")
+            if expected_metric_times_remaining == 0
+              flunk_with_exception_info(exception_occurred, "Unexpected StatsD call; number of times this metric " \
+                "was expected exceeded: #{expected_metric.inspect}")
+            end
 
             expected_metric_times_remaining -= 1
             metrics.delete(metric)
@@ -71,22 +80,41 @@ module StatsD::Instrument::Assertions
             end
           end
 
+          next if expected_metric_times_remaining == 0
+
           msg = +"Metric expected #{expected_metric_times} times but seen " \
             "#{expected_metric_times - expected_metric_times_remaining} " \
             "times: #{expected_metric.inspect}."
           msg << "\nCaptured metrics with the same key: #{filtered_metrics}" if filtered_metrics.any?
-
-          assert(expected_metric_times_remaining == 0, msg)
+          flunk_with_exception_info(exception_occurred, msg)
         end
         expected_metrics -= matched_expected_metrics
 
-        assert(expected_metrics.empty?,
-          "Unexpected StatsD calls; the following metric expectations were not satisfied: #{expected_metrics.inspect}")
+        unless expected_metrics.empty?
+          flunk_with_exception_info(exception_occurred, "Unexpected StatsD calls; the following metric expectations " \
+            "were not satisfied: #{expected_metrics.inspect}")
+        end
+
+        pass
       end
     end
   end
 
   private
+
+  def flunk_with_exception_info(exception, message)
+    if exception
+      flunk(<<~EXCEPTION)
+        #{message}
+
+        This could be due to the exception that occurred inside the block:
+        #{exception.class.name}: #{exception.message}
+        \t#{exception.backtrace.join("\n\t")}
+      EXCEPTION
+    else
+      flunk(message)
+    end
+  end
 
   def assert_statsd_call(metric_type, metric_name, options = {}, &block)
     options[:name] = metric_name
