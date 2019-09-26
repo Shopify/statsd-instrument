@@ -73,7 +73,7 @@ module StatsD
         super
       end
 
-      protected
+      private
 
       def check_block_or_numeric_value(value)
         if block_given?
