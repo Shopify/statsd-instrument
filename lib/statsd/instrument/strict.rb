@@ -97,7 +97,49 @@ module StatsD
         nil # We explicitly discard the return value, so people cannot depend on it.
       end
     end
+
+    module StrictMetaprogramming
+      def statsd_measure(method, name, sample_rate: nil, tags: nil,
+        prefix: StatsD.prefix, no_prefix: false, as_dist: false)
+
+        check_method_and_metric_name(method, name)
+        super
+      end
+
+      def statsd_distribution(method, name, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+        check_method_and_metric_name(method, name)
+        super
+      end
+
+      def statsd_count_success(method, name, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+        check_method_and_metric_name(method, name)
+        super
+      end
+
+      def statsd_count_if(method, name, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+        check_method_and_metric_name(method, name)
+        super
+      end
+
+      def statsd_count(method, name, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+        check_method_and_metric_name(method, name)
+        super
+      end
+
+      private
+
+      def check_method_and_metric_name(method, metric_name)
+        unless method.is_a?(Symbol)
+          raise ArgumentError, "The method name should be provided as symbol, got #{method.inspect}"
+        end
+
+        unless metric_name.is_a?(String) || metric_name.is_a?(Proc)
+          raise ArgumentError, "The metric name should be a proc or string, got #{metric_name.inspect}"
+        end
+      end
+    end
   end
 end
 
 StatsD.singleton_class.prepend(StatsD::Instrument::Strict)
+StatsD::Instrument.prepend(StatsD::Instrument::StrictMetaprogramming)

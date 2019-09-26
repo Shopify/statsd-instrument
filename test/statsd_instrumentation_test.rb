@@ -180,6 +180,17 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
   end
 
+  def test_statsd_count_with_name_as_proc
+    metric_namer = proc { |object, args| "#{object.metric_name}.#{args.first}" }
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, metric_namer)
+
+    assert_statsd_increment('subgateway.foo') do
+      GatewaySubClass.new.purchase('foo')
+    end
+  ensure
+    ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
+  end
+
   def test_statsd_count_with_method_receiving_block
     ActiveMerchant::Base.statsd_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
 
@@ -227,37 +238,17 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Base.statsd_remove_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
   end
 
-  def test_statsd_measure_with_value
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 1
+  def test_statsd_measure_with_sample_rate
+    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1
 
-    assert_statsd_measure('ActiveMerchant.Gateway.ssl_post') do
+    assert_statsd_measure('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
   end
 
-  def test_statsd_measure_with_value_and_options
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 1, sample_rate: 0.45
-
-    assert_statsd_measure('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.45) do
-      ActiveMerchant::UniqueGateway.new.purchase(true)
-    end
-  ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
-  end
-
-  def test_statsd_measure_with_value_and_distribution
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 1, as_dist: true
-
-    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post') do
-      ActiveMerchant::UniqueGateway.new.purchase(true)
-    end
-  ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
-  end
-
-  def test_statsd_measure_without_value_as_distribution
+  def test_statsd_measure_as_distribution
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', as_dist: true
 
     assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post') do
@@ -304,20 +295,20 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Base.statsd_remove_distribution :post_with_block, 'ActiveMerchant.Base.post_with_block'
   end
 
-  def test_statsd_distribution_with_value
-    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 1
+  def test_statsd_distribution_with_tags
+    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', tags: ['foo']
 
-    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post') do
+    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', tags: ['foo']) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
     ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
   end
 
-  def test_statsd_distribution_with_value_and_options
-    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', 1, sample_rate: 0.45
+  def test_statsd_distribution_with_sample_rate
+    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1
 
-    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.45) do
+    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
