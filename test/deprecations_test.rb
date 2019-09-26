@@ -3,10 +3,12 @@
 require 'test_helper'
 
 class DeprecationsTest < Minitest::Test
-  class InstrumentedClass
-    extend StatsD::Instrument
-    def foo; end
-    statsd_count :foo, 'metric', 0.5, ['tag']
+  unless StatsD::Instrument.strict_mode_enabled?
+    class InstrumentedClass
+      extend StatsD::Instrument
+      def foo; end
+      statsd_count :foo, 'metric', 0.5, ['tag']
+    end
   end
 
   include StatsD::Instrument::Assertions
