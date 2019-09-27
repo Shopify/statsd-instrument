@@ -29,13 +29,12 @@ require 'logger'
 # @!attribute logger
 #   The logger to use in case of any errors. The logger is also used as default logger
 #   for the LoggerBackend (although this can be overwritten).
+#   @see StatsD::Instrument::Backends::LoggerBackend
+#   @return [Logger]
 #
 # @!attribute default_tags
 #   The tags to apply to all metrics.
 #   @return [Array<String>, Hash<String, String>, nil] The default tags, or <tt>nil</tt> when no default tags is used
-#
-#   @see StatsD::Instrument::Backends::LoggerBackend
-#   @return [Logger]
 #
 # @see StatsD::Instrument <tt>StatsD::Instrument</tt> contains module to instrument
 #    existing methods with StatsD metrics.
@@ -336,31 +335,38 @@ module StatsD
     @backend ||= StatsD::Instrument::Environment.default_backend
   end
 
-  # Emits a duration metric.
+  # @!method measure(name, value = nil, sample_rate: nil, tags: nil, &block)
   #
-  # @overload measure(key, value, metric_options = {})
-  #   Emits a measure metric, by providing a duration in milliseconds.
-  #   @param key [String] The name of the metric.
-  #   @param value [Float] The measured duration in milliseconds
-  #   @param metric_options [Hash] Options for the metric
-  #     the key :as_dist will submit the value as a distribution instead of a timing
-  #     (only supported by DataDog's implementation)
-  #   @return [StatsD::Instrument::Metric] The metric that was sent to the backend.
+  # Emits a timing metric
   #
-  # @overload measure(key, metric_options = {}, &block)
-  #   Emits a measure metric, after measuring the execution duration of the
+  # @param [String] key The name of the metric.
+  # @param sample_rate (see #increment)
+  # @param tags (see #increment)
+  #
+  # @example Providing a value directly
+  #    start = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
+  #    do_something
+  #    stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
+  #    http_response = StatsD.measure('HTTP.call.duration', stop - start)
+  #
+  # @example Providing a block to measure the duration of its execution
+  #    http_response = StatsD.measure('HTTP.call.duration') do
+  #      Net::HTTP.get(url)
+  #    end
+  #
+  # @overload measure(key, value, sample_rate: nil, tags: nil)
+  #   Emits a timing metric, by providing a duration in milliseconds.
+  #
+  #   @param [Float] value The measured duration in milliseconds
+  #   @return [void]
+  #
+  # @overload measure(key, sample_rate: nil, tags: nil, &block)
+  #   Emits a timing metric, after measuring the execution duration of the
   #   block passed to this method.
-  #   @param key [String] The name of the metric.
-  #   @param metric_options [Hash] Options for the metric
-  #     the key :as_dist sets the metric type to a 'distribution' instead of a 'timing'
-  #     (only supported by DataDog's implementation)
-  #   @yield The method will yield the block that was passed to this method to measure its duration.
-  #   @return The value that was returns by the block passed to this method.
   #
-  #   @example
-  #      http_response = StatsD.measure('HTTP.call.duration') do
-  #        HTTP.get(url)
-  #      end
+  #   @yield `StatsD.measure` will yield the block and measure the duration. After the block
+  #     returns, the duration in millisecond will be emitted as metric.
+  #   @return The value that was returned by the block passed through.
   def measure(
     key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
     value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
@@ -383,7 +389,9 @@ module StatsD
     end
   end
 
+  # @!method increment(name, value = 1, sample_rate: nil, tags: nil)
   # Emits a counter metric.
+  #
   # @param key [String] The name of the metric.
   # @param value [Integer] The value to increment the counter by.
   #
@@ -392,7 +400,17 @@ module StatsD
   #   The sample rate is part of the packet that is being sent to the server, and the server
   #   should know how to handle it.
   #
-  # @param metric_options [Hash] (default: {}) Metric options
+  # @param sample_rate [Float] (default: `StatsD.default_sample_rate`) The rate at which to sample
+  #   this metric call. This value should be between 0 and 1. This value can be used to reduce
+  #   the amount of network I/O (and CPU cycles) used for very frequent metrics.
+  #
+  #   - A value of `0.1` means that only 1 out of 10 calls will be emitted; the other 9 will
+  #     be short-circuited.
+  #   - When set to `1`, every metric will be emitted.
+  #   - If this parameter is not set, the default sample rate for this client will be used.
+  # @param tags [Array<String>, Hash<Symbol, String>] The tags to associate with this measurement.
+  #   They can be provided as an array of strings, or a hash of key/value pairs.
+  #   _Note:_ Tags are not supported by all implementations.
   # @return [void]
   def increment(
     key, value_arg = 1, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
@@ -403,11 +421,15 @@ module StatsD
     collect_metric(:c, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
   end
 
+  # @!method gauge(name, value, sample_rate: nil, tags: nil)
+  #
   # Emits a gauge metric.
-  # @param key [String] The name of the metric.
+  #
+  # @param key The name of the metric.
   # @param value [Numeric] The current value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
+  # @param sample_rate (see #increment)
+  # @param tags (see #increment)
+  # @return [void]
   def gauge(
     key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
     value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
@@ -417,10 +439,35 @@ module StatsD
     collect_metric(:g, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
   end
 
-  # Emits a histogram metric.
+  # @!method set(name, value, sample_rate: nil, tags: nil)
+  #
+  # Emits a set metric, which counts the number of distinct values that have occurred.
+  #
+  # @example Couning the number of unique visitors
+  #   StatsD.set('visitors.unique', Current.user.id)
+  #
   # @param key [String] The name of the metric.
   # @param value [Numeric] The value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
+  # @param sample_rate (see #increment)
+  # @param tags (see #increment)
+  # @return [void]
+  def set(
+    key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
+    value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
+    prefix: StatsD.prefix, no_prefix: false
+  )
+    prefix = nil if no_prefix
+    collect_metric(:s, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
+  end
+
+  # @!method histogram(name, value, sample_rate: nil, tags: nil)
+  #
+  # Emits a histogram metric.
+  #
+  # @param key The name of the metric.
+  # @param value [Numeric] The value to record.
+  # @param sample_rate (see #increment)
+  # @param tags (see #increment)
   # @return (see #collect_metric)
   # @note Supported by the datadog implementation only.
   def histogram(
@@ -432,26 +479,34 @@ module StatsD
     collect_metric(:h, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
   end
 
+  # @!method distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
+  #
   # Emits a distribution metric.
-  # @param key [String] The name of the metric.
-  # @param value [Numeric] The value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  # @note Supported by the datadog implementation only (in beta)
+  #
+  # @param [String] key The name of the metric.
+  # @param sample_rate (see #increment)
+  # @param tags (see #increment)
+  #
+  # @note Supported by the datadog implementation only.
+  # @example
+  #    http_response = StatsD.distribution('HTTP.call.duration') do
+  #      Net::HTTP.get(url)
+  #    end
+  #
+  # @overload distribution(name, value, sample_rate: nil, tags: nil)
+  #
+  #   Emits a distribution metric, given a provided value to record.
+  #
+  #   @param [Numeric] value The value to record.
+  #   @return [void]
   #
   # @overload distribution(key, metric_options = {}, &block)
-  #   Emits a distribution metric, after measuring the execution duration of the
-  #   block passed to this method.
-  #   @param key [String] The name of the metric.
-  #   @param metric_options [Hash] Options for the metric
-  #   @yield The method will yield the block that was passed to this method to measure its duration.
-  #   @return The value that was returns by the block passed to this method.
-  #   @note Supported by the datadog implementation only.
   #
-  #   @example
-  #      http_response = StatsD.distribution('HTTP.call.duration') do
-  #        HTTP.get(url)
-  #      end
+  #   Emits a distribution metric for the duration of the provided block, in milliseconds.
+  #
+  #   @yield `StatsD.distribution` will yield the block and measure the duration. After
+  #     the block returns, the duration in millisecond will be emitted as metric.
+  #   @return The value that was returned by the block passed through.
   def distribution(
     key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
     value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
@@ -462,11 +517,13 @@ module StatsD
     measure(key, value, as_dist: true, sample_rate: sample_rate, tags: tags, prefix: prefix, &block)
   end
 
+  # @!method key_value(name, value)
+  #
   # Emits a key/value metric.
+  #
   # @param key [String] The name of the metric.
   # @param value [Numeric] The value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
+  # @return [void]
   # @note Supported by the statsite implementation only.
   def key_value(
     key, value_arg = nil, deprecated_sample_rate_arg = nil,
@@ -476,27 +533,15 @@ module StatsD
     collect_metric(:kv, key, value, sample_rate: sample_rate, prefix: prefix)
   end
 
-  # Emits a set metric.
-  # @param key [String] The name of the metric.
-  # @param value [Numeric] The value to record.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  # @note Supported by the datadog implementation only.
-  def set(
-    key, value_arg = nil, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
-    value: value_arg, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
-    prefix: StatsD.prefix, no_prefix: false
-  )
-    prefix = nil if no_prefix
-    collect_metric(:s, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
-  end
-
-  # Emits an event metric.
+  # @!method event(title, text, **metadata)
+  #
+  # Emits an event.
+  #
   # @param title [String] Title of the event.
   # @param text [String] Body of the event.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  # @note Supported by the datadog implementation only.
+  # @param **metadata [Hash<Symbol, String>] Metadata to associate with the event.
+  # @return [void]
+  # @note Supported by the Datadog implementation only.
   def event(
     title, text,
     deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
@@ -507,12 +552,15 @@ module StatsD
     collect_metric(:_e, title, text, sample_rate: sample_rate, tags: tags, prefix: prefix, metadata: metadata)
   end
 
-  # Emits a service check metric.
-  # @param title [String] Title of the event.
+  # @!method service_check(name, status, **metadata)
+  #
+  # Emits a service check.
+  #
+  # @param name [String] Title of the event.
   # @param text [String] Body of the event.
-  # @param metric_options [Hash] (default: {}) Metric options
-  # @return (see #collect_metric)
-  # @note Supported by the datadog implementation only.
+  # @param metadata [Hash<Symbol, String>] Metadata to associate with the service check.
+  # @return [void]
+  # @note Supported by the Datadog implementation only.
   def service_check(
     name, status,
     deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,

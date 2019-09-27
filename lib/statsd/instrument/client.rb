@@ -28,6 +28,8 @@ class StatsD::Instrument::Client
     @default_sample_rate = default_sample_rate
   end
 
+  # @!group Metric Methods
+
   # Emits a counter metric.
   #
   # You should use a counter metric to count the frequency of something happening. As a
@@ -59,7 +61,7 @@ class StatsD::Instrument::Client
   #   - When set to `1`, every metric will be emitted.
   #   - If this parameter is not set, the default sample rate for this client will be used.
   #
-  # @param [Hash, Array] tags (default: nil)
+  # @param [Hash<Symbol, String>, Array<String>] tags (default: nil)
   # @return [void]
   def increment(name, value = 1, sample_rate: nil, tags: nil)
     sample_rate ||= @default_sample_rate
@@ -113,7 +115,11 @@ class StatsD::Instrument::Client
   end
 
   # Emits a distribution metric, which builds a histogram of the reported
-  # values
+  # values.
+  #
+  # @note The distribution metric type is not available on all implementations.
+  #   A `NotImplemetedError` will be raised if you call this method, but
+  #   the active implementation does not support it.
   #
   # @param name (see #increment)
   # @param [Numeric] value The value to include in the distribution histogram.
@@ -126,7 +132,11 @@ class StatsD::Instrument::Client
     emit(datagram_builder.d(name, value, sample_rate, tags))
   end
 
-  # Emits a histogram metric, which counts distinct values.
+  # Emits a histogram metric, which builds a histogram of the reported values.
+  #
+  # @note The histogram metric type is not available on all implementations.
+  #   A `NotImplemetedError` will be raised if you call this method, but
+  #   the active implementation does not support it.
   #
   # @param name (see #increment)
   # @param [Numeric] value The value to include in the histogram.
@@ -138,6 +148,8 @@ class StatsD::Instrument::Client
     return unless sample?(sample_rate)
     emit(datagram_builder.h(name, value, sample_rate, tags))
   end
+
+  # @!endgroup
 
   # Instantiates a new StatsD client that uses the settings of the current client,
   # except for the provided overrides.
