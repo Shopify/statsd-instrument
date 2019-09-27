@@ -27,7 +27,10 @@ Style/ClassAndModuleChildren:
 Style/MethodCallWithArgsParentheses:
   Enabled: false # TODO: enable later
 
-# Enable our own cops on our own repos
+Lint/UnusedMethodArgument:
+  AllowUnusedKeywordArguments: true
+
+# Enable our own cops on our own repo
 
 StatsD/MetricReturnValue:
   Enabled: true
