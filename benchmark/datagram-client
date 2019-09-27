@@ -23,15 +23,15 @@ new_client_receiver = UDPSocket.new
 new_client_receiver.bind('localhost', 0)
 
 udp_sink = StatsD::Instrument::UDPSink.new(new_client_receiver.addr[2], new_client_receiver.addr[1])
-new_client = StatsD::Instrument::Client.new(sink: udp_sink)
+new_client = StatsD::Instrument::Client.new(sink: udp_sink, default_sample_rate: StatsD.default_sample_rate)
 
 Benchmark.ips do |bench|
-  bench.report("Legacy client") do
-    legacy_client.increment('StatsD.increment', 10)
+  bench.report("Legacy client (sample rate: #{StatsD.default_sample_rate})") do
+    legacy_client.increment('StatsD.increment')
   end
 
-  bench.report("New client") do
-    new_client.increment('StatsD.increment', 10)
+  bench.report("New client (sample rate: #{StatsD.default_sample_rate})") do
+    new_client.increment('StatsD.increment')
   end
 
   bench.compare!
