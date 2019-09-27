@@ -56,6 +56,18 @@ class ClientTest < Minitest::Test
     assert_equal 'foo:12345|s', datagrams.first.source
   end
 
+  def test_histogram
+    datagrams = dogstatsd_client.capture { dogstatsd_client.histogram('foo', 12.44) }
+    assert_equal 1, datagrams.size
+    assert_equal 'foo:12.44|h', datagrams.first.source
+  end
+
+  def test_distribution
+    datagrams = dogstatsd_client.capture { dogstatsd_client.distribution('foo', 12.44) }
+    assert_equal 1, datagrams.size
+    assert_equal 'foo:12.44|d', datagrams.first.source
+  end
+
   def test_clone_with_prefix_option
     datagrams = []
     original_client = StatsD::Instrument::Client.new(sink: datagrams)
@@ -67,5 +79,12 @@ class ClientTest < Minitest::Test
     assert_equal 2, datagrams.size, "Message both client should use the same sink"
     assert_equal 'metric', StatsD::Instrument::Datagram.new(datagrams[0]).name
     assert_equal 'foo.metric', StatsD::Instrument::Datagram.new(datagrams[1]).name
+  end
+
+  private
+
+  def dogstatsd_client
+    @dogstatsd_client ||= StatsD::Instrument::Client.new(datagram_builder_class:
+      StatsD::Instrument::DogStatsDDatagramBuilder)
   end
 end

@@ -108,6 +108,31 @@ class StatsD::Instrument::Client
     emit(datagram_builder.s(name, value, sample_rate, tags))
   end
 
+  # Emits a distribution metric, which builds a histogram of the reported
+  # values
+  #
+  # @param name (see #increment)
+  # @param [Numeric] value The value to include in the distribution histogram.
+  # @param sample_rate (see #increment)
+  # @param tags (see #increment)
+  # @return [void]
+  def distribution(name, value, sample_rate: nil, tags: nil)
+    return unless sample?(sample_rate || @default_sample_rate)
+    emit(datagram_builder.d(name, value, sample_rate, tags))
+  end
+
+  # Emits a histogram metric, which counts distinct values.
+  #
+  # @param name (see #increment)
+  # @param [Numeric] value The value to include in the histogram.
+  # @param sample_rate (see #increment)
+  # @param tags (see #increment)
+  # @return [void]
+  def histogram(name, value, sample_rate: nil, tags: nil)
+    return unless sample?(sample_rate || @default_sample_rate)
+    emit(datagram_builder.h(name, value, sample_rate, tags))
+  end
+
   # Instantiates a new StatsD client that uses the settings of the current client,
   # except for the provided overrides.
   #
