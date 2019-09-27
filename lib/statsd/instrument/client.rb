@@ -62,7 +62,8 @@ class StatsD::Instrument::Client
   # @param [Hash, Array] tags (default: nil)
   # @return [void]
   def increment(name, value = 1, sample_rate: nil, tags: nil)
-    return unless sample?(sample_rate || @default_sample_rate)
+    sample_rate ||= @default_sample_rate
+    return unless sample?(sample_rate)
     emit(datagram_builder.c(name, value, sample_rate, tags))
   end
 
@@ -74,7 +75,8 @@ class StatsD::Instrument::Client
   # @param tags (see #increment)
   # @return [void]
   def measure(name, value = nil, sample_rate: nil, tags: nil)
-    return unless sample?(sample_rate || @default_sample_rate)
+    sample_rate ||= @default_sample_rate
+    return unless sample?(sample_rate)
     emit(datagram_builder.ms(name, value, sample_rate, tags))
   end
 
@@ -92,7 +94,8 @@ class StatsD::Instrument::Client
   # @param tags (see #increment)
   # @return [void]
   def gauge(name, value, sample_rate: nil, tags: nil)
-    return unless sample?(sample_rate || @default_sample_rate)
+    sample_rate ||= @default_sample_rate
+    return unless sample?(sample_rate)
     emit(datagram_builder.g(name, value, sample_rate, tags))
   end
 
@@ -104,7 +107,8 @@ class StatsD::Instrument::Client
   # @param tags (see #increment)
   # @return [void]
   def set(name, value, sample_rate: nil, tags: nil)
-    return unless sample?(sample_rate || @default_sample_rate)
+    sample_rate ||= @default_sample_rate
+    return unless sample?(sample_rate)
     emit(datagram_builder.s(name, value, sample_rate, tags))
   end
 
@@ -117,7 +121,8 @@ class StatsD::Instrument::Client
   # @param tags (see #increment)
   # @return [void]
   def distribution(name, value, sample_rate: nil, tags: nil)
-    return unless sample?(sample_rate || @default_sample_rate)
+    sample_rate ||= @default_sample_rate
+    return unless sample?(sample_rate)
     emit(datagram_builder.d(name, value, sample_rate, tags))
   end
 
@@ -129,7 +134,8 @@ class StatsD::Instrument::Client
   # @param tags (see #increment)
   # @return [void]
   def histogram(name, value, sample_rate: nil, tags: nil)
-    return unless sample?(sample_rate || @default_sample_rate)
+    sample_rate ||= @default_sample_rate
+    return unless sample?(sample_rate)
     emit(datagram_builder.h(name, value, sample_rate, tags))
   end
 
