@@ -6,6 +6,10 @@ section below.
 
 ### Unreleased changes
 
+_Nothing yet_
+
+## Version 2.5.0
+
 - **DEPRECATION**: Providing a sample rate and tags to your metrics and method
   instrumentation macros should be done using keyword arguments rather than
   positional arguments. Also, previously you could provide `value` as a keyword
