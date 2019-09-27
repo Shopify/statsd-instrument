@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# @note This class is part of the new Client implementation that is intended
+#   to become the new default in the next major release of this library.
 class StatsD::Instrument::DatagramBuilder
   unless Regexp.method_defined?(:match?) # for ruby 2.3
     module RubyBackports

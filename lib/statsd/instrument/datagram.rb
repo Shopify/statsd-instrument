@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 # The Datagram class parses and inspects a StatsD datagrans
+#
+# @note This class is part of the new Client implementation that is intended
+#   to become the new default in the next major release of this library.
 class StatsD::Instrument::Datagram
   attr_reader :source
 
