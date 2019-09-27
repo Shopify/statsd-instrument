@@ -3,6 +3,15 @@
 module RuboCop
   module Cop
     module StatsD
+      # This Rubocop will check for using the StatsD metric methods (e.g. `StatsD.instrument`)
+      # for positional argument usage, which is deprecated.
+      #
+      # Use the following Rubocop invocation to check your project's codebase:
+      #
+      #     rubocop --require `bundle show statsd-instrument`/lib/statsd/instrument/rubocop/positional_arguments.rb \
+      #       --only StatsD/PositionalArguments
+      #
+      # This cop can autocorrect some offenses it finds, but not all of them.
       class PositionalArguments < Cop
         MSG = 'Use keyword arguments for StatsD calls'
 

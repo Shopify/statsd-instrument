@@ -4,11 +4,13 @@ require 'test_helper'
 
 class DeprecationsTest < Minitest::Test
   unless StatsD::Instrument.strict_mode_enabled?
+    # rubocop:disable StatsD/MetaprogrammingPositionalArguments
     class InstrumentedClass
       extend StatsD::Instrument
       def foo; end
       statsd_count :foo, 'metric', 0.5, ['tag']
     end
+    # rubocop:enable StatsD/MetaprogrammingPositionalArguments
   end
 
   include StatsD::Instrument::Assertions
