@@ -38,6 +38,12 @@ module Rubocop
       assert_offense("ClassName.statsd_measure(:method, 'metric', 1)")
       assert_offense("ClassName.statsd_measure(:method, 'metric', 1, ['tag'])")
       assert_offense("ClassName.statsd_measure(:method, 'metric', 1, tag: 'value')")
+      assert_offense(<<~RUBY)
+        class Foo
+          extend StatsD::Instrument
+          statsd_measure(:method, 'metric', 1)
+        end
+      RUBY
     end
 
     def test_offense_with_splat
