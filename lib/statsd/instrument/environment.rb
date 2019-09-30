@@ -4,31 +4,60 @@ require 'logger'
 
 # The environment module is used to detect, and initialize the environment in
 # which this library is active. It will use different default values based on the environment.
-module StatsD::Instrument::Environment
-  extend self
+class StatsD::Instrument::Environment
+  class << self
+    def from_env
+      @from_env ||= StatsD::Instrument::Environment.new(ENV)
+    end
 
-  # Instantiates a default backend for the current environment.
-  #
-  # @return [StatsD::Instrument::Backend]
-  # @see #environment
-  def default_backend
-    case environment
-    when 'production', 'staging'
-      StatsD::Instrument::Backends::UDPBackend.new(ENV['STATSD_ADDR'], ENV['STATSD_IMPLEMENTATION'])
-    when 'test'
-      StatsD::Instrument::Backends::NullBackend.new
-    else
-      StatsD::Instrument::Backends::LoggerBackend.new(StatsD.logger)
+    # Detects the current environment, either by asking Rails, or by inspecting environment variables.
+    #
+    # - Within a Rails application, <tt>Rails.env</tt> is used.
+    # - It will check the following environment variables in order: <tt>RAILS_ENV</tt>, <tt>RACK_ENV</tt>, <tt>ENV</tt>.
+    # - If none of these are set, it will return <tt>development</tt>
+    #
+    # @return [String] The detected environment.
+    def environment
+      from_env.environment
+    end
+
+    # Instantiates a default backend for the current environment.
+    #
+    # @return [StatsD::Instrument::Backend]
+    # @see #environment
+    def default_backend
+      case environment
+      when 'production', 'staging'
+        StatsD::Instrument::Backends::UDPBackend.new(from_env.statsd_addr, from_env.statsd_implementation)
+      when 'test'
+        StatsD::Instrument::Backends::NullBackend.new
+      else
+        StatsD::Instrument::Backends::LoggerBackend.new(StatsD.logger)
+      end
+    end
+
+    # Sets default values for sample rate and logger.
+    #
+    # - Default sample rate is set to the value in the STATSD_SAMPLE_RATE environment variable,
+    #   or 1.0 otherwise. See {StatsD#default_sample_rate}
+    # - {StatsD#logger} is set to a logger that send output to stderr.
+    #
+    # If you are including this library inside a Rails environment, additional initialization will
+    # be done as part of the {StatsD::Instrument::Railtie}.
+    #
+    # @return [void]
+    def setup
+      StatsD.prefix = from_env.statsd_prefix
+      StatsD.default_tags = from_env.statsd_default_tags
+      StatsD.default_sample_rate = from_env.statsd_sample_rate
+      StatsD.logger = Logger.new($stderr)
     end
   end
 
-  def datagram_builder_class
-    case ENV['STATSD_IMPLEMENTATION']
-    when 'datadog', 'dogstatsd'
-      StatsD::Instrument::DogStatsDDatagramBuilder
-    else
-      StatsD::Instrument::StatsDDatagramBuilder
-    end
+  attr_reader :env
+
+  def initialize(env)
+    @env = env
   end
 
   # Detects the current environment, either by asking Rails, or by inspecting environment variables.
@@ -39,26 +68,65 @@ module StatsD::Instrument::Environment
   #
   # @return [String] The detected environment.
   def environment
-    if defined?(Rails) && Rails.respond_to?(:env)
+    if env['STATSD_ENV']
+      env['STATSD_ENV']
+    elsif defined?(Rails) && Rails.respond_to?(:env)
       Rails.env.to_s
     else
-      ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['ENV'] || 'development'
+      env['RAILS_ENV'] || env['RACK_ENV'] || env['ENV'] || 'development'
     end
   end
 
-  # Sets default values for sample rate and logger.
-  #
-  # - Default sample rate is set to the value in the STATSD_SAMPLE_RATE environment variable,
-  #   or 1.0 otherwise. See {StatsD#default_sample_rate}
-  # - {StatsD#logger} is set to a logger that send output to stderr.
-  #
-  # If you are including this library inside a Rails environment, additional initialization will
-  # be done as part of the {StatsD::Instrument::Railtie}.
-  #
-  # @return [void]
-  def setup
-    StatsD.default_sample_rate = ENV.fetch('STATSD_SAMPLE_RATE', 1.0).to_f
-    StatsD.logger = Logger.new($stderr)
+  def statsd_implementation
+    env.fetch('STATSD_IMPLEMENTATION', 'statsd')
+  end
+
+  def statsd_sample_rate
+    env.fetch('STATSD_SAMPLE_RATE', 1.0).to_f
+  end
+
+  def statsd_prefix
+    env.fetch('STATSD_PREFIX', nil)
+  end
+
+  def statsd_addr
+    env.fetch('STATSD_ADDR', 'localhost:8125')
+  end
+
+  def statsd_default_tags
+    env.key?('STATSD_DEFAULT_TAGS') ? env.fetch('STATSD_DEFAULT_TAGS').split(',') : nil
+  end
+
+  def default_client
+    @default_client ||= StatsD::Instrument::Client.new(
+      sink: default_sink_for_environment,
+      datagram_builder_class: default_datagram_builder_class_for_implementation,
+      default_sample_rate: statsd_sample_rate,
+      prefix: statsd_prefix,
+      default_tags: statsd_default_tags,
+    )
+  end
+
+  def default_datagram_builder_class_for_implementation
+    case statsd_implementation
+    when 'statsd'
+      StatsD::Instrument::StatsDDatagramBuilder
+    when 'datadog', 'dogstatsd'
+      StatsD::Instrument::DogStatsDDatagramBuilder
+    else
+      raise NotImplementedError, "No implementation for #{statsd_implementation}"
+    end
+  end
+
+  def default_sink_for_environment
+    case environment
+    when 'production', 'staging'
+      StatsD::Instrument::UDPSink.for_addr(statsd_addr)
+    when 'test'
+      StatsD::Instrument::NullSink.new
+    else
+      StatsD::Instrument::LogSink.new(StatsD.logger)
+    end
   end
 end
 

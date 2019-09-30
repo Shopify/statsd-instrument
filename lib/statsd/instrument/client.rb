@@ -22,7 +22,7 @@ class StatsD::Instrument::Client
     prefix: nil,
     default_sample_rate: 1,
     default_tags: nil,
-    datagram_builder_class: StatsD::Instrument::Environment.datagram_builder_class
+    datagram_builder_class: StatsD::Instrument::StatsDDatagramBuilder
   )
     @sink = sink
     @datagram_builder_class = datagram_builder_class
