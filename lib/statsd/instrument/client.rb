@@ -151,6 +151,30 @@ class StatsD::Instrument::Client
 
   # @!endgroup
 
+  # Measures the latency of the given block in milliseconds, and emits it as a metric.
+  #
+  # @param name (see #increment)
+  # @param sample_rate (see #increment)
+  # @param tags (see #increment)
+  # @param [Symbol] metric_type The metric type to use. If not specified, we will
+  #   use the preferred metric type of the implementation. The default is `:ms`.
+  #   Generally, you should not have to set this.
+  # @yield The latency (execution time) of the block
+  # @return The return value of the proivded block will be passed through.
+  def latency(name, sample_rate: nil, tags: nil, metric_type: nil, &block)
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    block.call
+  ensure
+    stop = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    sample_rate ||= @default_sample_rate
+    if sample?(sample_rate)
+      metric_type ||= datagram_builder.latency_metric_type
+      latency_in_ms = 1000.0 * (stop - start)
+      emit(datagram_builder.send(metric_type, name, latency_in_ms, sample_rate, tags))
+    end
+  end
+
   # Instantiates a new StatsD client that uses the settings of the current client,
   # except for the provided overrides.
   #

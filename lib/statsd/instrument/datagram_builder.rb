@@ -58,6 +58,10 @@ class StatsD::Instrument::DatagramBuilder
     StatsD::Instrument::Datagram
   end
 
+  def latency_metric_type
+    :ms
+  end
+
   protected
 
   attr_reader :prefix, :default_tags
