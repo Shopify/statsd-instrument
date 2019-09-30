@@ -76,7 +76,8 @@ class StatsD::Instrument::Client
   # @param sample_rate (see #increment)
   # @param tags (see #increment)
   # @return [void]
-  def measure(name, value = nil, sample_rate: nil, tags: nil)
+  def measure(name, value = nil, sample_rate: nil, tags: nil, &block)
+    return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :ms, &block) if block_given?
     sample_rate ||= @default_sample_rate
     return unless sample?(sample_rate)
     emit(datagram_builder.ms(name, value, sample_rate, tags))
@@ -126,7 +127,8 @@ class StatsD::Instrument::Client
   # @param sample_rate (see #increment)
   # @param tags (see #increment)
   # @return [void]
-  def distribution(name, value, sample_rate: nil, tags: nil)
+  def distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
+    return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :d, &block) if block_given?
     sample_rate ||= @default_sample_rate
     return unless sample?(sample_rate)
     emit(datagram_builder.d(name, value, sample_rate, tags))

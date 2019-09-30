@@ -47,6 +47,14 @@ class ClientTest < Minitest::Test
     assert_equal 'foo:122.54|ms', datagrams.first.source
   end
 
+  def test_measure_with_block
+    datagrams = @client.capture do
+      @client.measure('foo') {}
+    end
+    assert_equal 1, datagrams.size
+    assert_match /\Afoo:\d+\.\d+\|ms\z/, datagrams.first.source
+  end
+
   def test_gauge
     datagrams = @client.capture { @client.gauge('foo', 123) }
     assert_equal 1, datagrams.size
@@ -69,6 +77,14 @@ class ClientTest < Minitest::Test
     datagrams = @dogstatsd_client.capture { @dogstatsd_client.distribution('foo', 12.44) }
     assert_equal 1, datagrams.size
     assert_equal 'foo:12.44|d', datagrams.first.source
+  end
+
+  def test_distribution_with_block
+    datagrams = @dogstatsd_client.capture do
+      @dogstatsd_client.distribution('foo') {}
+    end
+    assert_equal 1, datagrams.size
+    assert_match /\Afoo:\d+\.\d+|d\z/, datagrams.first.source
   end
 
   def test_latency_emits_ms_metric
