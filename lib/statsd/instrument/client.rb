@@ -189,7 +189,7 @@ class StatsD::Instrument::Client
   end
 
   def capture_sink
-    StatsD::Instrument::CaptureSink.new(parent: @sink)
+    StatsD::Instrument::CaptureSink.new(parent: @sink, datagram_class: datagram_builder.datagram_class)
   end
 
   def with_capture_sink(capture_sink)

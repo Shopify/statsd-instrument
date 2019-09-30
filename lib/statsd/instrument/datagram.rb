@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# The Datagram class parses and inspects a StatsD datagrans
 class StatsD::Instrument::Datagram
   attr_reader :source
 
@@ -7,6 +8,7 @@ class StatsD::Instrument::Datagram
     @source = source
   end
 
+  # @return [Float] The sample rate at which this datagram was emitted, between 0 and 1.
   def sample_rate
     parsed_datagram[:sample_rate] ? Float(parsed_datagram[:sample_rate]) : 1.0
   end
@@ -24,12 +26,29 @@ class StatsD::Instrument::Datagram
   end
 
   def tags
-    parsed_datagram[:tags] ? parsed_datagram[:tags].split(',') : nil
+    @tags ||= parsed_datagram[:tags] ? parsed_datagram[:tags].split(',') : nil
   end
 
   def inspect
     "#<#{self.class.name}:\"#{@source}\">"
   end
+
+  def hash
+    source.hash
+  end
+
+  def eql?(other)
+    case other
+    when StatsD::Instrument::Datagram
+      source == other.source
+    when String
+      source == other
+    else
+      false
+    end
+  end
+
+  alias_method :==, :eql?
 
   private
 
