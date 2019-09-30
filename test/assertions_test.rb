@@ -316,38 +316,55 @@ class AssertionsTest < Minitest::Test
     end
   end
 
-  def test_assertion_with_exceptions
+  def test_assertion_block_with_expected_exceptions
     assert_no_assertion_triggered do
+      @test_case.assert_statsd_increment('expected_happened') do
+        @test_case.assert_raises(RuntimeError) do
+          begin
+            raise "expected"
+          rescue
+            StatsD.increment('expected_happened')
+            raise
+          end
+        end
+      end
+    end
+
+    assertion = assert_assertion_triggered do
+      @test_case.assert_statsd_increment('counter') do
+        @test_case.assert_raises(RuntimeError) do
+          raise "expected"
+        end
+      end
+    end
+    assert_includes assertion.message, "No StatsD calls for metric counter of type c were made"
+  end
+
+  def test_assertion_block_with_unexpected_exceptions
+    assertion = assert_assertion_triggered do
+      @test_case.assert_statsd_increment('counter') do
+        StatsD.increment('counter')
+        raise "unexpected"
+      end
+    end
+    assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
+
+    assertion = assert_assertion_triggered do
       @test_case.assert_raises(RuntimeError) do
         @test_case.assert_statsd_increment('counter') do
           StatsD.increment('counter')
-          raise "foo"
+          raise "unexpected"
         end
       end
     end
+    assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
+  end
 
-    assert_no_assertion_triggered do
+  def test_assertion_block_with_other_assertion_failures
+    # If another assertion failure happens inside the block, that failrue should have priority
+    assert_assertion_triggered("other assertion failure") do
       @test_case.assert_statsd_increment('counter') do
-        @test_case.assert_raises(RuntimeError) do
-          StatsD.increment('counter')
-          raise "foo"
-        end
-      end
-    end
-
-    assert_assertion_triggered do
-      @test_case.assert_statsd_increment('counter') do
-        @test_case.assert_raises(RuntimeError) do
-          raise "foo"
-        end
-      end
-    end
-
-    assert_assertion_triggered do
-      @test_case.assert_raises(RuntimeError) do
-        @test_case.assert_statsd_increment('counter') do
-          raise "foo"
-        end
+        @test_case.flunk('other assertion failure')
       end
     end
   end
