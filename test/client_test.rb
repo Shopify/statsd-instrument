@@ -6,7 +6,10 @@ require 'statsd/instrument/client'
 
 class ClientTest < Minitest::Test
   def setup
-    @client = StatsD::Instrument::Client.new
+    @client = StatsD::Instrument::Client.new(datagram_builder_class: StatsD::Instrument::StatsDDatagramBuilder)
+    @dogstatsd_client = StatsD::Instrument::Client.new(
+      datagram_builder_class: StatsD::Instrument::DogStatsDDatagramBuilder,
+    )
   end
 
   def test_capture
@@ -44,6 +47,15 @@ class ClientTest < Minitest::Test
     assert_equal 'foo:122.54|ms', datagrams.first.source
   end
 
+  def test_measure_with_block
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    datagrams = @client.capture do
+      @client.measure('foo') {}
+    end
+    assert_equal 1, datagrams.size
+    assert_equal 'foo:100.0|ms', datagrams.first.source
+  end
+
   def test_gauge
     datagrams = @client.capture { @client.gauge('foo', 123) }
     assert_equal 1, datagrams.size
@@ -57,15 +69,51 @@ class ClientTest < Minitest::Test
   end
 
   def test_histogram
-    datagrams = dogstatsd_client.capture { dogstatsd_client.histogram('foo', 12.44) }
+    datagrams = @dogstatsd_client.capture { @dogstatsd_client.histogram('foo', 12.44) }
     assert_equal 1, datagrams.size
     assert_equal 'foo:12.44|h', datagrams.first.source
   end
 
-  def test_distribution
-    datagrams = dogstatsd_client.capture { dogstatsd_client.distribution('foo', 12.44) }
+  def test_distribution_with_value
+    datagrams = @dogstatsd_client.capture { @dogstatsd_client.distribution('foo', 12.44) }
     assert_equal 1, datagrams.size
     assert_equal 'foo:12.44|d', datagrams.first.source
+  end
+
+  def test_distribution_with_block
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    datagrams = @dogstatsd_client.capture do
+      @dogstatsd_client.distribution('foo') {}
+    end
+    assert_equal 1, datagrams.size
+    assert_equal "foo:100.0|d", datagrams.first.source
+  end
+
+  def test_latency_emits_ms_metric
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    datagrams = @client.capture do
+      @client.latency('foo') {}
+    end
+    assert_equal 1, datagrams.size
+    assert_equal "foo:100.0|ms", datagrams.first.source
+  end
+
+  def test_latency_on_dogstatsd_prefers_distribution_metric_type
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    datagrams = @dogstatsd_client.capture do
+      @dogstatsd_client.latency('foo') {}
+    end
+    assert_equal 1, datagrams.size
+    assert_equal "foo:100.0|d", datagrams.first.source
+  end
+
+  def test_latency_calls_block_even_when_not_sending_a_sample
+    called = false
+    datagrams = @client.capture do
+      @client.latency('foo', sample_rate: 0) { called = true }
+    end
+    assert_predicate datagrams, :empty?
+    assert called, "The block should have been called"
   end
 
   def test_clone_with_prefix_option
@@ -79,12 +127,5 @@ class ClientTest < Minitest::Test
     assert_equal 2, datagrams.size, "Message both client should use the same sink"
     assert_equal 'metric', StatsD::Instrument::Datagram.new(datagrams[0]).name
     assert_equal 'foo.metric', StatsD::Instrument::Datagram.new(datagrams[1]).name
-  end
-
-  private
-
-  def dogstatsd_client
-    @dogstatsd_client ||= StatsD::Instrument::Client.new(datagram_builder_class:
-      StatsD::Instrument::DogStatsDDatagramBuilder)
   end
 end
