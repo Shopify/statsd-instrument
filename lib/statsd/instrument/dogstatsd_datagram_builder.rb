@@ -27,7 +27,7 @@ class StatsD::Instrument::DogStatsDDatagramBuilder < StatsD::Instrument::Datagra
   def _e(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
     source_type_name: nil, alert_type: nil, tags: nil)
 
-    escaped_title = title.gsub("\n", '\n')
+    escaped_title = "#{@prefix}#{title}".gsub("\n", '\n')
     escaped_text = text.gsub("\n", '\n')
     tags = normalize_tags(tags) + default_tags
 
@@ -58,7 +58,7 @@ class StatsD::Instrument::DogStatsDDatagramBuilder < StatsD::Instrument::Datagra
     status_number = SERVICE_CHECK_STATUS_VALUES.fetch(status)
     tags = normalize_tags(tags) + default_tags
 
-    datagram = +"_sc|#{normalize_name(name)}|#{status_number}"
+    datagram = +"_sc|#{@prefix}#{normalize_name(name)}|#{status_number}"
     datagram << "|d:#{timestamp.to_i}" if timestamp
     datagram << "|h:#{hostname}" if hostname
     datagram << "|##{tags.join(',')}" unless tags.empty?
