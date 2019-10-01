@@ -6,6 +6,13 @@ section below.
 
 ### Unreleased changes
 
+- **Bugfix:** when using metaprogramming methods, changes to `StatsD.prefix` after
+  the metaprogramming method was evaluated would not be respected. This
+  unfortunately is quite common when you set the StatsD prefix inside an
+  initializer. This issue is now addressed: the prefix is evaluated at the
+  mopment the metric is emitted, not when the metaprogramming method is being
+  evaluated. (#202)
+
 - Several improvements to `StatsD.event` and `StatsD.service_check` (both are
   Datadog-only). The previous implementation would sometimes construct invalid
   datagrams based on the input. The method signatures have been made more
