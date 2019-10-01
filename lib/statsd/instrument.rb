@@ -546,10 +546,16 @@ module StatsD
     title, text,
     deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
     sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
-    prefix: StatsD.prefix, no_prefix: false, **metadata
+    prefix: StatsD.prefix, no_prefix: false,
+    hostname: nil, date_happened: nil, timestamp: date_happened,
+    aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil,
+    **_ignored
   )
     prefix = nil if no_prefix
-    collect_metric(:_e, title, text, sample_rate: sample_rate, tags: tags, prefix: prefix, metadata: metadata)
+    collect_metric(:_e, title, text, sample_rate: sample_rate, tags: tags, prefix: prefix, metadata: {
+      hostname: hostname, timestamp: timestamp, aggregation_key: aggregation_key,
+      priority: priority, source_type_name: source_type_name, alert_type: alert_type
+    })
   end
 
   # @!method service_check(name, status, **metadata)
