@@ -337,6 +337,48 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
   end
 
+  def test_statsd_respects_global_prefix_changes
+    StatsD.prefix = 'Foo'
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
+    StatsD.prefix = 'Quc'
+
+    statsd_calls = capture_statsd_calls { ActiveMerchant::Gateway.sync }
+    assert_equal 1, statsd_calls.length
+    assert_equal "Quc.ActiveMerchant.Gateway.sync", statsd_calls.first.name
+  ensure
+    StatsD.prefix = nil
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+  end
+
+  def test_statsd_macro_can_overwrite_prefix
+    StatsD.prefix = 'Foo'
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_measure :sync, 'ActiveMerchant.Gateway.sync', prefix: 'Bar'
+    StatsD.prefix = 'Quc'
+
+    statsd_calls = capture_statsd_calls { ActiveMerchant::Gateway.sync }
+    assert_equal 1, statsd_calls.length
+    assert_equal "Bar.ActiveMerchant.Gateway.sync", statsd_calls.first.name
+  ensure
+    StatsD.prefix = nil
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_measure :sync, 'ActiveMerchant.Gateway.sync'
+  end
+
+  def test_statsd_macro_can_disable_prefix
+    StatsD.prefix = 'Foo'
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_count_success :sync, 'ActiveMerchant.Gateway.sync', no_prefix: true
+    StatsD.prefix = 'Quc'
+
+    statsd_calls = capture_statsd_calls { ActiveMerchant::Gateway.sync }
+    assert_equal 1, statsd_calls.length
+    assert_equal "ActiveMerchant.Gateway.sync.success", statsd_calls.first.name
+  ensure
+    StatsD.prefix = nil
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count_success :sync, 'ActiveMerchant.Gateway.sync'
+  end
+
   def test_statsd_doesnt_change_method_scope_of_public_method
     assert_scope InstrumentedClass, :public_and_instrumented, :public
 
