@@ -9,6 +9,7 @@ module StatsD::Instrument::Backends
     class DogStatsDProtocol
       EVENT_OPTIONS = {
         date_happened: 'd',
+        timestamp: 'd',
         hostname: 'h',
         aggregation_key: 'k',
         priority: 'p',
@@ -16,13 +17,9 @@ module StatsD::Instrument::Backends
         alert_type: 't',
       }
 
-      SERVICE_CHECK_OPTIONS = {
-        timestamp: 'd',
-        hostname: 'h',
-        message: 'm',
-      }
-
       SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES.merge(h: true, _e: true, _sc: true, d: true)
+
+      SERVICE_CHECK_STATUSES = { ok: 0, warning: 1, critical: 2, unknown: 3 }
 
       def generate_packet(metric)
         packet = +""
@@ -33,15 +30,22 @@ module StatsD::Instrument::Backends
 
           packet << "_e{#{escaped_title.size},#{escaped_text.size}}:#{escaped_title}|#{escaped_text}"
           packet << generate_metadata(metric, EVENT_OPTIONS)
+          packet << "|##{metric.tags.join(',')}" if metric.tags
+
         elsif metric.type == :_sc
-          packet << "_sc|#{metric.name}|#{metric.value}"
-          packet << generate_metadata(metric, SERVICE_CHECK_OPTIONS)
+          status = metric.value.is_a?(Integer) ? metric.value : SERVICE_CHECK_STATUSES.fetch(metric.value.to_sym)
+
+          packet << "_sc|#{metric.name}|#{status}"
+          packet << "|h:#{metric.metadata[:hostname]}" if metric.metadata[:hostname]
+          packet << "|d:#{metric.metadata[:timestamp].to_i}" if metric.metadata[:timestamp]
+          packet << "|##{metric.tags.join(',')}" if metric.tags
+          packet << "|m:#{metric.metadata[:message]}" if metric.metadata[:message]
+
         else
           packet << "#{metric.name}:#{metric.value}|#{metric.type}"
+          packet << "|@#{metric.sample_rate}" if metric.sample_rate < 1
+          packet << "|##{metric.tags.join(',')}" if metric.tags
         end
-
-        packet << "|@#{metric.sample_rate}" if metric.sample_rate < 1
-        packet << "|##{metric.tags.join(',')}" if metric.tags
 
         packet
       end

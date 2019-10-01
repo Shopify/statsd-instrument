@@ -86,8 +86,8 @@ class UDPBackendTest < Minitest::Test
 
   def test_event_on_datadog
     @backend.implementation = :datadog
-    @backend.expects(:write_packet).with('_e{4,3}:fooh|baz|h:localhost:3000|@0.01|#foo')
-    StatsD.event('fooh', 'baz', hostname: 'localhost:3000', sample_rate: 0.01, tags: ["foo"])
+    @backend.expects(:write_packet).with('_e{4,3}:fooh|baz|h:localhost|#foo')
+    StatsD.event('fooh', 'baz', hostname: 'localhost', tags: ["foo"])
   end
 
   def test_event_on_datadog_escapes_newlines
@@ -99,7 +99,7 @@ class UDPBackendTest < Minitest::Test
   def test_event_on_datadog_ignores_invalid_metadata
     @backend.implementation = :datadog
     @backend.expects(:write_packet).with('_e{4,3}:fooh|baz')
-    StatsD.event('fooh', 'baz', i_am_not_supported: 'not-supported')
+    StatsD.event('fooh', 'baz', sample_rate: 0.01, i_am_not_supported: 'not-supported')
   end
 
   def test_event_warns_when_not_using_datadog
@@ -111,14 +111,21 @@ class UDPBackendTest < Minitest::Test
 
   def test_service_check_on_datadog
     @backend.implementation = :datadog
-    @backend.expects(:write_packet).with('_sc|fooh|baz|h:localhost:3000|@0.01|#foo')
-    StatsD.service_check('fooh', 'baz', hostname: 'localhost:3000', sample_rate: 0.01, tags: ["foo"])
+    @backend.expects(:write_packet).with('_sc|fooh|0|h:localhost|#foo')
+    StatsD.service_check('fooh', 0, hostname: 'localhost', tags: ["foo"])
   end
 
   def test_service_check_on_datadog_ignores_invalid_metadata
     @backend.implementation = :datadog
-    @backend.expects(:write_packet).with('_sc|fooh|baz')
-    StatsD.service_check('fooh', 'baz', i_am_not_supported: 'not-supported')
+    @backend.expects(:write_packet).with('_sc|fooh|1')
+    StatsD.service_check('fooh', "warning", sample_rate: 0.01, i_am_not_supported: 'not-supported')
+  end
+
+  def test_service_check_on_datadog_will_append_message_as_final_metadata_field
+    @backend.implementation = :datadog
+    @backend.expects(:write_packet).with('_sc|fooh|0|d:1230768000|#quc|m:Everything OK')
+    StatsD.service_check('fooh', :ok, message: "Everything OK",
+      timestamp: Time.parse('2009-01-01T00:00:00Z'), tags: ['quc'])
   end
 
   def test_service_check_warns_when_not_using_datadog
