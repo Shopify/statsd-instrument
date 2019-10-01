@@ -98,8 +98,13 @@ class UDPBackendTest < Minitest::Test
 
   def test_event_on_datadog_ignores_invalid_metadata
     @backend.implementation = :datadog
-    @backend.expects(:write_packet).with('_e{4,3}:fooh|baz')
-    StatsD.event('fooh', 'baz', sample_rate: 0.01, i_am_not_supported: 'not-supported')
+    if StatsD::Instrument.strict_mode_enabled?
+      assert_raises(ArgumentError) { StatsD.event('fooh', 'baz', sample_rate: 0.01) }
+      assert_raises(ArgumentError) { StatsD.event('fooh', 'baz', unsupported: 'foo') }
+    else
+      @backend.expects(:write_packet).with('_e{4,3}:fooh|baz')
+      StatsD.event('fooh', 'baz', sample_rate: 0.01, i_am_not_supported: 'not-supported')
+    end
   end
 
   def test_event_warns_when_not_using_datadog
@@ -118,9 +123,8 @@ class UDPBackendTest < Minitest::Test
   def test_service_check_on_datadog_ignores_invalid_metadata
     @backend.implementation = :datadog
     if StatsD::Instrument.strict_mode_enabled?
-      assert_raises(ArgumentError) do
-        StatsD.service_check('fooh', "warning", sample_rate: 0.01, i_am_not_supported: 'not-supported')
-      end
+      assert_raises(ArgumentError) { StatsD.service_check('fooh', "warning", sample_rate: 0.01) }
+      assert_raises(ArgumentError) { StatsD.service_check('fooh', "warning", unsupported: 'foo') }
     else
       @backend.expects(:write_packet).with('_sc|fooh|1')
       StatsD.service_check('fooh', "warning", sample_rate: 0.01, i_am_not_supported: 'not-supported')

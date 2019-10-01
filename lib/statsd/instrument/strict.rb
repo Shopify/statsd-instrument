@@ -61,6 +61,12 @@ module StatsD
         super
       end
 
+      def event(title, text, tags: nil, prefix: StatsD.prefix, no_prefix: false,
+        hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil)
+
+        super
+      end
+
       def measure(key, value = UNSPECIFIED, sample_rate: nil, tags: nil,
         prefix: StatsD.prefix, no_prefix: false, as_dist: false, &block)
 

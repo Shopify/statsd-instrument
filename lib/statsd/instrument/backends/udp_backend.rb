@@ -7,16 +7,6 @@ module StatsD::Instrument::Backends
     BASE_SUPPORTED_METRIC_TYPES = { c: true, ms: true, g: true, s: true }
 
     class DogStatsDProtocol
-      EVENT_OPTIONS = {
-        date_happened: 'd',
-        timestamp: 'd',
-        hostname: 'h',
-        aggregation_key: 'k',
-        priority: 'p',
-        source_type_name: 's',
-        alert_type: 't',
-      }
-
       SUPPORTED_METRIC_TYPES = BASE_SUPPORTED_METRIC_TYPES.merge(h: true, _e: true, _sc: true, d: true)
 
       SERVICE_CHECK_STATUSES = { ok: 0, warning: 1, critical: 2, unknown: 3 }
@@ -29,7 +19,12 @@ module StatsD::Instrument::Backends
           escaped_text = metric.value.gsub("\n", "\\n")
 
           packet << "_e{#{escaped_title.size},#{escaped_text.size}}:#{escaped_title}|#{escaped_text}"
-          packet << generate_metadata(metric, EVENT_OPTIONS)
+          packet << "|h:#{metric.metadata[:hostname]}" if metric.metadata[:hostname]
+          packet << "|d:#{metric.metadata[:timestamp].to_i}" if metric.metadata[:timestamp]
+          packet << "|k:#{metric.metadata[:aggregation_key]}" if metric.metadata[:aggregation_key]
+          packet << "|p:#{metric.metadata[:priority]}" if metric.metadata[:priority]
+          packet << "|s:#{metric.metadata[:source_type_name]}" if metric.metadata[:source_type_name]
+          packet << "|t:#{metric.metadata[:alert_type]}" if metric.metadata[:alert_type]
           packet << "|##{metric.tags.join(',')}" if metric.tags
 
         elsif metric.type == :_sc
@@ -48,14 +43,6 @@ module StatsD::Instrument::Backends
         end
 
         packet
-      end
-
-      private
-
-      def generate_metadata(metric, options)
-        (metric.metadata.keys & options.keys).map do |key|
-          "|#{options[key]}:#{metric.metadata[key]}"
-        end.join
       end
     end
 
