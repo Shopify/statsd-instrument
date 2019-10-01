@@ -317,6 +317,15 @@ class AssertionsTest < Minitest::Test
       end
     end
     assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
+
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_raises(RuntimeError) do
+        @test_case.assert_no_statsd_calls do
+          raise "unexpected"
+        end
+      end
+    end
+    assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
   end
 
   def test_assertion_block_with_other_assertion_failures
