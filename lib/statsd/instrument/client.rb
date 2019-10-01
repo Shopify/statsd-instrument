@@ -163,9 +163,9 @@ class StatsD::Instrument::Client
   #   Generally, you should not have to set this.
   # @yield The latency (execution time) of the block
   # @return The return value of the proivded block will be passed through.
-  def latency(name, sample_rate: nil, tags: nil, metric_type: nil, &block)
+  def latency(name, sample_rate: nil, tags: nil, metric_type: nil)
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    block.call
+    yield
   ensure
     stop = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
