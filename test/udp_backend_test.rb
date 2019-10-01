@@ -117,8 +117,14 @@ class UDPBackendTest < Minitest::Test
 
   def test_service_check_on_datadog_ignores_invalid_metadata
     @backend.implementation = :datadog
-    @backend.expects(:write_packet).with('_sc|fooh|1')
-    StatsD.service_check('fooh', "warning", sample_rate: 0.01, i_am_not_supported: 'not-supported')
+    if StatsD::Instrument.strict_mode_enabled?
+      assert_raises(ArgumentError) do
+        StatsD.service_check('fooh', "warning", sample_rate: 0.01, i_am_not_supported: 'not-supported')
+      end
+    else
+      @backend.expects(:write_packet).with('_sc|fooh|1')
+      StatsD.service_check('fooh', "warning", sample_rate: 0.01, i_am_not_supported: 'not-supported')
+    end
   end
 
   def test_service_check_on_datadog_will_append_message_as_final_metadata_field

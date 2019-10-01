@@ -55,6 +55,12 @@ module StatsD
         super
       end
 
+      def service_check(name, status, tags: nil, prefix: StatsD.prefix, no_prefix: false,
+        hostname: nil, timestamp: nil, message: nil)
+
+        super
+      end
+
       def measure(key, value = UNSPECIFIED, sample_rate: nil, tags: nil,
         prefix: StatsD.prefix, no_prefix: false, as_dist: false, &block)
 
