@@ -6,6 +6,11 @@ section below.
 
 ### Unreleased changes
 
+- Several improvements to `StatsD.event` and `StatsD.service_check` (both are
+  Datadog-only). The previous implementation would sometimes construct invalid
+  datagrams based on the input. The method signatures have been made more
+  explicit, and documentation of these methods is now also more clear.
+
 - Slight behaviour change when using the `assert_statsd_*` assertion methods in
   combination with `assert_raises`: we now do not allow the block passed to the
   `assert_statsd_` call to raise an exception. This may cause tests to fail that
