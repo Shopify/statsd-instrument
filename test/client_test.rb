@@ -116,6 +116,18 @@ class ClientTest < Minitest::Test
     assert called, "The block should have been called"
   end
 
+  def test_service_check
+    datagrams = @dogstatsd_client.capture { @dogstatsd_client.service_check('service', :ok) }
+    assert_equal 1, datagrams.size
+    assert_equal "_sc|service|0", datagrams.first.source
+  end
+
+  def test_event
+    datagrams = @dogstatsd_client.capture { @dogstatsd_client.event('service', "event\ndescription") }
+    assert_equal 1, datagrams.size
+    assert_equal "_e{7,18}:service|event\\ndescription", datagrams.first.source
+  end
+
   def test_clone_with_prefix_option
     datagrams = []
     original_client = StatsD::Instrument::Client.new(sink: datagrams)
