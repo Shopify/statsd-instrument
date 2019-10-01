@@ -10,141 +10,120 @@ class AssertionsTest < Minitest::Test
   end
 
   def test_assert_no_statsd_calls
-    assert_no_assertion_triggered do
-      @test_case.assert_no_statsd_calls('counter') do
-        # noop
-      end
+    @test_case.assert_no_statsd_calls('counter') do
+      # noop
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_no_statsd_calls('counter') do
-        StatsD.increment('other')
-      end
+    @test_case.assert_no_statsd_calls('counter') do
+      StatsD.increment('other')
     end
 
-    assert_assertion_triggered("No StatsD calls for metric counter expected.") do
+    assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_no_statsd_calls('counter') do
         StatsD.increment('counter')
       end
     end
+    assert_equal assertion.message, "No StatsD calls for metric counter expected."
 
-    assert_assertion_triggered("No StatsD calls for metric other expected.") do
+    assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_no_statsd_calls do
         StatsD.increment('other')
       end
     end
+    assert_equal assertion.message, "No StatsD calls for metric other expected."
 
-    assert_assertion_triggered("No StatsD calls for metric other, another expected.") do
+    assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_no_statsd_calls do
         StatsD.increment('other')
         StatsD.increment('another')
       end
     end
+    assert_equal assertion.message, "No StatsD calls for metric other, another expected."
   end
 
   def test_assert_statsd_call
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter') do
-        StatsD.increment('counter')
-      end
+    @test_case.assert_statsd_increment('counter') do
+      StatsD.increment('counter')
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter') do
-        StatsD.increment('counter')
-        StatsD.increment('other')
-      end
+    @test_case.assert_statsd_increment('counter') do
+      StatsD.increment('counter')
+      StatsD.increment('other')
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter') do
         StatsD.increment('other')
       end
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter') do
         StatsD.gauge('counter', 42)
       end
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter') do
         StatsD.increment('counter')
         StatsD.increment('counter')
       end
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', times: 2) do
-        StatsD.increment('counter')
-        StatsD.increment('counter')
-      end
+    @test_case.assert_statsd_increment('counter', times: 2) do
+      StatsD.increment('counter')
+      StatsD.increment('counter')
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', times: 2, tags: ['foo:1']) do
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 1 })
-      end
+    @test_case.assert_statsd_increment('counter', times: 2, tags: ['foo:1']) do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 1 })
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter', times: 2, tags: ['foo:1']) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 2 })
       end
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a', 'b']) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: ['a', 'b'])
-      end
+    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a', 'b']) do
+      StatsD.increment('counter', sample_rate: 0.5, tags: ['a', 'b'])
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a', 'b'], ignore_tags: ['b']) do
         StatsD.increment('counter', sample_rate: 0.5, tags: ['a'])
       end
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a'], ignore_tags: ['b']) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: ['a', 'b'])
-      end
+    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a'], ignore_tags: ['b']) do
+      StatsD.increment('counter', sample_rate: 0.5, tags: ['a', 'b'])
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a'], ignore_tags: ['b']) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: ['a'])
-      end
+    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a'], ignore_tags: ['b']) do
+      StatsD.increment('counter', sample_rate: 0.5, tags: ['a'])
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: { b: 2 }) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
-      end
+    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: { b: 2 }) do
+      StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: { b: 2 }) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 3 })
-      end
+    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: { b: 2 }) do
+      StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 3 })
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1, b: 3 }, ignore_tags: ['b']) do
         StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
       end
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: ['b']) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
-      end
+    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: ['b']) do
+      StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a', 'b']) do
         StatsD.increment('counter', sample_rate: 0.2, tags: ['c'])
       end
@@ -152,13 +131,11 @@ class AssertionsTest < Minitest::Test
   end
 
   def test_tags_will_match_subsets
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
-      end
+    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }) do
+      StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1, b: 3 }) do
         StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2, c: 4 })
       end
@@ -166,66 +143,58 @@ class AssertionsTest < Minitest::Test
   end
 
   def test_tags_friendly_error
-    @test_case.assert_statsd_increment('counter', tags: { class: "AnotherJob" }) do
-      StatsD.increment('counter', tags: { class: "MyJob" })
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('counter', tags: { class: "AnotherJob" }) do
+        StatsD.increment('counter', tags: { class: "MyJob" })
+      end
     end
-  rescue MiniTest::Assertion => assertion
-    assert_match(/Captured metrics with the same key/, assertion.message)
-    assert_match(/MyJob/, assertion.message)
+
+    assert_includes assertion.message, "Captured metrics with the same key"
+    assert_includes assertion.message, "MyJob"
   end
 
   def test_multiple_metrics_are_not_order_dependent
-    assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-      @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 2 })
-      end
+    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+    @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 2 })
     end
 
-    assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-      @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 2 })
-      end
+    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+    @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 2 })
     end
 
-    assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-      @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 2 })
-      end
+    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+    @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 2 })
     end
 
-    assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-      @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 2 })
-      end
+    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+    @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 2 })
     end
 
-    assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-      @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 2 })
-        StatsD.increment('counter', tags: { foo: 1 })
-      end
+    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+    @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 2 })
+      StatsD.increment('counter', tags: { foo: 1 })
     end
   end
 
   def test_assert_multiple_statsd_calls
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
       foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
@@ -234,7 +203,7 @@ class AssertionsTest < Minitest::Test
       end
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
       foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
       @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
@@ -245,60 +214,52 @@ class AssertionsTest < Minitest::Test
       end
     end
 
-    assert_no_assertion_triggered do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-      @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 1 })
-        StatsD.increment('counter', tags: { foo: 2 })
-      end
+    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
+    @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 2 })
     end
   end
 
   def test_assert_statsd_call_with_tags
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', tags: ['a:b', 'c:d']) do
-        StatsD.increment('counter', tags: { a: 'b', c: 'd' })
-      end
+    @test_case.assert_statsd_increment('counter', tags: ['a:b', 'c:d']) do
+      StatsD.increment('counter', tags: { a: 'b', c: 'd' })
     end
 
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter', tags: { a: 'b', c: 'd' }) do
-        StatsD.increment('counter', tags: ['a:b', 'c:d'])
-      end
+    @test_case.assert_statsd_increment('counter', tags: { a: 'b', c: 'd' }) do
+      StatsD.increment('counter', tags: ['a:b', 'c:d'])
     end
   end
 
   def test_assert_statsd_call_with_wrong_sample_rate_type
     skip("In Strict mode, the StatsD.increment call will raise") if StatsD::Instrument.strict_mode_enabled?
-    assert_assertion_triggered "Unexpected sample rate type for metric counter, must be numeric" do
+
+    assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter', tags: ['a', 'b']) do
         StatsD.increment('counter', sample_rate: 'abc', tags: ['a', 'b'])
       end
     end
+    assert_equal "Unexpected sample rate type for metric counter, must be numeric", assertion.message
   end
 
   def test_nested_assertions
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter1') do
-        @test_case.assert_statsd_increment('counter2') do
-          StatsD.increment('counter1')
-          StatsD.increment('counter2')
-        end
-      end
-    end
-
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter1') do
+    @test_case.assert_statsd_increment('counter1') do
+      @test_case.assert_statsd_increment('counter2') do
         StatsD.increment('counter1')
-        @test_case.assert_statsd_increment('counter2') do
-          StatsD.increment('counter2')
-        end
+        StatsD.increment('counter2')
       end
     end
 
-    assert_assertion_triggered do
+    @test_case.assert_statsd_increment('counter1') do
+      StatsD.increment('counter1')
+      @test_case.assert_statsd_increment('counter2') do
+        StatsD.increment('counter2')
+      end
+    end
+
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter1') do
         @test_case.assert_statsd_increment('counter2') do
           StatsD.increment('counter2')
@@ -306,7 +267,7 @@ class AssertionsTest < Minitest::Test
       end
     end
 
-    assert_assertion_triggered do
+    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter1') do
         @test_case.assert_statsd_increment('counter2') do
           StatsD.increment('counter1')
@@ -316,62 +277,55 @@ class AssertionsTest < Minitest::Test
     end
   end
 
-  def test_assertion_with_exceptions
-    assert_no_assertion_triggered do
+  def test_assertion_block_with_expected_exceptions
+    @test_case.assert_statsd_increment('expected_happened') do
+      @test_case.assert_raises(RuntimeError) do
+        begin
+          raise "expected"
+        rescue
+          StatsD.increment('expected_happened')
+          raise
+        end
+      end
+    end
+
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('counter') do
+        @test_case.assert_raises(RuntimeError) do
+          raise "expected"
+        end
+      end
+    end
+    assert_includes assertion.message, "No StatsD calls for metric counter of type c were made"
+  end
+
+  def test_assertion_block_with_unexpected_exceptions
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('counter') do
+        StatsD.increment('counter')
+        raise "unexpected"
+      end
+    end
+    assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
+
+    assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_raises(RuntimeError) do
         @test_case.assert_statsd_increment('counter') do
           StatsD.increment('counter')
-          raise "foo"
+          raise "unexpected"
         end
       end
     end
-
-    assert_no_assertion_triggered do
-      @test_case.assert_statsd_increment('counter') do
-        @test_case.assert_raises(RuntimeError) do
-          StatsD.increment('counter')
-          raise "foo"
-        end
-      end
-    end
-
-    assert_assertion_triggered do
-      @test_case.assert_statsd_increment('counter') do
-        @test_case.assert_raises(RuntimeError) do
-          raise "foo"
-        end
-      end
-    end
-
-    assert_assertion_triggered do
-      @test_case.assert_raises(RuntimeError) do
-        @test_case.assert_statsd_increment('counter') do
-          raise "foo"
-        end
-      end
-    end
+    assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
   end
 
-  private
-
-  def assert_no_assertion_triggered(&block)
-    block.call
-  rescue MiniTest::Assertion => assertion
-    flunk("No assertion trigger expected, but one was triggered with message #{assertion.message}.")
-  else
-    pass
-  end
-
-  def assert_assertion_triggered(message = nil, &block)
-    block.call
-  rescue MiniTest::Assertion => assertion
-    if message
-      assert_equal(message, assertion.message, "Assertion triggered, but message was not what was expected.")
-    else
-      pass
+  def test_assertion_block_with_other_assertion_failures
+    # If another assertion failure happens inside the block, that failrue should have priority
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('counter') do
+        @test_case.flunk('other assertion failure')
+      end
     end
-    assertion
-  else
-    flunk("No assertion was triggered, but one was expected.")
+    assert_equal "other assertion failure", assertion.message
   end
 end
