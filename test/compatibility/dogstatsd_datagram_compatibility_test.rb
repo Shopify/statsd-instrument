@@ -83,6 +83,25 @@ module Compatibility
       end
     end
 
+    def test_service_check_compatibility
+      assert_equal_datagrams { |client| client.service_check('service', 0) }
+      assert_equal_datagrams { |client| client.event('foo', "bar\nbaz") }
+      assert_equal_datagrams do |client|
+        client.service_check('service', "ok", timestamp: Time.parse('2019-09-09T04:22:17Z'),
+          hostname: 'localhost', tags: ['foo'], message: 'bar')
+      end
+    end
+
+    def test_event_compatibility
+      assert_equal_datagrams { |client| client.event('foo', "bar\nbaz") }
+      assert_equal_datagrams { |client| client.event('foo', "bar\nbaz") }
+      assert_equal_datagrams do |client|
+        client.event('Something happend', "And it's not good", timestamp: Time.parse('2019-09-09T04:22:17Z'),
+          hostname: 'localhost', tags: ['foo'], alert_type: 'warning', priority: 'low',
+          aggregation_key: 'foo', source_type_name: 'logs')
+      end
+    end
+
     private
 
     MODES = [:normal, :with_prefix, :with_default_tags]

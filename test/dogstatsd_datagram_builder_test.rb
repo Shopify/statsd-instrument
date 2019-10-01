@@ -17,7 +17,7 @@ class DogStatsDDatagramBuilderTest < Minitest::Test
     assert_equal '_sc|service|0', @datagram_builder._sc('service', :ok)
     datagram = @datagram_builder._sc('service', :warning, timestamp: Time.parse('2019-09-30T04:22:12Z'),
       hostname: 'localhost', tags: { foo: 'bar|baz' }, message: 'blah')
-    assert_equal "_sc|service|1|d:1569817332|h:localhost|#foo:barbaz|m:blah", datagram
+    assert_equal "_sc|service|1|h:localhost|d:1569817332|#foo:barbaz|m:blah", datagram
   end
 
   def test_event

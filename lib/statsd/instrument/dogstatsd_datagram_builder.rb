@@ -55,12 +55,12 @@ class StatsD::Instrument::DogStatsDDatagramBuilder < StatsD::Instrument::Datagra
   #
   # @see https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/#service-checks
   def _sc(name, status, timestamp: nil, hostname: nil, tags: nil, message: nil)
-    status_number = SERVICE_CHECK_STATUS_VALUES.fetch(status)
+    status_number = status.is_a?(Integer) ? status : SERVICE_CHECK_STATUS_VALUES.fetch(status.to_sym)
     tags = normalize_tags(tags) + default_tags
 
     datagram = +"_sc|#{@prefix}#{normalize_name(name)}|#{status_number}"
-    datagram << "|d:#{timestamp.to_i}" if timestamp
     datagram << "|h:#{hostname}" if hostname
+    datagram << "|d:#{timestamp.to_i}" if timestamp
     datagram << "|##{tags.join(',')}" unless tags.empty?
     datagram << "|m:#{normalize_name(message)}" if message
     datagram
