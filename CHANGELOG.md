@@ -6,7 +6,57 @@ section below.
 
 ### Unreleased changes
 
-_Nothing yet_
+- Slight behaviour change when using the `assert_statsd_*` assertion methods in
+  combination with `assert_raises`: we now do not allow the block passed to the
+  `assert_statsd_` call to raise an exception. This may cause tests to fail that
+  previousloy were succeeding.
+
+  Consider the following example:
+
+  ``` ruby
+  assert_raises(RuntimeError)
+    assert_statsd_increment('foo') do
+      raise 'something unexpected'
+    end
+  end
+  ```
+
+  In versions before 2.3.3, the assert `assert_statsd_*` calls would silently
+  pass when an exception would occur, which would later be handled by
+  `assert_raises`. So the test would pass, even though no `foo` metric would be
+  emitted.
+
+  Version 2.3.3 changed this by failing the test because no metric was being
+  emitted. However, this would hide the the exception from the assertion message,
+  complicating debugging efforts.
+
+  Now, we fail the test because an unexpected exception occured inside the block.
+  This means that the following test will fail:
+
+  ``` ruby
+  assert_raises(RuntimeError)
+    assert_statsd_increment('foo') do
+      StatsD.increment('foo')
+      raise 'something unexpected'
+    end
+  end
+  ```
+
+  To fix, you will need to nest the `assert_raises` inside the block passed to
+  `assert_statsd_instrument` so that `assert_statsd_increment` will not see any
+  exceptions:
+
+  ``` ruby
+  assert_statsd_increment('foo') do
+    assert_raises(RuntimeError)
+      StatsD.increment('foo')
+      raise 'something unexpected'
+    end
+  end
+  ```
+
+  See #193, #184, and #166 for more information.
+
 
 ## Version 2.5.0
 
