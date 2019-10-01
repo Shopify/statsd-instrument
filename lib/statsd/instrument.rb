@@ -565,10 +565,13 @@ module StatsD
     name, status,
     deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
     sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
-    prefix: StatsD.prefix, no_prefix: false, **metadata
+    prefix: StatsD.prefix, no_prefix: false,
+    hostname: nil, timestamp: nil, message: nil, **_ignored
   )
     prefix = nil if no_prefix
-    collect_metric(:_sc, name, status, sample_rate: sample_rate, tags: tags, prefix: prefix, metadata: metadata)
+    collect_metric(:_sc, name, status, sample_rate: sample_rate, prefix: prefix, tags: tags, metadata: {
+      hostname: hostname, timestamp: timestamp, message: message
+    })
   end
 
   private
