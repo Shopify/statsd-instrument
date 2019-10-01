@@ -524,6 +524,7 @@ module StatsD
   # @param key [String] The name of the metric.
   # @param value [Numeric] The value to record.
   # @return [void]
+  #
   # @note Supported by the statsite implementation only.
   def key_value(
     key, value_arg = nil, deprecated_sample_rate_arg = nil,
@@ -533,14 +534,21 @@ module StatsD
     collect_metric(:kv, key, value, sample_rate: sample_rate, prefix: prefix)
   end
 
-  # @!method event(title, text, **metadata)
+  # @!method event(title, text, tags: nil, hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil) # rubocop:disable Metrics/LineLength
   #
   # Emits an event.
   #
-  # @param title [String] Title of the event.
-  # @param text [String] Body of the event.
-  # @param **metadata [Hash<Symbol, String>] Metadata to associate with the event.
+  # @param title [String] Title of the event. A configured prefix may be applied to this title.
+  # @param text [String] Body of the event. Can contain newlines.
+  # @param [String] hostname The hostname to associate with the event.
+  # @param [Time] timestamp The moment the status of the service was checkes. Defaults to now.
+  # @param [String] aggregation_key A key to aggregate similar events into groups.
+  # @param [String] priority The event's priority, either `"low"` or `"normal"` (default).
+  # @param [String] source_type_name The source type.
+  # @param [String] alert_type The type of alert. Either `"info"` (default), `"warning"`, `"error"`, or `"success"`.
+  # @param tags (see #increment)
   # @return [void]
+  #
   # @note Supported by the Datadog implementation only.
   def event(
     title, text,
@@ -558,14 +566,18 @@ module StatsD
     })
   end
 
-  # @!method service_check(name, status, **metadata)
+  # @!method service_check(name, status, tags: nil, hostname: nil, timestamp: nil, message: nil)
   #
   # Emits a service check.
   #
-  # @param name [String] Title of the event.
-  # @param text [String] Body of the event.
-  # @param metadata [Hash<Symbol, String>] Metadata to associate with the service check.
+  # @param [String] name Name of the service. A configured prefix may be applied to this title.
+  # @param [Symbol] status Current status of the service. Either `:ok`, `:warning`, `:critical`, or `:unknown`.
+  # @param [String] hostname The hostname to associate with the event.
+  # @param [Time] timestamp The moment the status of the service was checkes. Defaults to now.
+  # @param [String] message A message that describes the current status.
+  # @param tags (see #increment)
   # @return [void]
+  #
   # @note Supported by the Datadog implementation only.
   def service_check(
     name, status,
