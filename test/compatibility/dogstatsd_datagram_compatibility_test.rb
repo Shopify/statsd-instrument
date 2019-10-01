@@ -13,7 +13,6 @@ module Compatibility
     end
 
     def teardown
-      StatsD.backend = @old_backend
       @server.close
     end
 
