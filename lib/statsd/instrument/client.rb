@@ -30,6 +30,8 @@ class StatsD::Instrument::Client
     @prefix = prefix
     @default_tags = default_tags
     @default_sample_rate = default_sample_rate
+
+    @datagram_builder = { false => nil, true => nil }
   end
 
   # @!group Metric Methods
@@ -67,10 +69,10 @@ class StatsD::Instrument::Client
   #
   # @param [Hash<Symbol, String>, Array<String>] tags (default: nil)
   # @return [void]
-  def increment(name, value = 1, sample_rate: nil, tags: nil)
+  def increment(name, value = 1, sample_rate: nil, tags: nil, no_prefix: false)
     sample_rate ||= @default_sample_rate
     return unless sample?(sample_rate)
-    emit(datagram_builder.c(name, value, sample_rate, tags))
+    emit(datagram_builder(no_prefix: no_prefix).c(name, value, sample_rate, tags))
   end
 
   # Emits a timing metric.
@@ -80,11 +82,14 @@ class StatsD::Instrument::Client
   # @param sample_rate (see #increment)
   # @param tags (see #increment)
   # @return [void]
-  def measure(name, value = nil, sample_rate: nil, tags: nil, &block)
-    return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :ms, &block) if block_given?
+  def measure(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
+    if block_given?
+      return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :ms, no_prefix: no_prefix, &block)
+    end
+
     sample_rate ||= @default_sample_rate
     return unless sample?(sample_rate)
-    emit(datagram_builder.ms(name, value, sample_rate, tags))
+    emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
   end
 
   # Emits a gauge metric.
@@ -100,10 +105,10 @@ class StatsD::Instrument::Client
   # @param sample_rate (see #increment)
   # @param tags (see #increment)
   # @return [void]
-  def gauge(name, value, sample_rate: nil, tags: nil)
+  def gauge(name, value, sample_rate: nil, tags: nil, no_prefix: false)
     sample_rate ||= @default_sample_rate
     return unless sample?(sample_rate)
-    emit(datagram_builder.g(name, value, sample_rate, tags))
+    emit(datagram_builder(no_prefix: no_prefix).g(name, value, sample_rate, tags))
   end
 
   # Emits a set metric, which counts distinct values.
@@ -113,10 +118,10 @@ class StatsD::Instrument::Client
   # @param sample_rate (see #increment)
   # @param tags (see #increment)
   # @return [void]
-  def set(name, value, sample_rate: nil, tags: nil)
+  def set(name, value, sample_rate: nil, tags: nil, no_prefix: false)
     sample_rate ||= @default_sample_rate
     return unless sample?(sample_rate)
-    emit(datagram_builder.s(name, value, sample_rate, tags))
+    emit(datagram_builder(no_prefix: no_prefix).s(name, value, sample_rate, tags))
   end
 
   # Emits a distribution metric, which builds a histogram of the reported
@@ -131,11 +136,14 @@ class StatsD::Instrument::Client
   # @param sample_rate (see #increment)
   # @param tags (see #increment)
   # @return [void]
-  def distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
-    return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :d, &block) if block_given?
+  def distribution(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
+    if block_given?
+      return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :d, no_prefix: no_prefix, &block)
+    end
+
     sample_rate ||= @default_sample_rate
     return unless sample?(sample_rate)
-    emit(datagram_builder.d(name, value, sample_rate, tags))
+    emit(datagram_builder(no_prefix: no_prefix).d(name, value, sample_rate, tags))
   end
 
   # Emits a histogram metric, which builds a histogram of the reported values.
@@ -149,10 +157,10 @@ class StatsD::Instrument::Client
   # @param sample_rate (see #increment)
   # @param tags (see #increment)
   # @return [void]
-  def histogram(name, value, sample_rate: nil, tags: nil)
+  def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
     sample_rate ||= @default_sample_rate
     return unless sample?(sample_rate)
-    emit(datagram_builder.h(name, value, sample_rate, tags))
+    emit(datagram_builder(no_prefix: no_prefix).h(name, value, sample_rate, tags))
   end
 
   # @!endgroup
@@ -167,7 +175,7 @@ class StatsD::Instrument::Client
   #   Generally, you should not have to set this.
   # @yield The latency (execution time) of the block
   # @return The return value of the proivded block will be passed through.
-  def latency(name, sample_rate: nil, tags: nil, metric_type: nil)
+  def latency(name, sample_rate: nil, tags: nil, metric_type: nil, no_prefix: false)
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     begin
       yield
@@ -176,9 +184,9 @@ class StatsD::Instrument::Client
 
       sample_rate ||= @default_sample_rate
       if sample?(sample_rate)
-        metric_type ||= datagram_builder.latency_metric_type
+        metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
         latency_in_ms = 1000.0 * (stop - start)
-        emit(datagram_builder.send(metric_type, name, latency_in_ms, sample_rate, tags))
+        emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
       end
     end
   end
@@ -198,8 +206,9 @@ class StatsD::Instrument::Client
   # @return [void]
   #
   # @note Supported by the Datadog implementation only.
-  def service_check(name, status, timestamp: nil, hostname: nil, tags: nil, message: nil)
-    emit(datagram_builder._sc(name, status, timestamp: timestamp, hostname: hostname, tags: tags, message: message))
+  def service_check(name, status, timestamp: nil, hostname: nil, tags: nil, message: nil, no_prefix: false)
+    emit(datagram_builder(no_prefix: no_prefix)._sc(name, status,
+      timestamp: timestamp, hostname: hostname, tags: tags, message: message))
   end
 
   # Emits an event.
@@ -215,10 +224,11 @@ class StatsD::Instrument::Client
   #
   # @note Supported by the Datadog implementation only.
   def event(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
-    source_type_name: nil, alert_type: nil, tags: nil)
+    source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
 
-    emit(datagram_builder._e(title, text, timestamp: timestamp, hostname: hostname, aggregation_key: aggregation_key,
-      priority: priority, source_type_name: source_type_name, alert_type: alert_type, tags: tags))
+    emit(datagram_builder(no_prefix: no_prefix)._e(title, text, timestamp: timestamp,
+      hostname: hostname, tags: tags, aggregation_key: aggregation_key, priority: priority,
+      source_type_name: source_type_name, alert_type: alert_type))
   end
 
   # Instantiates a new StatsD client that uses the settings of the current client,
@@ -259,7 +269,10 @@ class StatsD::Instrument::Client
   end
 
   def capture_sink
-    StatsD::Instrument::CaptureSink.new(parent: @sink, datagram_class: datagram_builder.datagram_class)
+    StatsD::Instrument::CaptureSink.new(
+      parent: @sink,
+      datagram_class: datagram_builder(no_prefix: false).datagram_class,
+    )
   end
 
   def with_capture_sink(capture_sink)
@@ -282,8 +295,11 @@ class StatsD::Instrument::Client
 
   protected
 
-  def datagram_builder
-    @datagram_builder ||= @datagram_builder_class.new(prefix: prefix, default_tags: default_tags)
+  def datagram_builder(no_prefix:)
+    @datagram_builder[no_prefix] ||= @datagram_builder_class.new(
+      prefix: no_prefix ? nil : prefix,
+      default_tags: default_tags,
+    )
   end
 
   def sample?(sample_rate)
