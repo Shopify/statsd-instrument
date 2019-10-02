@@ -21,6 +21,8 @@ module RuboCop
         statsd_count
       }
 
+      private
+
       def metaprogramming_method?(node)
         METAPROGRAMMING_METHODS.include?(node.method_name)
       end
@@ -39,3 +41,4 @@ require_relative 'rubocop/metric_return_value'
 require_relative 'rubocop/metric_value_keyword_argument'
 require_relative 'rubocop/positional_arguments'
 require_relative 'rubocop/splat_arguments'
+require_relative 'rubocop/measure_as_dist'
