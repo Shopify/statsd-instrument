@@ -183,6 +183,44 @@ class StatsD::Instrument::Client
     end
   end
 
+  # Emits a service check.
+  #
+  # @param [String] title Event title.
+  # @param [String] text Event description. Newlines are allowed.
+  # @param [Time] timestamp The of the event. If not provided,
+  #   Datadog will interpret it as the current timestamp.
+  # @param [String] hostname A hostname to associate with the event.
+  # @param [String] aggregation_key An aggregation key to group events with the same key.
+  # @param [String] priority Priority of the event. Either "normal" (default) or "low".
+  # @param [String] source_type_name The source type of the event.
+  # @param [String] alert_type Either "error", "warning", "info" (default) or "success".
+  # @param [Array, Hash] tags Tags to associate with the event.
+  # @return [void]
+  #
+  # @note Supported by the Datadog implementation only.
+  def service_check(name, status, timestamp: nil, hostname: nil, tags: nil, message: nil)
+    emit(datagram_builder._sc(name, status, timestamp: timestamp, hostname: hostname, tags: tags, message: message))
+  end
+
+  # Emits an event.
+  #
+  # @param [String] name Name of the service
+  # @param [Symbol] status Either `:ok`, `:warning`, `:critical` or `:unknown`
+  # @param [Time] timestamp The moment when the service was checked. If not provided,
+  #   Datadog will interpret it as the current timestamp.
+  # @param [String] hostname A hostname to associate with the check.
+  # @param [Array, Hash] tags Tags to associate with the check.
+  # @param [String] message A message describing the current state of the service check.
+  # @return [void]
+  #
+  # @note Supported by the Datadog implementation only.
+  def event(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
+    source_type_name: nil, alert_type: nil, tags: nil)
+
+    emit(datagram_builder._e(title, text, timestamp: timestamp, hostname: hostname, aggregation_key: aggregation_key,
+      priority: priority, source_type_name: source_type_name, alert_type: alert_type, tags: tags))
+  end
+
   # Instantiates a new StatsD client that uses the settings of the current client,
   # except for the provided overrides.
   #
