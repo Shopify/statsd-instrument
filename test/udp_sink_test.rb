@@ -24,6 +24,18 @@ class UDPSinktest < Minitest::Test
     assert_equal 'foo:1|c', datagram
   end
 
+  def test_sample?
+    udp_sink = StatsD::Instrument::UDPSink.new(@host, @port)
+    assert udp_sink.sample?(1)
+    refute udp_sink.sample?(0)
+
+    udp_sink.stubs(:rand).returns(0.3)
+    assert udp_sink.sample?(0.5)
+
+    udp_sink.stubs(:rand).returns(0.7)
+    refute udp_sink.sample?(0.5)
+  end
+
   def test_parallelism
     udp_sink = StatsD::Instrument::UDPSink.new(@host, @port)
     50.times { |i| Thread.new { udp_sink << "foo:#{i}|c" << "bar:#{i}|c" } }

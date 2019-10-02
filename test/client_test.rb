@@ -109,10 +109,9 @@ class ClientTest < Minitest::Test
 
   def test_latency_calls_block_even_when_not_sending_a_sample
     called = false
-    datagrams = @client.capture do
+    @client.capture do
       @client.latency('foo', sample_rate: 0) { called = true }
     end
-    assert_predicate datagrams, :empty?
     assert called, "The block should have been called"
   end
 
@@ -128,16 +127,26 @@ class ClientTest < Minitest::Test
     assert_equal "_e{7,18}:service|event\\ndescription", datagrams.first.source
   end
 
+  def test_sampling
+    mock_sink = mock('sink')
+    mock_sink.stubs(:sample?).returns(false, true, false, false, true)
+    mock_sink.expects(:<<).twice
+
+    client = StatsD::Instrument::Client.new(sink: mock_sink)
+    5.times { client.increment('metric') }
+  end
+
   def test_clone_with_prefix_option
-    datagrams = []
-    original_client = StatsD::Instrument::Client.new(sink: datagrams)
+    # Both clients will use the same sink.
+    mock_sink = mock('sink')
+    mock_sink.stubs(:sample?).returns(true)
+    mock_sink.expects(:<<).with("metric:1|c").returns(mock_sink)
+    mock_sink.expects(:<<).with("foo.metric:1|c").returns(mock_sink)
+
+    original_client = StatsD::Instrument::Client.new(sink: mock_sink)
     client_with_other_options = original_client.clone_with_options(prefix: 'foo')
 
     original_client.increment('metric')
     client_with_other_options.increment('metric')
-
-    assert_equal 2, datagrams.size, "Message both client should use the same sink"
-    assert_equal 'metric', StatsD::Instrument::Datagram.new(datagrams[0]).name
-    assert_equal 'foo.metric', StatsD::Instrument::Datagram.new(datagrams[1]).name
   end
 end
