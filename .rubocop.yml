@@ -45,3 +45,6 @@ StatsD/MetaprogrammingPositionalArguments:
 
 StatsD/MeasureAsDistArgument:
   Enabled: true
+
+StatsD/MetricPrefixArgument:
+  Enabled: true

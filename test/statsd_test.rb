@@ -219,14 +219,6 @@ class StatsDTest < Minitest::Test
 
     m = capture_statsd_call { StatsD.increment('counter', no_prefix: true) }
     assert_equal 'counter', m.name
-
-    unless StatsD::Instrument.strict_mode_enabled?
-      m = capture_statsd_call { StatsD.increment('counter', prefix: "foobar") }
-      assert_equal 'foobar.counter', m.name
-
-      m = capture_statsd_call { StatsD.increment('counter', prefix: "foobar", no_prefix: true) }
-      assert_equal 'counter', m.name
-    end
   end
 
   protected

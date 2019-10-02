@@ -97,7 +97,7 @@ module StatsD
         define_method(method) do |*args, &block|
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
           prefix ||= StatsD.prefix
-          StatsD.measure( # rubocop:disable StatsD/MeasureAsDistArgument
+          StatsD.measure( # rubocop:disable StatsD/MeasureAsDistArgument, StatsD/MetricPrefixArgument
             key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix, as_dist: as_dist
           ) do
             super(*args, &block)
@@ -121,7 +121,9 @@ module StatsD
         define_method(method) do |*args, &block|
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
           prefix ||= StatsD.prefix
-          StatsD.distribution(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix) do
+          StatsD.distribution( # rubocop:disable StatsD/MetricPrefixArgument
+            key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix
+          ) do
             super(*args, &block)
           end
         end
@@ -166,7 +168,8 @@ module StatsD
             suffix = truthiness == false ? 'failure' : 'success'
             key = "#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}"
             prefix ||= StatsD.prefix
-            StatsD.increment(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
+            StatsD.increment(key, prefix: prefix, # rubocop:disable StatsD/MetricPrefixArgument
+              sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           end
         end
       end
@@ -207,7 +210,8 @@ module StatsD
             if truthiness
               key = StatsD::Instrument.generate_metric_name(name, self, *args)
               prefix ||= StatsD.prefix
-              StatsD.increment(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
+              StatsD.increment(key, prefix: prefix, # rubocop:disable StatsD/MetricPrefixArgument
+                sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
             end
           end
         end
@@ -230,7 +234,8 @@ module StatsD
         define_method(method) do |*args, &block|
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
           prefix ||= StatsD.prefix
-          StatsD.increment(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
+          StatsD.increment(key, prefix: prefix, # rubocop:disable StatsD/MetricPrefixArgument
+            sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           super(*args, &block)
         end
       end

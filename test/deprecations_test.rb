@@ -9,6 +9,7 @@ class DeprecationsTest < Minitest::Test
       def foo; end
       statsd_count :foo, 'frequency', 0.5, ['tag'] # rubocop:disable StatsD/MetaprogrammingPositionalArguments
       statsd_measure :foo, 'latency', as_dist: true # rubocop:disable StatsD/MeasureAsDistArgument
+      statsd_count_success :foo, 'frequency', prefix: 'foo' # rubocop:disable StatsD/MetricPrefixArgument
     end
   end
 
@@ -16,6 +17,30 @@ class DeprecationsTest < Minitest::Test
 
   def setup
     skip("Deprecation are not supported in strict mode") if StatsD::Instrument.strict_mode_enabled?
+  end
+
+  def test__deprecated__metaprogramming_method_with_positional_arguments
+    metrics = capture_statsd_calls { InstrumentedClass.new.foo }
+    metric = metrics[0]
+    assert_equal :c, metric.type
+    assert_equal 'frequency', metric.name
+    assert_equal 1, metric.value
+    assert_equal 0.5, metric.sample_rate
+    assert_equal ["tag"], metric.tags
+  end
+
+  def test__deprecated__metaprogramming_statsd_measure_with_as_dist
+    metrics = capture_statsd_calls { InstrumentedClass.new.foo }
+    metric = metrics[1]
+    assert_equal :d, metric.type
+    assert_equal 'latency', metric.name
+  end
+
+  def test__deprecated__metaprogramming_statsd_count_with_prefix
+    metrics = capture_statsd_calls { InstrumentedClass.new.foo }
+    metric = metrics[2]
+    assert_equal :c, metric.type
+    assert_equal 'foo.frequency.success', metric.name
   end
 
   # rubocop:disable StatsD/MetricValueKeywordArgument
@@ -68,23 +93,6 @@ class DeprecationsTest < Minitest::Test
   end
   # rubocop:enable StatsD/PositionalArguments
 
-  def test__deprecated__metaprogramming_method_with_positional_arguments
-    metrics = capture_statsd_calls { InstrumentedClass.new.foo }
-    metric = metrics[0]
-    assert_equal :c, metric.type
-    assert_equal 'frequency', metric.name
-    assert_equal 1, metric.value
-    assert_equal 0.5, metric.sample_rate
-    assert_equal ["tag"], metric.tags
-  end
-
-  def test__deprecated__metaprogramming_statsd_measure_with_as_dist
-    metrics = capture_statsd_calls { InstrumentedClass.new.foo }
-    metric = metrics[1]
-    assert_equal :d, metric.type
-    assert_equal 'latency', metric.name
-  end
-
   # rubocop:disable StatsD/MeasureAsDistArgument
   def test__deprecated__statsd_measure_with_explicit_value_and_distribution_override
     metric = capture_statsd_call { StatsD.measure('values.foobar', 42, as_dist: true) }
@@ -103,6 +111,16 @@ class DeprecationsTest < Minitest::Test
     assert_nil return_value
   end
   # rubocop:enable StatsD/MeasureAsDistArgument
+
+  # rubocop:disable StatsD/MetricPrefixArgument
+  def test__deprecated__override_name_prefix
+    m = capture_statsd_call { StatsD.increment('counter', prefix: "foobar") }
+    assert_equal 'foobar.counter', m.name
+
+    m = capture_statsd_call { StatsD.increment('counter', prefix: "foobar", no_prefix: true) }
+    assert_equal 'counter', m.name
+  end
+  # rubocop:enable StatsD/MetricPrefixArgument
 
   protected
 
