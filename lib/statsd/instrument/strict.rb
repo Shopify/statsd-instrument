@@ -26,7 +26,7 @@ module StatsD
     module Strict
       def increment(key, value = 1, sample_rate: nil, tags: nil, no_prefix: false)
         raise ArgumentError, "StatsD.increment does not accept a block" if block_given?
-        raise ArgumentError, "The value argument should be an integer, got #{value.inspect}" unless value.is_a?(Numeric)
+        raise ArgumentError, "The value argument should be an integer, got #{value.inspect}" unless value.is_a?(Integer)
         check_tags_and_sample_rate(sample_rate, tags)
 
         super
