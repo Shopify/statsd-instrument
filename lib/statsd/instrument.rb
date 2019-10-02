@@ -329,7 +329,7 @@ module StatsD
   end
 
   attr_accessor :logger, :default_sample_rate, :prefix
-  attr_writer :backend
+  attr_writer :backend, :client
   attr_reader :default_tags
 
   def default_tags=(tags)
@@ -338,6 +338,13 @@ module StatsD
 
   def backend
     @backend ||= StatsD::Instrument::Environment.default_backend
+  end
+
+  def client
+    @client ||= begin
+      require 'statsd/instrument/client'
+      StatsD::Instrument::Environment.from_env.default_client
+    end
   end
 
   # @!method measure(name, value = nil, sample_rate: nil, tags: nil, &block)
