@@ -24,7 +24,7 @@ module StatsD
     #
     # This monkeypatch is not meant to be used in production.
     module Strict
-      def increment(key, value = 1, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+      def increment(key, value = 1, sample_rate: nil, tags: nil, no_prefix: false)
         raise ArgumentError, "StatsD.increment does not accept a block" if block_given?
         raise ArgumentError, "The value argument should be an integer, got #{value.inspect}" unless value.is_a?(Numeric)
         check_tags_and_sample_rate(sample_rate, tags)
@@ -32,7 +32,7 @@ module StatsD
         super
       end
 
-      def gauge(key, value, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+      def gauge(key, value, sample_rate: nil, tags: nil, no_prefix: false)
         raise ArgumentError, "StatsD.increment does not accept a block" if block_given?
         raise ArgumentError, "The value argument should be an integer, got #{value.inspect}" unless value.is_a?(Numeric)
         check_tags_and_sample_rate(sample_rate, tags)
@@ -40,7 +40,7 @@ module StatsD
         super
       end
 
-      def histogram(key, value, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+      def histogram(key, value, sample_rate: nil, tags: nil, no_prefix: false)
         raise ArgumentError, "StatsD.increment does not accept a block" if block_given?
         raise ArgumentError, "The value argument should be an integer, got #{value.inspect}" unless value.is_a?(Numeric)
         check_tags_and_sample_rate(sample_rate, tags)
@@ -48,37 +48,33 @@ module StatsD
         super
       end
 
-      def set(key, value, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+      def set(key, value, sample_rate: nil, tags: nil, no_prefix: false)
         raise ArgumentError, "StatsD.set does not accept a block" if block_given?
         check_tags_and_sample_rate(sample_rate, tags)
 
         super
       end
 
-      def service_check(name, status, tags: nil, prefix: StatsD.prefix, no_prefix: false,
+      def service_check(name, status, tags: nil, no_prefix: false,
         hostname: nil, timestamp: nil, message: nil)
 
         super
       end
 
-      def event(title, text, tags: nil, prefix: StatsD.prefix, no_prefix: false,
+      def event(title, text, tags: nil, no_prefix: false,
         hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil)
 
         super
       end
 
-      def measure(key, value = UNSPECIFIED, sample_rate: nil, tags: nil,
-        prefix: StatsD.prefix, no_prefix: false, &block)
-
+      def measure(key, value = UNSPECIFIED, sample_rate: nil, tags: nil, no_prefix: false, &block)
         check_block_or_numeric_value(value, &block)
         check_tags_and_sample_rate(sample_rate, tags)
 
         super
       end
 
-      def distribution(key, value = UNSPECIFIED, sample_rate: nil, tags: nil,
-        prefix: StatsD.prefix, no_prefix: false, &block)
-
+      def distribution(key, value = UNSPECIFIED, sample_rate: nil, tags: nil, no_prefix: false, &block)
         check_block_or_numeric_value(value, &block)
         check_tags_and_sample_rate(sample_rate, tags)
 
@@ -111,40 +107,113 @@ module StatsD
     end
 
     module StrictMetaprogramming
-      def statsd_measure(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
+      def statsd_measure(method, name, sample_rate: nil, tags: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
 
         # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
-        # Stats.measure call to not use the `as_dist` argumenr.
+        # Stats.measure call to not use the `as_dist` and `prefix` arguments.
         add_to_method(method, name, :measure) do
           define_method(method) do |*args, &block|
             key = StatsD::Instrument.generate_metric_name(name, self, *args)
-            prefix ||= StatsD.prefix
-            StatsD.measure(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix) do
+            StatsD.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
               super(*args, &block)
             end
           end
         end
       end
 
-      def statsd_distribution(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
+      def statsd_distribution(method, name, sample_rate: nil, tags: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
-        super
+
+        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Stats.distribution call to not use the `prefix` argument.
+
+        add_to_method(method, name, :distribution) do
+          define_method(method) do |*args, &block|
+            key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            StatsD.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
+              super(*args, &block)
+            end
+          end
+        end
       end
 
-      def statsd_count_success(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
+      def statsd_count_success(method, name, sample_rate: nil, tags: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
-        super
+
+        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Stats.increment call to not use the `prefix` argument.
+
+        add_to_method(method, name, :count_success) do
+          define_method(method) do |*args, &block|
+            begin
+              truthiness = result = super(*args, &block)
+            rescue
+              truthiness = false
+              raise
+            else
+              if block_given?
+                begin
+                  truthiness = yield(result)
+                rescue
+                  truthiness = false
+                end
+              end
+              result
+            ensure
+              suffix = truthiness == false ? 'failure' : 'success'
+              key = "#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}"
+              StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+            end
+          end
+        end
       end
 
-      def statsd_count_if(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
+      def statsd_count_if(method, name, sample_rate: nil, tags: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
-        super
+
+        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Stats.increment call to not use the `prefix` argument.
+
+        add_to_method(method, name, :count_if) do
+          define_method(method) do |*args, &block|
+            begin
+              truthiness = result = super(*args, &block)
+            rescue
+              truthiness = false
+              raise
+            else
+              if block_given?
+                begin
+                  truthiness = yield(result)
+                rescue
+                  truthiness = false
+                end
+              end
+              result
+            ensure
+              if truthiness
+                key = StatsD::Instrument.generate_metric_name(name, self, *args)
+                StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+              end
+            end
+          end
+        end
       end
 
-      def statsd_count(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
+      def statsd_count(method, name, sample_rate: nil, tags: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
-        super
+
+        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Stats.increment call to not use the `prefix` argument.
+
+        add_to_method(method, name, :count) do
+          define_method(method) do |*args, &block|
+            key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+            super(*args, &block)
+          end
+        end
       end
 
       private

@@ -355,6 +355,8 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_macro_can_overwrite_prefix
+    skip("StatsD.measure(..., prefix: 'foo') is deprecated") if StatsD::Instrument.strict_mode_enabled?
+
     StatsD.prefix = 'Foo'
     ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
     ActiveMerchant::Gateway.singleton_class.statsd_measure :sync, 'ActiveMerchant.Gateway.sync', prefix: 'Bar'
@@ -364,8 +366,10 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_equal 1, statsd_calls.length
     assert_equal "Bar.ActiveMerchant.Gateway.sync", statsd_calls.first.name
   ensure
-    StatsD.prefix = nil
-    ActiveMerchant::Gateway.singleton_class.statsd_remove_measure :sync, 'ActiveMerchant.Gateway.sync'
+    unless StatsD::Instrument.strict_mode_enabled?
+      StatsD.prefix = nil
+      ActiveMerchant::Gateway.singleton_class.statsd_remove_measure :sync, 'ActiveMerchant.Gateway.sync'
+    end
   end
 
   def test_statsd_macro_can_disable_prefix
