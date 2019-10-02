@@ -169,15 +169,17 @@ class StatsD::Instrument::Client
   # @return The return value of the proivded block will be passed through.
   def latency(name, sample_rate: nil, tags: nil, metric_type: nil)
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    yield
-  ensure
-    stop = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    begin
+      yield
+    ensure
+      stop = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
-    sample_rate ||= @default_sample_rate
-    if sample?(sample_rate)
-      metric_type ||= datagram_builder.latency_metric_type
-      latency_in_ms = 1000.0 * (stop - start)
-      emit(datagram_builder.send(metric_type, name, latency_in_ms, sample_rate, tags))
+      sample_rate ||= @default_sample_rate
+      if sample?(sample_rate)
+        metric_type ||= datagram_builder.latency_metric_type
+        latency_in_ms = 1000.0 * (stop - start)
+        emit(datagram_builder.send(metric_type, name, latency_in_ms, sample_rate, tags))
+      end
     end
   end
 
