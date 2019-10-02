@@ -6,7 +6,7 @@ require 'statsd/instrument/client'
 module Compatibility
   class DogStatsDDatagramCompatibilityTest < Minitest::Test
     def setup
-      StatsD::Instrument::Client.any_instance.stubs(:rand).returns(0)
+      StatsD::Instrument::UDPSink.any_instance.stubs(:sample?).returns(true)
       StatsD::Instrument::Backends::UDPBackend.any_instance.stubs(:rand).returns(0)
 
       @server = UDPSocket.new

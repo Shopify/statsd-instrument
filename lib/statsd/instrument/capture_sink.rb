@@ -11,6 +11,10 @@ class StatsD::Instrument::CaptureSink
     @datagrams = []
   end
 
+  def sample?(_sample_rate)
+    true
+  end
+
   def <<(datagram)
     @datagrams << datagram_class.new(datagram)
     parent << datagram

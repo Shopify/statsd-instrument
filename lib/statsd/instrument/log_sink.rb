@@ -10,6 +10,10 @@ class StatsD::Instrument::LogSink
     @severity = severity
   end
 
+  def sample?(_sample_rate)
+    true
+  end
+
   def <<(datagram)
     # Some implementations require a newline at the end of datagrams.
     # When logging, we make sure those newlines are removed using chomp.

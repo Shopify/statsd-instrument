@@ -287,7 +287,7 @@ class StatsD::Instrument::Client
   end
 
   def sample?(sample_rate)
-    sample_rate == 1 || rand < sample_rate
+    @sink.sample?(sample_rate)
   end
 
   def emit(datagram)

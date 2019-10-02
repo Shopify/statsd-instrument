@@ -17,6 +17,10 @@ class StatsD::Instrument::UDPSink
     @socket = nil
   end
 
+  def sample?(sample_rate)
+    sample_rate == 1 || rand < sample_rate
+  end
+
   def <<(datagram)
     with_socket { |socket| socket.send(datagram, 0) > 0 }
     self
