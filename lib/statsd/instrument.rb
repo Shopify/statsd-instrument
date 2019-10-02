@@ -385,18 +385,12 @@ module StatsD
     prefix: StatsD.prefix, no_prefix: false, as_dist: false,
     &block
   )
-    prefix = nil if no_prefix
+    # TODO: in the next version, hardcode this to :ms when the as_dist argument is dropped.
     type = as_dist ? :d : :ms
-    unless block_given?
-      return collect_metric(type, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix, &block)
-    end
-
-    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    begin
-      block.call
-    ensure
-      # Ensure catches both a raised exception and a return in the invoked block
-      value = 1000.0 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
+    prefix = nil if no_prefix
+    if block_given?
+      measure_latency(type, key, sample_rate: sample_rate, tags: tags, prefix: prefix, &block)
+    else
       collect_metric(type, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
     end
   end
@@ -526,7 +520,11 @@ module StatsD
     &block
   )
     prefix = nil if no_prefix
-    measure(key, value, as_dist: true, sample_rate: sample_rate, tags: tags, prefix: prefix, &block)
+    if block_given?
+      measure_latency(:d, key, sample_rate: sample_rate, tags: tags, prefix: prefix, &block)
+    else
+      collect_metric(:d, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
+    end
   end
 
   # @!method key_value(name, value)
@@ -605,6 +603,17 @@ module StatsD
   end
 
   private
+
+  def measure_latency(type, key, sample_rate:, tags:, prefix:)
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    begin
+      yield
+    ensure
+      # Ensure catches both a raised exception and a return in the invoked block
+      value = 1000.0 * (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
+      collect_metric(type, key, value, sample_rate: sample_rate, tags: tags, prefix: prefix)
+    end
+  end
 
   # Instantiates a metric, and sends it to the backend for further processing.
   # @param options (see StatsD::Instrument::Metric#initialize)
