@@ -112,28 +112,28 @@ module StatsD
 
     module StrictMetaprogramming
       def statsd_measure(method, name, sample_rate: nil, tags: nil,
-        prefix: StatsD.prefix, no_prefix: false, as_dist: false)
+        prefix: nil, no_prefix: false, as_dist: false)
 
         check_method_and_metric_name(method, name)
         super
       end
 
-      def statsd_distribution(method, name, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+      def statsd_distribution(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
         super
       end
 
-      def statsd_count_success(method, name, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+      def statsd_count_success(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
         super
       end
 
-      def statsd_count_if(method, name, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+      def statsd_count_if(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
         super
       end
 
-      def statsd_count(method, name, sample_rate: nil, tags: nil, prefix: StatsD.prefix, no_prefix: false)
+      def statsd_count(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
         super
       end
