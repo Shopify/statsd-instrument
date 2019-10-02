@@ -1,5 +1,7 @@
 # frozen-string-literal: true
 
+require_relative '../rubocop' unless defined?(RuboCop::Cop::StatsD)
+
 module RuboCop
   module Cop
     module StatsD
@@ -8,14 +10,14 @@ module RuboCop
       #
       # Use the following Rubocop invocation to check your project's codebase:
       #
-      #     rubocop --require `bundle show statsd-instrument`/lib/statsd/instrument/rubocop/positional_arguments.rb \
+      #     rubocop --require `bundle show statsd-instrument`/lib/statsd/instrument/rubocop.rb \
       #       --only StatsD/PositionalArguments
       #
       # This cop can autocorrect some offenses it finds, but not all of them.
       class PositionalArguments < Cop
-        MSG = 'Use keyword arguments for StatsD calls'
+        include RuboCop::Cop::StatsD
 
-        STATSD_SINGLETON_METHODS = %i{increment gauge measure set histogram distribution key_value}
+        MSG = 'Use keyword arguments for StatsD calls'
 
         POSITIONAL_ARGUMENT_TYPES = Set[:int, :float, :nil]
         UNKNOWN_ARGUMENT_TYPES = Set[:send, :const, :lvar, :splat]
@@ -26,16 +28,14 @@ module RuboCop
         ACCEPTED_ARGUMENT_TYPES = KEYWORD_ARGUMENT_TYPES | BLOCK_ARGUMENT_TYPES
 
         def on_send(node)
-          if node.receiver&.type == :const && node.receiver&.const_name == "StatsD"
-            if STATSD_SINGLETON_METHODS.include?(node.method_name) && node.arguments.length >= 3
-              case node.arguments[2].type
-              when *REFUSED_ARGUMENT_TYPES
-                add_offense(node)
-              when *ACCEPTED_ARGUMENT_TYPES
-                nil
-              else
-                $stderr.puts "[StatsD/PositionalArguments] Unhandled argument type: #{node.arguments[2].type.inspect}"
-              end
+          if metric_method?(node) && node.arguments.length >= 3
+            case node.arguments[2].type
+            when *REFUSED_ARGUMENT_TYPES
+              add_offense(node)
+            when *ACCEPTED_ARGUMENT_TYPES
+              nil
+            else
+              $stderr.puts "[StatsD/PositionalArguments] Unhandled argument type: #{node.arguments[2].type.inspect}"
             end
           end
         end
