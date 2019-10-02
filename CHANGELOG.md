@@ -6,6 +6,45 @@ section below.
 
 ### Unreleased changes
 
+- **⚠️ DEPRECATION**: Using the `prefix: "foo"` argument for `StatsD.metric`
+  calls (and the metaprogramming macros) is deprecated.
+
+  - You can simply include the prefix in the metric name.
+  - If you want to override the global prefix, set `no_prefix: true` and
+    include the desired prefix in the metric name
+
+  This library ships with a Rubocop rule to detect uses of this keyword
+  argument in your codebase:
+
+  ``` sh
+  # Check for the prefix arguments on your StatsD.metric calls
+  rubocop --only StatsD/MetricPrefixArgument \
+    -r `bundle show statsd-instrument`/lib/statsd/instrument/rubocop.rb
+  ```
+
+  Strict mode has also been updated to no longer allow this argument.
+
+- **⚠️ DEPRECATION**: Using the `as_dist: true` argument for `StatsD.measure`
+  and `statsd_measure` methods is deprecated. This argument was only available
+  for internal use, but was exposed in the public API. It is unlikely that you
+  are usijng this argumenr, but you can check to make sure using this Rubocop
+  invocation:
+
+  ``` sh
+  # Check for the as_dist arguments on your StatsD.measure calls
+  rubocop --only StatsD/MeasureAsDistArgument \
+    -r `bundle show statsd-instrument`/lib/statsd/instrument/rubocop.rb
+  ```
+
+  Strict mode has also been updated to no longer allow this argument.
+
+- You can now enable strict mode simply by setting the `STATSD_STRICT_MODE`
+  environment variable. No more need to change your Gemfile! Note that it is
+  still not recommended to enable strict mode in production due to the
+  performance penalty, but is recommended for development and test. E.g. use
+  `STATSD_STRICT_MODE=1 rails test` to run your test suite with strict mode
+  enabled to expose any deprecations in your codebase.
+
 - Add support for `STATSD_PREFIX` and `STATSD_DEFAULT_TAGS` environment variables
   to configure the prefix to use for metrics and the comma-separated list of tags
   to apply to every metric, respectively.
@@ -81,7 +120,7 @@ section below.
 
 ## Version 2.5.0
 
-- **DEPRECATION**: Providing a sample rate and tags to your metrics and method
+- **⚠️ DEPRECATION**: Providing a sample rate and tags to your metrics and method
   instrumentation macros should be done using keyword arguments rather than
   positional arguments. Also, previously you could provide `value` as a keyword
   argument, but it should be provided as the second positional argument.
@@ -123,7 +162,7 @@ section below.
 
   ```
 
-- **DEPRECATION**: Relying on the return value of the StatsD metric methods
+- **⚠️ DEPRECATION**: Relying on the return value of the StatsD metric methods
   (e.g. `StatsD.increment`) is deprecated. StatsD is a fire-and-forget
   protocol, so your code should not depend on the return value of these methods.
 
