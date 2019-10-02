@@ -4,13 +4,12 @@ require 'test_helper'
 
 class DeprecationsTest < Minitest::Test
   unless StatsD::Instrument.strict_mode_enabled?
-    # rubocop:disable StatsD/MetaprogrammingPositionalArguments
     class InstrumentedClass
       extend StatsD::Instrument
       def foo; end
-      statsd_count :foo, 'metric', 0.5, ['tag']
+      statsd_count :foo, 'frequency', 0.5, ['tag'] # rubocop:disable StatsD/MetaprogrammingPositionalArguments
+      statsd_measure :foo, 'latency', as_dist: true # rubocop:disable StatsD/MeasureAsDist
     end
-    # rubocop:enable StatsD/MetaprogrammingPositionalArguments
   end
 
   include StatsD::Instrument::Assertions
@@ -27,11 +26,13 @@ class DeprecationsTest < Minitest::Test
     assert_equal :ms, metric.type
   end
 
+  # rubocop:disable StatsD/MeasureAsDist
   def test__deprecated__statsd_measure_with_explicit_value_keyword_and_distribution_override
     metric = capture_statsd_call { StatsD.measure('values.foobar', value: 42, as_dist: true) }
     assert_equal 42, metric.value
     assert_equal :d, metric.type
   end
+  # rubocop:enable StatsD/MeasureAsDist
 
   def test__deprecated__statsd_increment_with_value_as_keyword_argument
     metric = capture_statsd_call { StatsD.increment('values.foobar', value: 2) }
@@ -68,13 +69,40 @@ class DeprecationsTest < Minitest::Test
   # rubocop:enable StatsD/PositionalArguments
 
   def test__deprecated__metaprogramming_method_with_positional_arguments
-    metric = capture_statsd_call { InstrumentedClass.new.foo }
+    metrics = capture_statsd_calls { InstrumentedClass.new.foo }
+    metric = metrics[0]
     assert_equal :c, metric.type
-    assert_equal 'metric', metric.name
+    assert_equal 'frequency', metric.name
     assert_equal 1, metric.value
     assert_equal 0.5, metric.sample_rate
     assert_equal ["tag"], metric.tags
   end
+
+  def test__deprecated__metaprogramming_statsd_measure_with_as_dist
+    metrics = capture_statsd_calls { InstrumentedClass.new.foo }
+    metric = metrics[1]
+    assert_equal :d, metric.type
+    assert_equal 'latency', metric.name
+  end
+
+  # rubocop:disable StatsD/MeasureAsDist
+  def test__deprecated__statsd_measure_with_explicit_value_and_distribution_override
+    metric = capture_statsd_call { StatsD.measure('values.foobar', 42, as_dist: true) }
+    assert_equal :d, metric.type
+  end
+
+  def test__deprecated__statsd_measure_use_distribution_override_for_a_block
+    metric = capture_statsd_call do
+      StatsD.measure('values.foobar', as_dist: true) { 'foo' }
+    end
+    assert_equal :d, metric.type
+  end
+
+  def test__deprecated__statsd_measure_as_distribution_returns_return_value_of_block_even_if_nil
+    return_value = StatsD.measure('values.foobar', as_dist: true) { nil }
+    assert_nil return_value
+  end
+  # rubocop:enable StatsD/MeasureAsDist
 
   protected
 
