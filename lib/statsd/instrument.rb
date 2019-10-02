@@ -621,4 +621,4 @@ require 'statsd/instrument/helpers'
 require 'statsd/instrument/assertions'
 require 'statsd/instrument/metric_expectation'
 require 'statsd/instrument/matchers' if defined?(::RSpec)
-require 'statsd/instrument/railtie' if defined?(Rails)
+require 'statsd/instrument/railtie' if defined?(::Rails::Railtie)
