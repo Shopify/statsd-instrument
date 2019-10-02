@@ -1,57 +1,51 @@
 # StatsD client for Ruby apps
 
-[![Built on Travis](https://secure.travis-ci.org/Shopify/statsd-instrument.svg?branch=master)](https://secure.travis-ci.org/Shopify/statsd-instrument)
+This is a ruby client for statsd (http://github.com/etsy/statsd). It provides
+a lightweight way to track and measure metrics in your application.
 
-This is a ruby client for statsd (http://github.com/etsy/statsd). It provides a lightweight way to track and measure metrics in your application.
+We call out to statsd by sending data over a UDP socket. UDP sockets are fast,
+but unreliable, there is no guarantee that your data will ever arrive at its
+location. In other words, fire and forget. This is perfect for this use case
+because it means your code doesn't get bogged down trying to log statistics.
+We send data to statsd several times per request and haven't noticed a
+performance hit.
 
-We call out to statsd by sending data over a UDP socket. UDP sockets are fast, but unreliable, there is no guarantee that your data will ever arrive at its location. In other words, fire and forget. This is perfect for this use case because it means your code doesn't get bogged down trying to log statistics. We send data to statsd several times per request and haven't noticed a performance hit.
-
-For more information about StatsD, see the [README of the Etsy project](http://github.com/etsy/statsd).
+For more information about StatsD, see the [README of the Etsy
+project](http://github.com/etsy/statsd).
 
 ## Configuration
 
-The library comes with different backends. Based on your environment (detected using environment
-variables), it will select one of the following backends by default:
+It's recommended to configure this librray by setting environment variables.
+The following environment variables are supported:
 
-- **Production** and **staging** environment: `StatsD::Instrument::Backends::UDPBackend` will actually send UDP packets.
-  It will configure itself using environment variables: it uses `STATSD_ADDR` for the address to connect
-  to (default `"localhost:8125"`), and `STATSD_IMPLEMENTATION` to set the protocol variant. (See below)
-- **Test** environment: `StatsD::Instrument::Backends::NullBackend` will swallow all calls. See below for
-  notes on writing tests.
-- **Development**, and all other, environments: `StatsD::Instrument::Backends::LoggerBackend` will log all
-  calls to stdout.
+- `STATSD_ADDR`: (default `localhost:8125`) The address to send the StatsD UDP
+  datagrams to.
+- `STATSD_IMPLEMENTATION`: (default: `statsd`). The StatsD implementation you
+  are using. `statsd`, `statsite` and `datadog` are supported. Some features
+  are only available on certain implementations,
+- `STATSD_ENV`: The environment StatsD will run in. If this is not set
+  explicitly, this will be determined based on other environment variables,
+  like `RAILS_ENV` or `ENV`. The library will behave differently:
 
-You can override the currently active backend by setting `StatsD.backend`:
+  - In the **production** and **staging** environment, thre librray will
+    actually send UDP packets.
+  - In the **test** environment, it will swallow all calls, but allows you to
+    capture them for testing purposes. See below for notes on writing tests.
+  - In **development** and all other environments, it will write all calls to
+    the log (`StatsD.logger`, which by default writes to STDOUT).
 
-``` ruby
-# Sets up a UDP backend. First argument is the UDP address to send StatsD packets to,
-# second argument specifies the protocol variant (i.e. `:statsd`, `:statsite`, or `:datadog`).
-StatsD.backend = StatsD::Instrument::Backends::UDPBackend.new("1.2.3.4:8125", :statsite)
-
-# Sets up a logger backend
-StatsD.backend = StatsD::Instrument::Backends::LoggerBackend.new(Rails.logger)
-```
-
-The other available settings, with their default, are
-
-``` ruby
-# Logger to which commands are logged when using the LoggerBackend, which is
-# the default in development environment. Also, any errors or warnings will
-# be logged here.
-StatsD.logger = defined?(Rails) ? Rails.logger : Logger.new($stderr)
-
-# An optional prefix to be added to each metric.
-StatsD.prefix = nil # but can be set to any string
-
-# Sample 10% of events. By default all events are reported, which may overload your network or server.
-# You can, and should vary this on a per metric basis, depending on frequency and accuracy requirements
-StatsD.default_sample_rate = (ENV['STATSD_SAMPLE_RATE'] || 0.1 ).to_f
-```
+- `STATSD_SAMPLE_RATE`: (default: `1.0`) The default sample rate to use for all
+  metrics. This can be used to reduce the amount of network traffic and CPU
+  overhead the usage of this library generates. This can be overridden in a
+  metric method call.
+- `STATSD_PREFIX`: The prefix to apply to all metric names. This can be
+  overridden in a metric method call.
+- `STATSD_DEFAULT_TAGS`: A comma-separated list of tags to apply to all metrics.
+  (Note: tags are not supported by all iomplementations.)
 
 ## StatsD keys
 
 StatsD keys look like 'admin.logins.api.success'. Dots are used as namespace separators.
-In Graphite, they will show up as folders.
 
 ## Usage
 
@@ -82,7 +76,7 @@ StatsD.increment('GoogleBase.insert')
 StatsD.increment('GoogleBase.insert', 10)
 # you can also specify a sample rate, so only 1/10 of events
 # actually get to statsd. Useful for very high volume data
-StatsD.increment('GoogleBase.insert', 1, sample_rate: 0.1)
+StatsD.increment('GoogleBase.insert', sample_rate: 0.1)
 ```
 
 #### StatsD.gauge
@@ -105,6 +99,18 @@ StatsD.set('GoogleBase.customers', "12345", sample_rate: 1.0)
 ```
 
 Because you are counting unique values, the results of using a sampling value less than 1.0 can lead to unexpected, hard to interpret results.
+
+#### StatsD.histogram
+
+Builds a histogram of numeric values.
+``` ruby
+
+StatsD.histogram('Order.value', order.value_in_usd.to_f tags: { source: 'POS' })
+```
+
+Because you are counting unique values, the results of using a sampling value less than 1.0 can lead to unexpected, hard to interpret results.
+
+*Note: This is only supported by the beta datadog implementatation.*
 
 #### StatsD.distribution
 
@@ -333,7 +339,9 @@ end
 
 ### Compatibility
 
-Tested using Travis CI against Ruby 2.0, 2.1, 2.2, Rubinius, and JRuby.
+The library is tested against Ruby 2.3 and higher. We are not testing on
+different Ruby implementations besides MRI, but we expect it to work on other
+implementations as well.
 
 ### Reliance on DNS
 
@@ -350,6 +358,6 @@ This can be particularly problematic in clouds that have a shared DNS infrastruc
 
 This library was developed for shopify.com and is MIT licensed.
 
-- [API documentation](http://www.rubydoc.info/gems/statsd-instrument/frames)
+- [API documentation](http://www.rubydoc.info/gems/statsd-instrument)
 - [The changelog](./CHANGELOG.md) covers the changes between releases.
 - [Contributing notes](./CONTRIBUTING.md) if you are interested in contributing to this library.
