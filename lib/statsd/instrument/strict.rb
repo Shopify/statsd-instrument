@@ -68,7 +68,7 @@ module StatsD
       end
 
       def measure(key, value = UNSPECIFIED, sample_rate: nil, tags: nil,
-        prefix: StatsD.prefix, no_prefix: false, as_dist: false, &block)
+        prefix: StatsD.prefix, no_prefix: false, &block)
 
         check_block_or_numeric_value(value, &block)
         check_tags_and_sample_rate(sample_rate, tags)
@@ -111,11 +111,20 @@ module StatsD
     end
 
     module StrictMetaprogramming
-      def statsd_measure(method, name, sample_rate: nil, tags: nil,
-        prefix: nil, no_prefix: false, as_dist: false)
-
+      def statsd_measure(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)
         check_method_and_metric_name(method, name)
-        super
+
+        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Stats.measure call to not use the `as_dist` argumenr.
+        add_to_method(method, name, :measure) do
+          define_method(method) do |*args, &block|
+            key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            prefix ||= StatsD.prefix
+            StatsD.measure(key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix) do
+              super(*args, &block)
+            end
+          end
+        end
       end
 
       def statsd_distribution(method, name, sample_rate: nil, tags: nil, prefix: nil, no_prefix: false)

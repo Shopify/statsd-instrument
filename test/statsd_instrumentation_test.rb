@@ -249,13 +249,16 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_measure_as_distribution
+    skip("StatsD.measure(..., as_dist: true) is deprecated") if StatsD::Instrument.strict_mode_enabled?
     ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', as_dist: true
 
     assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post') do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    unless StatsD::Instrument.strict_mode_enabled?
+      ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    end
   end
 
   def test_statsd_distribution
