@@ -12,10 +12,10 @@ module RuboCop
       # To run this cop on your codebase:
       #
       #     rubocop --require `bundle show statsd-instrument`/lib/statsd/instrument/rubocop.rb \
-      #       --only StatsD/MeasureAsDist
+      #       --only StatsD/MeasureAsDistArgument
       #
       # This cop will not autocorrect offenses.
-      class MeasureAsDist < Cop
+      class MeasureAsDistArgument < Cop
         include RuboCop::Cop::StatsD
 
         MSG = 'Do not use StatsD.measure(..., as_dist: true). Use StatsD.distribution instead.'
@@ -36,17 +36,6 @@ module RuboCop
             end
             add_offense(node) if as_dist
           end
-        end
-
-        def keyword_arguments(node)
-          return nil if node.arguments.empty?
-          last_argument = if node.arguments.last&.type == :block_pass
-            node.arguments[node.arguments.length - 2]
-          else
-            node.arguments[node.arguments.length - 1]
-          end
-
-          last_argument&.type == :hash ? last_argument : nil
         end
       end
     end

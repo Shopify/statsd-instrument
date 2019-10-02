@@ -43,5 +43,5 @@ StatsD/SplatArguments:
 StatsD/MetaprogrammingPositionalArguments:
   Enabled: true
 
-StatsD/MeasureAsDist:
+StatsD/MeasureAsDistArgument:
   Enabled: true

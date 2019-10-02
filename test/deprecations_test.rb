@@ -8,7 +8,7 @@ class DeprecationsTest < Minitest::Test
       extend StatsD::Instrument
       def foo; end
       statsd_count :foo, 'frequency', 0.5, ['tag'] # rubocop:disable StatsD/MetaprogrammingPositionalArguments
-      statsd_measure :foo, 'latency', as_dist: true # rubocop:disable StatsD/MeasureAsDist
+      statsd_measure :foo, 'latency', as_dist: true # rubocop:disable StatsD/MeasureAsDistArgument
     end
   end
 
@@ -26,13 +26,13 @@ class DeprecationsTest < Minitest::Test
     assert_equal :ms, metric.type
   end
 
-  # rubocop:disable StatsD/MeasureAsDist
+  # rubocop:disable StatsD/MeasureAsDistArgument
   def test__deprecated__statsd_measure_with_explicit_value_keyword_and_distribution_override
     metric = capture_statsd_call { StatsD.measure('values.foobar', value: 42, as_dist: true) }
     assert_equal 42, metric.value
     assert_equal :d, metric.type
   end
-  # rubocop:enable StatsD/MeasureAsDist
+  # rubocop:enable StatsD/MeasureAsDistArgument
 
   def test__deprecated__statsd_increment_with_value_as_keyword_argument
     metric = capture_statsd_call { StatsD.increment('values.foobar', value: 2) }
@@ -85,7 +85,7 @@ class DeprecationsTest < Minitest::Test
     assert_equal 'latency', metric.name
   end
 
-  # rubocop:disable StatsD/MeasureAsDist
+  # rubocop:disable StatsD/MeasureAsDistArgument
   def test__deprecated__statsd_measure_with_explicit_value_and_distribution_override
     metric = capture_statsd_call { StatsD.measure('values.foobar', 42, as_dist: true) }
     assert_equal :d, metric.type
@@ -102,7 +102,7 @@ class DeprecationsTest < Minitest::Test
     return_value = StatsD.measure('values.foobar', as_dist: true) { nil }
     assert_nil return_value
   end
-  # rubocop:enable StatsD/MeasureAsDist
+  # rubocop:enable StatsD/MeasureAsDistArgument
 
   protected
 

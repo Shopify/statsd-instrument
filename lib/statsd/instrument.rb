@@ -97,7 +97,7 @@ module StatsD
         define_method(method) do |*args, &block|
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
           prefix ||= StatsD.prefix
-          StatsD.measure( # rubocop:disable StatsD/MeasureAsDist
+          StatsD.measure( # rubocop:disable StatsD/MeasureAsDistArgument
             key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix, as_dist: as_dist
           ) do
             super(*args, &block)

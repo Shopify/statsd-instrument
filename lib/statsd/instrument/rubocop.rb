@@ -32,6 +32,17 @@ module RuboCop
           node.receiver&.const_name == "StatsD" &&
           METRIC_METHODS.include?(node.method_name)
       end
+
+      def keyword_arguments(node)
+        return nil if node.arguments.empty?
+        last_argument = if node.arguments.last&.type == :block_pass
+          node.arguments[node.arguments.length - 2]
+        else
+          node.arguments[node.arguments.length - 1]
+        end
+
+        last_argument&.type == :hash ? last_argument : nil
+      end
     end
   end
 end
@@ -41,4 +52,4 @@ require_relative 'rubocop/metric_return_value'
 require_relative 'rubocop/metric_value_keyword_argument'
 require_relative 'rubocop/positional_arguments'
 require_relative 'rubocop/splat_arguments'
-require_relative 'rubocop/measure_as_dist'
+require_relative 'rubocop/measure_as_dist_argument'
