@@ -6,6 +6,14 @@ section below.
 
 ### Unreleased changes
 
+- Add support for `STATSD_PREFIX` and `STATSD_DEFAULT_TAGS` environment variables
+  to configure the prefix to use for metrics and the comma-separated list of tags
+  to apply to every metric, respectively.
+
+  These environment variables are preferred over using `StatsD.prefix` and
+  `StatsD.default_tags`: it's best practice to configure the StatsD library
+  using environment variables.
+
 - Several improvements to `StatsD.event` and `StatsD.service_check` (both are
   Datadog-only). The previous implementation would sometimes construct invalid
   datagrams based on the input. The method signatures have been made more
