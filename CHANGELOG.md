@@ -6,10 +6,32 @@ section below.
 
 ### Unreleased changes
 
+_Nothing yet!_
+
+## Version 2.6.0
+
+This release contains a new `StatsD::Instrument::Client` class, which is
+slated to replace the current implementation in the next major release.
+
+The main reasons for this rewrite are two folds:
+- Improved performance.
+- Being able to instantiate multiple clients.
+
+We have worked hard to make the new client as compatible as possible. However,
+to accomplish some of our goals we have deprecated some stuff that we think
+is unlikely to be used. See the rest of the release notes of this version, and
+version 2.5.0 to see what is deprecated.
+
+You can test compatibility with the new client by replacing `StatsD` with
+`StatsD.client`, which points to a client that will be instantiated using
+the same environment variables that you can already use for this library. You
+can also use strict mode, and rubocop rules to check whether you are using any
+deprecated patterns. See below for more info.
+
 - **⚠️ DEPRECATION**: Using the `prefix: "foo"` argument for `StatsD.metric`
   calls (and the metaprogramming macros) is deprecated.
 
-  - You can simply include the prefix in the metric name.
+  - You can include the prefix in the metric name.
   - If you want to override the global prefix, set `no_prefix: true` and
     include the desired prefix in the metric name
 
@@ -38,7 +60,7 @@ section below.
 
   Strict mode has also been updated to no longer allow this argument.
 
-- You can now enable strict mode simply by setting the `STATSD_STRICT_MODE`
+- You can now enable strict mode by setting the `STATSD_STRICT_MODE`
   environment variable. No more need to change your Gemfile! Note that it is
   still not recommended to enable strict mode in production due to the
   performance penalty, but is recommended for development and test. E.g. use
@@ -66,7 +88,7 @@ section below.
   Consider the following example:
 
   ``` ruby
-  assert_raises(RuntimeError)
+  assert_raises(RuntimeError) do
     assert_statsd_increment('foo') do
       raise 'something unexpected'
     end
@@ -86,7 +108,7 @@ section below.
   This means that the following test will fail:
 
   ``` ruby
-  assert_raises(RuntimeError)
+  assert_raises(RuntimeError) do
     assert_statsd_increment('foo') do
       StatsD.increment('foo')
       raise 'something unexpected'
@@ -100,7 +122,7 @@ section below.
 
   ``` ruby
   assert_statsd_increment('foo') do
-    assert_raises(RuntimeError)
+    assert_raises(RuntimeError) do
       StatsD.increment('foo')
       raise 'something unexpected'
     end
