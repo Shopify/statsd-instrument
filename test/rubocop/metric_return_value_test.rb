@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
-require 'statsd/instrument/rubocop/metric_return_value'
+require 'statsd/instrument/rubocop'
 
 module Rubocop
   class MetricReturnValueTest < Minitest::Test

@@ -21,12 +21,6 @@ class StatsDTest < Minitest::Test
     assert_equal :ms, metric.type
   end
 
-  def test_statsd_measure_with_explicit_value_and_distribution_override
-    skip("StatsD.measure(..., as_dist: true) is deprecated") if StatsD::Instrument.strict_mode_enabled?
-    metric = capture_statsd_call { StatsD.measure('values.foobar', 42, as_dist: true) }
-    assert_equal :d, metric.type
-  end
-
   def test_statsd_measure_without_value_or_block
     assert_raises(ArgumentError) { StatsD.measure('values.foobar', tags: 123) }
   end
@@ -44,23 +38,9 @@ class StatsDTest < Minitest::Test
     assert_equal 1120.0, metric.value
   end
 
-  def test_statsd_measure_use_distribution_override_for_a_block
-    skip("StatsD.measure(..., as_dist: true) is deprecated") if StatsD::Instrument.strict_mode_enabled?
-    metric = capture_statsd_call do
-      StatsD.measure('values.foobar', as_dist: true) { 'foo' }
-    end
-    assert_equal :d, metric.type
-  end
-
   def test_statsd_measure_returns_return_value_of_block
     return_value = StatsD.measure('values.foobar') { 'sarah' }
     assert_equal 'sarah', return_value
-  end
-
-  def test_statsd_measure_as_distribution_returns_return_value_of_block_even_if_nil
-    skip("StatsD.measure(..., as_dist: true) is deprecated") if StatsD::Instrument.strict_mode_enabled?
-    return_value = StatsD.measure('values.foobar', as_dist: true) { nil }
-    assert_nil return_value
   end
 
   def test_statsd_measure_with_return_in_block_still_captures
@@ -239,14 +219,6 @@ class StatsDTest < Minitest::Test
 
     m = capture_statsd_call { StatsD.increment('counter', no_prefix: true) }
     assert_equal 'counter', m.name
-
-    unless StatsD::Instrument.strict_mode_enabled?
-      m = capture_statsd_call { StatsD.increment('counter', prefix: "foobar") }
-      assert_equal 'foobar.counter', m.name
-
-      m = capture_statsd_call { StatsD.increment('counter', prefix: "foobar", no_prefix: true) }
-      assert_equal 'counter', m.name
-    end
   end
 
   protected

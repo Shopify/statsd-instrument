@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
-require 'statsd/instrument/rubocop/splat_arguments'
+require 'statsd/instrument/rubocop'
 
 module Rubocop
   class SplatArgumentsTest < Minitest::Test

@@ -2,11 +2,7 @@ inherit_from:
   - https://shopify.github.io/ruby-style-guide/rubocop.yml
 
 require:
-  - ./lib/statsd/instrument/rubocop/metric_return_value.rb
-  - ./lib/statsd/instrument/rubocop/metric_value_keyword_argument.rb
-  - ./lib/statsd/instrument/rubocop/positional_arguments.rb
-  - ./lib/statsd/instrument/rubocop/splat_arguments.rb
-  - ./lib/statsd/instrument/rubocop/metaprogramming_positional_arguments.rb
+  - ./lib/statsd/instrument/rubocop.rb
 
 AllCops:
   TargetRubyVersion: 2.3
@@ -45,4 +41,10 @@ StatsD/SplatArguments:
   Enabled: true
 
 StatsD/MetaprogrammingPositionalArguments:
+  Enabled: true
+
+StatsD/MeasureAsDistArgument:
+  Enabled: true
+
+StatsD/MetricPrefixArgument:
   Enabled: true

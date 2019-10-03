@@ -1,5 +1,7 @@
 # frozen-string-literal: true
 
+require_relative '../rubocop' unless defined?(RuboCop::Cop::StatsD)
+
 module RuboCop
   module Cop
     module StatsD
@@ -10,23 +12,17 @@ module RuboCop
       # Use the following Rubocop invocation to check your project's codebase:
       #
       #     rubocop --only StatsD/MetaprogrammingPositionalArguments
-      #       -r `bundle show statsd-instrument`/lib/statsd/instrument/rubocop/metaprogramming_positional_arguments.rb
+      #       -r `bundle show statsd-instrument`/lib/statsd/instrument/rubocop.rb
       #
       #
       # This cop will not autocorrect the offenses it finds, but generally the fixes are easy to fix
       class MetaprogrammingPositionalArguments < Cop
+        include RuboCop::Cop::StatsD
+
         MSG = 'Use keyword arguments for StatsD metaprogramming macros'
 
-        METAPROGRAMMING_METHODS = %i{
-          statsd_measure
-          statsd_distribution
-          statsd_count_success
-          statsd_count_if
-          statsd_count
-        }
-
         def on_send(node)
-          if METAPROGRAMMING_METHODS.include?(node.method_name)
+          if metaprogramming_method?(node)
             arguments = node.arguments.dup
             arguments.shift # method
             arguments.shift # metric

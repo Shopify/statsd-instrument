@@ -248,19 +248,6 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
   end
 
-  def test_statsd_measure_as_distribution
-    skip("StatsD.measure(..., as_dist: true) is deprecated") if StatsD::Instrument.strict_mode_enabled?
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', as_dist: true
-
-    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post') do
-      ActiveMerchant::UniqueGateway.new.purchase(true)
-    end
-  ensure
-    unless StatsD::Instrument.strict_mode_enabled?
-      ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
-    end
-  end
-
   def test_statsd_distribution
     ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3
 
@@ -352,24 +339,6 @@ class StatsDInstrumentationTest < Minitest::Test
   ensure
     StatsD.prefix = nil
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
-  end
-
-  def test_statsd_macro_can_overwrite_prefix
-    skip("StatsD.measure(..., prefix: 'foo') is deprecated") if StatsD::Instrument.strict_mode_enabled?
-
-    StatsD.prefix = 'Foo'
-    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
-    ActiveMerchant::Gateway.singleton_class.statsd_measure :sync, 'ActiveMerchant.Gateway.sync', prefix: 'Bar'
-    StatsD.prefix = 'Quc'
-
-    statsd_calls = capture_statsd_calls { ActiveMerchant::Gateway.sync }
-    assert_equal 1, statsd_calls.length
-    assert_equal "Bar.ActiveMerchant.Gateway.sync", statsd_calls.first.name
-  ensure
-    unless StatsD::Instrument.strict_mode_enabled?
-      StatsD.prefix = nil
-      ActiveMerchant::Gateway.singleton_class.statsd_remove_measure :sync, 'ActiveMerchant.Gateway.sync'
-    end
   end
 
   def test_statsd_macro_can_disable_prefix
