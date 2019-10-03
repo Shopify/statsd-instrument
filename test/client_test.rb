@@ -127,6 +127,18 @@ class ClientTest < Minitest::Test
     assert_equal "_e{7,18}:service|event\\ndescription", datagrams.first.source
   end
 
+  def test_no_prefix
+    client = StatsD::Instrument::Client.new(prefix: 'foo')
+    datagrams = client.capture do
+      client.increment('bar')
+      client.increment('bar', no_prefix: true)
+    end
+
+    assert_equal 2, datagrams.size
+    assert_equal "foo.bar", datagrams[0].name
+    assert_equal "bar", datagrams[1].name
+  end
+
   def test_sampling
     mock_sink = mock('sink')
     mock_sink.stubs(:sample?).returns(false, true, false, false, true)

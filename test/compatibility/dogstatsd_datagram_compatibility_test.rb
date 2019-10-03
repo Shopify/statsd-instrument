@@ -21,6 +21,7 @@ module Compatibility
 
     def test_increment_compatibility
       assert_equal_datagrams { |client| client.increment('counter') }
+      assert_equal_datagrams { |client| client.increment('counter', no_prefix: true) }
       assert_equal_datagrams { |client| client.increment('counter', 12) }
       assert_equal_datagrams { |client| client.increment('counter', sample_rate: 0.1) }
       assert_equal_datagrams { |client| client.increment('counter', tags: ['foo', 'bar']) }
@@ -30,7 +31,7 @@ module Compatibility
 
     def test_measure_compatibility
       assert_equal_datagrams { |client| client.measure('timing', 12.34) }
-      assert_equal_datagrams { |client| client.measure('timing', 0.01) }
+      assert_equal_datagrams { |client| client.measure('timing', 0.01, no_prefix: true) }
       assert_equal_datagrams { |client| client.measure('timing', 0.12, sample_rate: 0.1) }
       assert_equal_datagrams { |client| client.measure('timing', 0.12, tags: ['foo', 'bar']) }
     end
@@ -45,6 +46,7 @@ module Compatibility
 
     def test_gauge_compatibility
       assert_equal_datagrams { |client| client.gauge('current', 1234) }
+      assert_equal_datagrams { |client| client.gauge('current', 1234, no_prefix: true) }
       assert_equal_datagrams { |client| client.gauge('current', 1234, sample_rate: 0.1) }
       assert_equal_datagrams { |client| client.gauge('current', 1234, tags: ['foo', 'bar']) }
       assert_equal_datagrams { |client| client.gauge('current', 1234, tags: { foo: 'bar' }) }
@@ -53,6 +55,7 @@ module Compatibility
 
     def test_set_compatibility
       assert_equal_datagrams { |client| client.set('unique', 'foo') }
+      assert_equal_datagrams { |client| client.set('unique', 'foo', no_prefix: true) }
       assert_equal_datagrams { |client| client.set('unique', 'foo', sample_rate: 0.1) }
       assert_equal_datagrams { |client| client.set('unique', '1234', tags: ['foo', 'bar']) }
       assert_equal_datagrams { |client| client.set('unique', '1234', tags: { foo: 'bar' }) }
@@ -61,6 +64,7 @@ module Compatibility
 
     def test_histogram_compatibility
       assert_equal_datagrams { |client| client.histogram('sample', 12.44) }
+      assert_equal_datagrams { |client| client.histogram('sample', 12.44, no_prefix: true) }
       assert_equal_datagrams { |client| client.histogram('sample', 12.44, sample_rate: 0.1) }
       assert_equal_datagrams { |client| client.histogram('sample', 12.44, tags: ['foo', 'bar']) }
       assert_equal_datagrams { |client| client.histogram('sample', 12.44, tags: { foo: 'bar' }) }
@@ -69,6 +73,7 @@ module Compatibility
 
     def test_distribution_compatibility
       assert_equal_datagrams { |client| client.distribution('sample', 12.44) }
+      assert_equal_datagrams { |client| client.distribution('sample', 12.44, no_prefix: true) }
       assert_equal_datagrams { |client| client.distribution('sample', 12.44, sample_rate: 0.1) }
       assert_equal_datagrams { |client| client.distribution('sample', 12.44, tags: ['foo', 'bar']) }
       assert_equal_datagrams { |client| client.distribution('sample', 12.44, tags: { foo: 'bar' }) }
@@ -85,6 +90,7 @@ module Compatibility
 
     def test_service_check_compatibility
       assert_equal_datagrams { |client| client.service_check('service', 0) }
+      assert_equal_datagrams { |client| client.service_check('service', :critical, no_prefix: true) }
       assert_equal_datagrams { |client| client.event('foo', "bar\nbaz") }
       assert_equal_datagrams do |client|
         client.service_check('service', "ok", timestamp: Time.parse('2019-09-09T04:22:17Z'),
@@ -94,7 +100,7 @@ module Compatibility
 
     def test_event_compatibility
       assert_equal_datagrams { |client| client.event('foo', "bar\nbaz") }
-      assert_equal_datagrams { |client| client.event('foo', "bar\nbaz") }
+      assert_equal_datagrams { |client| client.event('foo', "bar\nbaz", no_prefix: true) }
       assert_equal_datagrams do |client|
         client.event('Something happend', "And it's not good", timestamp: Time.parse('2019-09-09T04:22:17Z'),
           hostname: 'localhost', tags: ['foo'], alert_type: 'warning', priority: 'low',
