@@ -16,27 +16,19 @@ module RuboCop
         include RuboCop::Cop::StatsD
 
         MSG = <<~MSG
-          Do not use StatsD.metric(..., prefix: "foo").
+          Do not use StatsD.metric(..., prefix: "foo"). The prefix argument is deprecated.
 
-          This is deprecated: you can simply include the prefix in the metric name instead.
+          You can simply include the prefix in the metric name instead.
           If you want to override the global prefix, you can set `no_prefix: true`.
         MSG
 
         def on_send(node)
-          if metric_method?(node) && (hash = keyword_arguments(node))
-            prefix = hash.child_nodes.detect do |pair|
-              pair.child_nodes[0]&.type == :sym &&
-                pair.child_nodes[0].value == :prefix
-            end
-            add_offense(node) if prefix
+          if metric_method?(node)
+            add_offense(node) if has_keyword_argument?(node, :prefix)
           end
 
-          if metaprogramming_method?(node) && (hash = keyword_arguments(node))
-            prefix = hash.child_nodes.detect do |pair|
-              pair.child_nodes[0]&.type == :sym &&
-                pair.child_nodes[0].value == :prefix
-            end
-            add_offense(node) if prefix
+          if metaprogramming_method?(node)
+            add_offense(node) if has_keyword_argument?(node, :prefix)
           end
         end
       end

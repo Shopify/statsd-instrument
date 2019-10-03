@@ -19,25 +19,16 @@ module RuboCop
       class MetricValueKeywordArgument < Cop
         include RuboCop::Cop::StatsD
 
-        MSG = 'Do not use the value keyword argument, but use a positional argument'
+        MSG = <<~MSG
+          Do not use the StatsD.metric('name', value: <value>, ...). The `value` keyword argument is deprecated.
+
+          Use a positional argument instead: StatsD.metric('name', <value>, ...).
+        MSG
 
         def on_send(node)
-          if metric_method?(node)
-            last_argument = if node.arguments.last&.type == :block_pass
-              node.arguments[node.arguments.length - 2]
-            else
-              node.arguments[node.arguments.length - 1]
-            end
-
-            check_keyword_arguments_for_value_entry(node, last_argument) if last_argument&.type == :hash
+          if metric_method?(node) && has_keyword_argument?(node, :value)
+            add_offense(node)
           end
-        end
-
-        def check_keyword_arguments_for_value_entry(node, keyword_arguments)
-          value_pair_found = keyword_arguments.child_nodes.any? do |pair|
-            pair.child_nodes[0].type == :sym && pair.child_nodes[0].value == :value
-          end
-          add_offense(node) if value_pair_found
         end
       end
     end

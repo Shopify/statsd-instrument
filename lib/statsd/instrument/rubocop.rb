@@ -33,6 +33,14 @@ module RuboCop
           METRIC_METHODS.include?(node.method_name)
       end
 
+      def has_keyword_argument?(node, sym)
+        if (kwargs = keyword_arguments(node))
+          kwargs.child_nodes.detect do |pair|
+            pair.child_nodes[0]&.type == :sym && pair.child_nodes[0].value == sym
+          end
+        end
+      end
+
       def keyword_arguments(node)
         return nil if node.arguments.empty?
         last_argument = if node.arguments.last&.type == :block_pass

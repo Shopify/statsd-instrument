@@ -18,23 +18,19 @@ module RuboCop
       class MeasureAsDistArgument < Cop
         include RuboCop::Cop::StatsD
 
-        MSG = 'Do not use StatsD.measure(..., as_dist: true). Use StatsD.distribution instead.'
+        MSG = <<~MSG
+          Do not use StatsD.measure(..., as_dist: true). This is deprecated.
+
+          Use StatsD.distribution (or statsd_distribution) instead.
+        MSG
 
         def on_send(node)
-          if metric_method?(node) && node.method_name == :measure && (hash = keyword_arguments(node))
-            as_dist = hash.child_nodes.detect do |pair|
-              pair.child_nodes[0]&.type == :sym &&
-                pair.child_nodes[0].value == :as_dist
-            end
-            add_offense(node) if as_dist
+          if metric_method?(node) && node.method_name == :measure
+            add_offense(node) if has_keyword_argument?(node, :as_dist)
           end
 
-          if metaprogramming_method?(node) && node.method_name == :statsd_measure && (hash = keyword_arguments(node))
-            as_dist = hash.child_nodes.detect do |pair|
-              pair.child_nodes[0]&.type == :sym &&
-                pair.child_nodes[0].value == :as_dist
-            end
-            add_offense(node) if as_dist
+          if metaprogramming_method?(node) && node.method_name == :statsd_measure
+            add_offense(node) if has_keyword_argument?(node, :as_dist)
           end
         end
       end
