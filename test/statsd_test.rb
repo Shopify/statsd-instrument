@@ -213,7 +213,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_name_prefix
-    StatsD.stubs(:prefix).returns('prefix')
+    StatsD.legacy_singleton_client.stubs(:prefix).returns('prefix')
     m = capture_statsd_call { StatsD.increment('counter') }
     assert_equal 'prefix.counter', m.name
 

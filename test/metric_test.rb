@@ -36,11 +36,11 @@ class MetricTest < Minitest::Test
   end
 
   def test_default_tags
-    StatsD.stubs(:default_tags).returns(['default_tag:default_value'])
+    StatsD.legacy_singleton_client.stubs(:default_tags).returns(['default_tag:default_value'])
     m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: { tag: 'value' })
     assert_equal ['tag:value', 'default_tag:default_value'], m.tags
 
-    StatsD.stubs(:default_tags).returns(['tag:value'])
+    StatsD.legacy_singleton_client.stubs(:default_tags).returns(['tag:value'])
     m = StatsD::Instrument::Metric.new(type: :c, name: 'counter', tags: { tag: 'value' })
     assert_equal ['tag:value', 'tag:value'], m.tags # we don't care about duplicates
   end

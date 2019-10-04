@@ -4,7 +4,7 @@ require 'test_helper'
 
 class UDPBackendTest < Minitest::Test
   def setup
-    StatsD.stubs(:backend).returns(@backend = StatsD::Instrument::Backends::UDPBackend.new)
+    StatsD.legacy_singleton_client.stubs(:backend).returns(@backend = StatsD::Instrument::Backends::UDPBackend.new)
     @backend.stubs(:rand).returns(0.0)
 
     UDPSocket.stubs(:new).returns(@socket = mock('socket'))
