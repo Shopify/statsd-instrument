@@ -6,12 +6,20 @@ require 'forwardable'
 
 # The StatsD module contains low-level metrics for collecting metrics and sending them to the backend.
 #
+# @!attribute client
+#   @return [StatsD::Instrument::Backend] The client that will handle singleton method calls in the next
+#     major version of this library.
+#   @note This new Client implementation is intended to become the new default in
+#     the next major release of this library. While this class may already be functional,
+#     we provide no guarantees about the API and the behavior may change.
+#
 # @!attribute backend
 #   The backend that is being used to emit the metrics.
 #   @return [StatsD::Instrument::Backend] the currently active backend. If there is no active backend
 #     yet, it will call {StatsD::Instrument::Environment#default_backend} to obtain a
 #     default backend for the environment.
 #   @see StatsD::Instrument::Environment#default_backend
+#   @deprecated
 #
 # @!attribute prefix
 #   The prefix to apply to metric names. This can be useful to group all the metrics
@@ -22,10 +30,12 @@ require 'forwardable'
 #
 #   @return [String, nil] The prefix, or <tt>nil</tt> when no prefix is used
 #   @see StatsD::Instrument::Metric#name
+#   @deprecated
 #
 # @!attribute default_sample_rate
 #   The sample rate to use if the sample rate is unspecified for a metric call.
 #   @return [Float] Default is 1.0.
+#   @deprecated
 #
 # @!attribute logger
 #   The logger to use in case of any errors. The logger is also used as default logger
@@ -36,9 +46,45 @@ require 'forwardable'
 # @!attribute default_tags
 #   The tags to apply to all metrics.
 #   @return [Array<String>, Hash<String, String>, nil] The default tags, or <tt>nil</tt> when no default tags is used
+#   @deprecated
+#
+# @!attribute legacy_singleton_client
+#   @nodoc
+#   @deprecated
+#
+# @!attribute singleton_client
+#   @nodoc
+#   @deprecated
+#
+# @!method measure(name, value = nil, sample_rate: nil, tags: nil, &block)
+#   (see StatsD::Instrument::LegacyClient#measure)
+#
+# @!method increment(name, value = 1, sample_rate: nil, tags: nil)
+#   (see StatsD::Instrument::LegacyClient#increment)
+#
+# @!method gauge(name, value, sample_rate: nil, tags: nil)
+#   (see StatsD::Instrument::LegacyClient#gauge)
+#
+# @!method set(name, value, sample_rate: nil, tags: nil)
+#   (see StatsD::Instrument::LegacyClient#set)
+#
+# @!method histogram(name, value, sample_rate: nil, tags: nil)
+#   (see StatsD::Instrument::LegacyClient#histogram)
+#
+# @!method distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
+#   (see StatsD::Instrument::LegacyClient#distribution)
+#
+# @!method key_value(name, value)
+#   (see StatsD::Instrument::LegacyClient#key_value)
+#
+# @!method event(title, text, tags: nil, hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil) # rubocop:disable Metrics/LineLength
+#   (see StatsD::Instrument::LegacyClient#event)
+#
+# @!method service_check(name, status, tags: nil, hostname: nil, timestamp: nil, message: nil)
+#   (see StatsD::Instrument::LegacyClient#service_check)
 #
 # @see StatsD::Instrument <tt>StatsD::Instrument</tt> contains module to instrument
-#    existing methods with StatsD metrics.
+#    existing methods with StatsD metrics
 module StatsD
   extend self
 
@@ -339,12 +385,10 @@ module StatsD
 
   extend Forwardable
 
-  # @deprecated
   def legacy_singleton_client
     StatsD::Instrument::LegacyClient.singleton
   end
 
-  # @deprecated
   def singleton_client
     @singleton_client ||= legacy_singleton_client
   end

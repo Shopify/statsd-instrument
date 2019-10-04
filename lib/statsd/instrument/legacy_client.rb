@@ -66,6 +66,7 @@ class StatsD::Instrument::LegacyClient
   end
 
   # @!method increment(name, value = 1, sample_rate: nil, tags: nil)
+  #
   # Emits a counter metric.
   #
   # @param key [String] The name of the metric.

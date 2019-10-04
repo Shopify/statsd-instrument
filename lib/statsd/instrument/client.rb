@@ -11,8 +11,8 @@ require 'statsd/instrument/log_sink'
 
 # The Client is the main interface for using StatsD.
 #
-# @note This new new Client implementation that is intended to become the new default in
-#   the next major release of this library. While this class may already be functional,
+# @note This new Client implementation is intended to become the new default in the
+#   next major release of this library. While this class may already be functional,
 #   we provide no guarantees about the API and the behavior may change.
 class StatsD::Instrument::Client
   attr_reader :sink, :datagram_builder_class, :prefix, :default_tags, :default_sample_rate
