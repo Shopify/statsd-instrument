@@ -43,9 +43,9 @@ class StatsD::Instrument::Metric
     using RubyBackports
   end
 
-  def self.new(
-    type:, name:, value: default_value(type), sample_rate: StatsD.default_sample_rate, tags: nil, metadata: nil
-  )
+  def self.new(type:, name:, value: default_value(type), tags: nil, metadata: nil,
+    sample_rate: StatsD.legacy_singleton_client.default_sample_rate)
+
     # pass keyword arguments as positional arguments for performance reasons,
     # since MRI's C implementation of new turns keyword arguments into a hash
     super(type, name, value, sample_rate, tags, metadata)
@@ -92,8 +92,8 @@ class StatsD::Instrument::Metric
     @value = value
     @sample_rate = sample_rate
     @tags = StatsD::Instrument::Metric.normalize_tags(tags)
-    if StatsD.default_tags
-      @tags = Array(@tags) + StatsD.default_tags
+    if StatsD.legacy_singleton_client.default_tags
+      @tags = Array(@tags) + StatsD.legacy_singleton_client.default_tags
     end
     @metadata = metadata
   end
