@@ -167,9 +167,6 @@ module StatsD::Instrument::Assertions
       filtered_metrics.each do |metric|
         next unless expected_metric.matches(metric)
 
-        assert(within_numeric_range?(metric.sample_rate),
-          "Unexpected sample rate type for metric #{metric.name}, must be numeric")
-
         if expected_metric_times_remaining == 0
           flunk("Unexpected StatsD call; number of times this metric " \
             "was expected exceeded: #{expected_metric.inspect}")
@@ -222,9 +219,5 @@ module StatsD::Instrument::Assertions
     options[:times] ||= 1
     expected_metric = StatsD::Instrument::MetricExpectation.new(options)
     assert_statsd_calls([expected_metric], &block)
-  end
-
-  def within_numeric_range?(object)
-    object.is_a?(Numeric) && (0.0..1.0).cover?(object)
   end
 end
