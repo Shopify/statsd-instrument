@@ -53,19 +53,11 @@ module StatsD::Instrument::Assertions
   # @raise [Minitest::Assertion] If an exception occurs, or if any metric (with the
   #   provided name, or any), occurred during the execution of the provided block.
   def assert_no_statsd_calls(metric_name = nil, &block)
-    metrics = capture_statsd_calls(&block)
+    raise ArgumentError, "block must be given" unless block_given?
+    metrics = capture_statsd_datagrams_with_exception_handling(&block)
+
     metrics.select! { |m| m.name == metric_name } if metric_name
     assert(metrics.empty?, "No StatsD calls for metric #{metrics.map(&:name).join(', ')} expected.")
-  rescue => exception
-    flunk(<<~MESSAGE)
-      An exception occurred in the block provided to the StatsD assertion.
-
-      #{exception.class.name}: #{exception.message}
-      \t#{exception.backtrace.join("\n\t")}
-
-      If this exception is expected, make sure to handle it using `assert_raises`
-      inside the block provided to the StatsD assertion.
-    MESSAGE
   end
 
   # Asserts that a given counter metric occurred inside the provided block.
@@ -158,74 +150,71 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_calls(expected_metrics)
+  def assert_statsd_calls(expected_metrics, &block)
     raise ArgumentError, "block must be given" unless block_given?
+    metrics = capture_statsd_datagrams_with_exception_handling(&block)
 
-    capture_backend = StatsD::Instrument::Backends::CaptureBackend.new
-    with_capture_backend(capture_backend) do
-      begin
-        yield
-      rescue => exception
-        flunk(<<~MESSAGE)
-          An exception occurred in the block provided to the StatsD assertion.
+    matched_expected_metrics = []
+    expected_metrics.each do |expected_metric|
+      expected_metric_times = expected_metric.times
+      expected_metric_times_remaining = expected_metric.times
+      filtered_metrics = metrics.select { |m| m.type == expected_metric.type && m.name == expected_metric.name }
 
-          #{exception.class.name}: #{exception.message}
-          \t#{exception.backtrace.join("\n\t")}
-
-          If this exception is expected, make sure to handle it using `assert_raises`
-          inside the block provided to the StatsD assertion.
-        MESSAGE
+      if filtered_metrics.empty?
+        flunk("No StatsD calls for metric #{expected_metric.name} of type #{expected_metric.type} were made.")
       end
 
-      metrics = capture_backend.collected_metrics
-      matched_expected_metrics = []
-      expected_metrics.each do |expected_metric|
-        expected_metric_times = expected_metric.times
-        expected_metric_times_remaining = expected_metric.times
-        filtered_metrics = metrics.select { |m| m.type == expected_metric.type && m.name == expected_metric.name }
+      filtered_metrics.each do |metric|
+        next unless expected_metric.matches(metric)
 
-        if filtered_metrics.empty?
-          flunk("No StatsD calls for metric #{expected_metric.name} of type #{expected_metric.type} were made.")
+        assert(within_numeric_range?(metric.sample_rate),
+          "Unexpected sample rate type for metric #{metric.name}, must be numeric")
+
+        if expected_metric_times_remaining == 0
+          flunk("Unexpected StatsD call; number of times this metric " \
+            "was expected exceeded: #{expected_metric.inspect}")
         end
 
-        filtered_metrics.each do |metric|
-          next unless expected_metric.matches(metric)
-
-          assert(within_numeric_range?(metric.sample_rate),
-            "Unexpected sample rate type for metric #{metric.name}, must be numeric")
-
-          if expected_metric_times_remaining == 0
-            flunk("Unexpected StatsD call; number of times this metric " \
-              "was expected exceeded: #{expected_metric.inspect}")
-          end
-
-          expected_metric_times_remaining -= 1
-          metrics.delete(metric)
-          if expected_metric_times_remaining == 0
-            matched_expected_metrics << expected_metric
-          end
+        expected_metric_times_remaining -= 1
+        metrics.delete(metric)
+        if expected_metric_times_remaining == 0
+          matched_expected_metrics << expected_metric
         end
-
-        next if expected_metric_times_remaining == 0
-
-        msg = +"Metric expected #{expected_metric_times} times but seen " \
-          "#{expected_metric_times - expected_metric_times_remaining} " \
-          "times: #{expected_metric.inspect}."
-        msg << "\nCaptured metrics with the same key: #{filtered_metrics}" if filtered_metrics.any?
-        flunk(msg)
-      end
-      expected_metrics -= matched_expected_metrics
-
-      unless expected_metrics.empty?
-        flunk("Unexpected StatsD calls; the following metric expectations " \
-          "were not satisfied: #{expected_metrics.inspect}")
       end
 
-      pass
+      next if expected_metric_times_remaining == 0
+
+      msg = +"Metric expected #{expected_metric_times} times but seen " \
+        "#{expected_metric_times - expected_metric_times_remaining} " \
+        "times: #{expected_metric.inspect}."
+      msg << "\nCaptured metrics with the same key: #{filtered_metrics}" if filtered_metrics.any?
+      flunk(msg)
     end
+    expected_metrics -= matched_expected_metrics
+
+    unless expected_metrics.empty?
+      flunk("Unexpected StatsD calls; the following metric expectations " \
+        "were not satisfied: #{expected_metrics.inspect}")
+    end
+
+    pass
   end
 
   private
+
+  def capture_statsd_datagrams_with_exception_handling(&block)
+    capture_statsd_datagrams(&block)
+  rescue => exception
+    flunk(<<~MESSAGE)
+      An exception occurred in the block provided to the StatsD assertion.
+
+      #{exception.class.name}: #{exception.message}
+      \t#{exception.backtrace.join("\n\t")}
+
+      If this exception is expected, make sure to handle it using `assert_raises`
+      inside the block provided to the StatsD assertion.
+    MESSAGE
+  end
 
   def assert_statsd_call(metric_type, metric_name, options = {}, &block)
     options[:name] = metric_name

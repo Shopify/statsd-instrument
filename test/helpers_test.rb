@@ -22,4 +22,21 @@ class HelpersTest < Minitest::Test
     assert_equal 'gauge', metrics[1].name
     assert_equal 12, metrics[1].value
   end
+
+  def test_capture_metrics_with_new_client
+    @old_client = StatsD.singleton_client
+    StatsD.singleton_client = StatsD.client
+
+    StatsD.increment('counter')
+    metrics = @test_case.capture_statsd_datagrams do
+      StatsD.increment('counter')
+      StatsD.gauge('gauge', 12)
+    end
+    StatsD.gauge('gauge', 15)
+
+    assert_equal 2, metrics.length
+
+  ensure
+    StatsD.singleton_client = @old_client
+  end
 end
