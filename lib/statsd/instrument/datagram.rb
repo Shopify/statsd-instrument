@@ -59,7 +59,7 @@ class StatsD::Instrument::Datagram
     \A
     (?<name>[^\:\|\@]+)\:(?<value>[^\:\|\@]+)\|(?<type>c|ms|g|s|h|d)
     (?:\|\@(?<sample_rate>\d*(?:\.\d*)?))?
-    (?:\|\#(?<tags>(?:[^\|\#,]+(?:,[^\|\#,]+)*)))?
+    (?:\|\#(?<tags>(?:[^\|,]+(?:,[^\|,]+)*)))?
     \n? # In some implementations, the datagram may include a trailing newline.
     \z
   }x

@@ -17,7 +17,7 @@ class DatagramBuilderTest < Minitest::Test
   end
 
   def test_normalize_unsupported_tag_names
-    assert_equal ['ignored'], @datagram_builder.send(:normalize_tags, ['igno|re,d'])
+    assert_equal ['ign#ored'], @datagram_builder.send(:normalize_tags, ['ign#o|re,d'])
     # Note: how this is interpreted by the backend is undefined.
     # We rely on the user to not do stuff like this if they don't want to be surprised.
     # We do not want to take the performance hit of normaling this.
