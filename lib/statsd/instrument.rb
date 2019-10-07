@@ -390,7 +390,7 @@ module StatsD
   end
 
   def singleton_client
-    @singleton_client ||= legacy_singleton_client
+    @singleton_client ||= StatsD::Instrument::Environment.from_env.client
   end
 
   def client

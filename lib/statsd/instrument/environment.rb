@@ -97,6 +97,15 @@ class StatsD::Instrument::Environment
     env.key?('STATSD_DEFAULT_TAGS') ? env.fetch('STATSD_DEFAULT_TAGS').split(',') : nil
   end
 
+  def client
+    if env.key?('STATSD_USE_NEW_CLIENT')
+      require 'statsd/instrument/client'
+      default_client
+    else
+      StatsD::Instrument::LegacyClient.singleton
+    end
+  end
+
   def default_client
     @default_client ||= StatsD::Instrument::Client.new(
       sink: default_sink_for_environment,
