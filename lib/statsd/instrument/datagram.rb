@@ -17,7 +17,7 @@ class StatsD::Instrument::Datagram
   end
 
   def type
-    parsed_datagram[:type].to_sym
+    @type ||= parsed_datagram[:type].to_sym
   end
 
   def name
@@ -25,7 +25,16 @@ class StatsD::Instrument::Datagram
   end
 
   def value
-    parsed_datagram[:value] # TODO: do we need to parse this to a number or integer?
+    @value ||= case type
+    when :c
+      Integer(parsed_datagram[:value])
+    when :g, :h, :d, :kv, :ms
+      Float(parsed_datagram[:value])
+    when :s
+      String(parsed_datagram[:value])
+    else
+      parsed_datagram[:value]
+    end
   end
 
   def tags

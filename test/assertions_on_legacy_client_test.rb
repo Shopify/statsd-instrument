@@ -137,6 +137,46 @@ class AssertionsOnLegacyClientTest < Minitest::Test
     end
   end
 
+  def test_assert_statsd_gauge_call_with_numeric_value
+    @test_case.assert_statsd_gauge('gauge', value: 42) do
+      StatsD.gauge('gauge', 42)
+    end
+
+    @test_case.assert_statsd_gauge('gauge', value: '42') do
+      StatsD.gauge('gauge', 42)
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_gauge('gauge', value: 42) do
+        StatsD.gauge('gauge', 45)
+      end
+    end
+  end
+
+  def test_assert_statsd_set_call_with_string_value
+    @test_case.assert_statsd_set('set', value: 12345) do
+      StatsD.set('set', '12345')
+    end
+
+    @test_case.assert_statsd_set('set', value: '12345') do
+      StatsD.set('set', '12345')
+    end
+
+    @test_case.assert_statsd_set('set', value: 12345) do
+      StatsD.set('set', 12345)
+    end
+
+    @test_case.assert_statsd_set('set', value: '12345') do
+      StatsD.set('set', 12345)
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_set('set', value: '42') do
+        StatsD.set('set', 45)
+      end
+    end
+  end
+
   def test_tags_will_match_subsets
     @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }) do
       StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })

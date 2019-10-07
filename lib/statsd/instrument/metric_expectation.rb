@@ -13,7 +13,7 @@ class StatsD::Instrument::MetricExpectation
     end
 
     if options[:name]
-      @name = options[:name]
+      @name = options[:name].to_s
     else
       raise ArgumentError, "Metric :name is required."
     end
@@ -27,16 +27,24 @@ class StatsD::Instrument::MetricExpectation
     @name = StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
     @tags = StatsD::Instrument::Metric.normalize_tags(options[:tags])
     @sample_rate = options[:sample_rate]
-    @value = options[:value]
+    @value = normalized_value_for_type(type, options[:value]) if options[:value]
     @ignore_tags = StatsD::Instrument::Metric.normalize_tags(options[:ignore_tags])
+  end
+
+  def normalized_value_for_type(type, value)
+    case type
+    when :c then Integer(value)
+    when :g, :h, :d, :kv, :ms then Float(value)
+    when :s then String(value)
+    else value
+    end
   end
 
   def matches(actual_metric)
     return false if sample_rate && sample_rate != actual_metric.sample_rate
-    return false if value && value != actual_metric.value
+    return false if value && value != normalized_value_for_type(actual_metric.type, actual_metric.value)
 
     if tags
-
       expected_tags = Set.new(tags)
       actual_tags = Set.new(actual_metric.tags)
 
@@ -58,25 +66,15 @@ class StatsD::Instrument::MetricExpectation
     1 if type == :c
   end
 
-  TYPES = {
-    c: 'increment',
-    ms: 'measure',
-    g: 'gauge',
-    h: 'histogram',
-    d: 'distribution',
-    kv: 'key/value',
-    s: 'set',
-  }
-
   def to_s
-    str = +"#{TYPES[type]} #{name}:#{value}"
-    str << " @#{sample_rate}" if sample_rate != 1.0
-    str << " " << tags.map { |t| "##{t}" }.join(' ') if tags
-    str << " times:#{times}" if times > 1
+    str = +"#{name}:#{value || '<anything>'}|#{type}"
+    str << "|@#{sample_rate}" if sample_rate && sample_rate != 1.0
+    str << "|#" << tags.join(',') if tags
+    str << " (expected #{times} times)" if times > 1
     str
   end
 
   def inspect
-    "#<StatsD::Instrument::MetricExpectation #{self}>"
+    "#<StatsD::Instrument::MetricExpectation:\"#{self}\">"
   end
 end

@@ -15,8 +15,8 @@ class LoggerBackendTest < Minitest::Test
     @backend.collect_metric(@metric1)
     @backend.collect_metric(@metric2)
     assert_equal <<~LOG, @io.string
-      [StatsD] increment mock.counter:1 #a:b #c:d
-      [StatsD] measure mock.measure:123 @0.3
+      [StatsD] mock.counter:1|c|#a:b,c:d
+      [StatsD] mock.measure:123|ms|@0.3
     LOG
   end
 end
