@@ -2,11 +2,10 @@
 
 require 'test_helper'
 
-class AssertionsTest < Minitest::Test
+class AssertionsOnLegacyClientTest < Minitest::Test
   def setup
     @old_client = StatsD.singleton_client
-    env = StatsD::Instrument::Environment.new('STATSD_IMPLEMENTATION' => 'datadog')
-    StatsD.singleton_client = env.default_client
+    StatsD.singleton_client = StatsD.legacy_singleton_client
 
     test_class = Class.new(Minitest::Test)
     test_class.send(:include, StatsD::Instrument::Assertions)

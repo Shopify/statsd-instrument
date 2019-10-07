@@ -53,7 +53,7 @@ module StatsD::Instrument::Assertions
   # @raise [Minitest::Assertion] If an exception occurs, or if any metric (with the
   #   provided name, or any), occurred during the execution of the provided block.
   def assert_no_statsd_calls(metric_name = nil, &block)
-    raise ArgumentError, "block must be given" unless block_given?
+    raise ArgumentError, "assert_no_statsd_calls requires a block" unless block_given?
     metrics = capture_statsd_datagrams_with_exception_handling(&block)
 
     metrics.select! { |m| m.name == metric_name } if metric_name
@@ -151,7 +151,7 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise (see #assert_statsd_increment)
   def assert_statsd_calls(expected_metrics, &block)
-    raise ArgumentError, "block must be given" unless block_given?
+    raise ArgumentError, "assert_statsd_* requires a block" unless block_given?
     metrics = capture_statsd_datagrams_with_exception_handling(&block)
 
     matched_expected_metrics = []
