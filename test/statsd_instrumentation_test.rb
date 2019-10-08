@@ -221,11 +221,11 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
   end
 
-  def test_statsd_measure_yells_without_block
+  def test_statsd_measure_raises_without_a_provided_block
     err = assert_raises(ArgumentError) do
       assert_statsd_measure('ActiveMerchant.Gateway.ssl_post')
     end
-    assert_equal "block must be given", err.to_s
+    assert_equal 'assert_statsd_* requires a block', err.message
   end
 
   def test_statsd_measure_with_method_receiving_block
@@ -268,11 +268,11 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
   end
 
-  def test_statsd_distribution_yells_without_block
+  def test_statsd_distribution_raises_without_a_provided_block
     err = assert_raises(ArgumentError) do
       assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post')
     end
-    assert_equal "block must be given", err.to_s
+    assert_equal "assert_statsd_* requires a block", err.to_s
   end
 
   def test_statsd_distribution_with_method_receiving_block
