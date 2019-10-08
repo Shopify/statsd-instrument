@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
 module StatsD::Instrument::Helpers
-  def capture_statsd_datagrams(&block)
-    if StatsD.singleton_client == StatsD.legacy_singleton_client
+  def capture_statsd_datagrams(client: nil, &block)
+    client ||= StatsD.singleton_client
+    case client
+    when StatsD.legacy_singleton_client
       capture_statsd_metrics_on_legacy_client(&block)
+    when StatsD::Instrument::Client
+      client.capture(&block)
     else
-      StatsD.singleton_client.capture(&block)
+      raise ArgumentError, "Don't know how to capture StatsD datagrams from #{client.inspect}!"
     end
   end
 

@@ -222,10 +222,9 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_measure_raises_without_a_provided_block
-    err = assert_raises(ArgumentError) do
+    assert_raises(LocalJumpError) do
       assert_statsd_measure('ActiveMerchant.Gateway.ssl_post')
     end
-    assert_equal 'assert_statsd_* requires a block', err.message
   end
 
   def test_statsd_measure_with_method_receiving_block
@@ -269,10 +268,9 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_distribution_raises_without_a_provided_block
-    err = assert_raises(ArgumentError) do
+    assert_raises(LocalJumpError) do
       assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post')
     end
-    assert_equal "assert_statsd_* requires a block", err.to_s
   end
 
   def test_statsd_distribution_with_method_receiving_block

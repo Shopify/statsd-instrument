@@ -49,7 +49,7 @@ class AssertionsTest < Minitest::Test
     assert_equal assertion.message, "No StatsD calls for metric other, another expected."
   end
 
-  def test_assert_statsd_call
+  def test_assert_statsd
     @test_case.assert_statsd_increment('counter') do
       StatsD.increment('counter')
     end
@@ -201,60 +201,89 @@ class AssertionsTest < Minitest::Test
     assert_includes assertion.message, "MyJob"
   end
 
-  def test_multiple_metrics_are_not_order_dependent
-    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
-    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-    @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
+  def test_capture_and_assert
+    datagrams = @test_case.capture_statsd_datagrams do
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 2 })
     end
 
-    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:1'])
-    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-    @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
+    @test_case.assert_statsd_increment('counter', tags: ['foo:1'], datagrams: datagrams)
+    @test_case.assert_statsd_increment('counter', tags: ['foo:2'], datagrams: datagrams)
+  end
+
+  def test_capture_from_different_client
+    client = StatsD::Instrument::Client.new
+    @test_case.assert_statsd_increment('foo', client: client) do
+      client.increment('foo')
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('foo', client: client) do
+        StatsD.increment('foo')
+      end
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('foo') do
+        client.increment('foo')
+      end
+    end
+  end
+
+  def test_multiple_expectations_are_not_order_dependent
+    foo_1_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+    @test_case.assert_statsd_expectations([foo_1_metric, foo_2_metric]) do
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 2 })
     end
 
-    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-    @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
+    foo_1_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+    @test_case.assert_statsd_expectations([foo_2_metric, foo_1_metric]) do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 2 })
+    end
+
+    foo_1_metric = StatsD::Instrument::Expectation.increment('counter', times: 2, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+    @test_case.assert_statsd_expectations([foo_1_metric, foo_2_metric]) do
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 2 })
     end
 
-    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-    @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
+    foo_1_metric = StatsD::Instrument::Expectation.increment('counter', times: 2, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+    @test_case.assert_statsd_expectations([foo_2_metric, foo_1_metric]) do
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 2 })
     end
 
-    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-    @test_case.assert_statsd_calls([foo_2_metric, foo_1_metric]) do
+    foo_1_metric = StatsD::Instrument::Expectation.increment('counter', times: 2, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+    @test_case.assert_statsd_expectations([foo_2_metric, foo_1_metric]) do
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 2 })
       StatsD.increment('counter', tags: { foo: 1 })
     end
   end
 
-  def test_assert_multiple_statsd_calls
+  def test_assert_multiple_statsd_expectations
     assert_raises(Minitest::Assertion) do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-      @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
+      foo_1_metric = StatsD::Instrument::Expectation.increment('counter', times: 2, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+      @test_case.assert_statsd_expectations([foo_1_metric, foo_2_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 2 })
       end
     end
 
     assert_raises(Minitest::Assertion) do
-      foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-      foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-      @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
+      foo_1_metric = StatsD::Instrument::Expectation.increment('counter', times: 2, tags: ['foo:1'])
+      foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+      @test_case.assert_statsd_expectations([foo_1_metric, foo_2_metric]) do
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 1 })
         StatsD.increment('counter', tags: { foo: 2 })
@@ -262,16 +291,16 @@ class AssertionsTest < Minitest::Test
       end
     end
 
-    foo_1_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 2, tags: ['foo:1'])
-    foo_2_metric = StatsD::Instrument::MetricExpectation.new(type: :c, name: 'counter', times: 1, tags: ['foo:2'])
-    @test_case.assert_statsd_calls([foo_1_metric, foo_2_metric]) do
+    foo_1_metric = StatsD::Instrument::Expectation.increment('counter', times: 2, tags: ['foo:1'])
+    foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+    @test_case.assert_statsd_expectations([foo_1_metric, foo_2_metric]) do
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 2 })
     end
   end
 
-  def test_assert_statsd_call_with_tags
+  def test_assert_statsd_increment_with_tags
     @test_case.assert_statsd_increment('counter', tags: ['a:b', 'c:d']) do
       StatsD.increment('counter', tags: { a: 'b', c: 'd' })
     end
