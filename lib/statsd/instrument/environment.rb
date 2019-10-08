@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'logger'
-
 # The environment module is used to detect, and initialize the environment in
 # which this library is active. It will use different default values based on the environment.
 class StatsD::Instrument::Environment
@@ -99,7 +97,6 @@ class StatsD::Instrument::Environment
 
   def client
     if env.key?('STATSD_USE_NEW_CLIENT')
-      require 'statsd/instrument/client'
       default_client
     else
       StatsD::Instrument::LegacyClient.singleton
