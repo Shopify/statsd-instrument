@@ -49,7 +49,7 @@ deprecated patterns. See below for more info.
 - **⚠️ DEPRECATION**: Using the `as_dist: true` argument for `StatsD.measure`
   and `statsd_measure` methods is deprecated. This argument was only available
   for internal use, but was exposed in the public API. It is unlikely that you
-  are usijng this argumenr, but you can check to make sure using this Rubocop
+  are using this argument, but you can check to make sure using this Rubocop
   invocation:
 
   ``` sh
@@ -104,9 +104,9 @@ deprecated patterns. See below for more info.
   emitted. However, this would hide the the exception from the assertion message,
   complicating debugging efforts.
 
-  Now, we fail the test because an unexpected exception occured inside the block.
+  Now, we fail the test because an unexpected exception occurred inside the block.
   This means that the following test will fail:
-
+s
   ``` ruby
   assert_raises(RuntimeError) do
     assert_statsd_increment('foo') do
@@ -137,7 +137,7 @@ deprecated patterns. See below for more info.
   the metaprogramming method was evaluated would not be respected. This
   unfortunately is quite common when you set the StatsD prefix inside an
   initializer. This issue is now addressed: the prefix is evaluated at the
-  mopment the metric is emitted, not when the metaprogramming method is being
+  moment the metric is emitted, not when the metaprogramming method is being
   evaluated. (#202)
 
 ## Version 2.5.0
@@ -223,7 +223,7 @@ deprecated patterns. See below for more info.
   in production because enabling it comes with a performance penalty.
 
 - **Performance improvements 🎉**: Several internal changes have made the
-  library run singificantly faster. The changes:
+  library run significantly faster. The changes:
 
   - Improve performance of duration calculations. (#168)
   - Early exit when no changes are needed to bring tags and metric names to
@@ -261,7 +261,7 @@ deprecated patterns. See below for more info.
 
 ## Version 2.3.5
 
-- Re-add `StatsD::Instrument.duration`, which was accidentally removed since verison 2.5.3 (#157)
+- Re-add `StatsD::Instrument.duration`, which was accidentally removed since version 2.5.3 (#157)
 
 ## Version 2.3.4
 
@@ -301,7 +301,7 @@ average metric considerably.
 
 ### Version 2.3.0
 
-- No changes from `beta6`, distribtions are GA at DataDog so making the distribution changes GA in gem
+- No changes from `beta6`, distributions are GA at DataDog so making the distribution changes GA in gem
 
 ### Version 2.3.0.beta6
 
@@ -327,7 +327,7 @@ average metric considerably.
 
 ### Version 2.3.0.beta
 
-- Add support for beta, datadog specifc distribution metrics
+- Add support for beta, Datadog specific distribution metrics
 - Invalidate socket on connectivity issues
 
 ### Version 2.2.1
@@ -336,7 +336,7 @@ average metric considerably.
 
 ### Version 2.2.0
 
-- Add support for two new datadog specific metric types: events and service checks.
+- Add support for two new Datadog specific metric types: events and service checks.
 
 ### Version 2.1.3
 
