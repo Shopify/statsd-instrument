@@ -52,10 +52,10 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise [Minitest::Assertion] If an exception occurs, or if any metric (with the
   #   provided name, or any), occurred during the execution of the provided block.
-  def assert_no_statsd_calls(metric_name = nil, datagrams: nil, &block)
+  def assert_no_statsd_calls(metric_name = nil, datagrams: nil, client: nil, &block)
     if datagrams.nil?
       raise LocalJumpError, "assert_no_statsd_calls requires a block" unless block_given?
-      datagrams = capture_statsd_datagrams_with_exception_handling(&block)
+      datagrams = capture_statsd_datagrams_with_exception_handling(client: client, &block)
     end
 
     datagrams.select! { |m| m.name == metric_name } if metric_name
@@ -71,9 +71,9 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise [Minitest::Assertion] If an exception occurs, or if the metric did
   #   not occur as specified during the execution the block.
-  def assert_statsd_increment(metric_name, datagrams: nil, **options, &block)
+  def assert_statsd_increment(metric_name, datagrams: nil, client: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.increment(metric_name, **options)
-    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
   end
 
   # Asserts that a given timing metric occurred inside the provided block.
@@ -83,9 +83,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_measure(metric_name, datagrams: nil, **options, &block)
+  def assert_statsd_measure(metric_name, datagrams: nil, client: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.measure(metric_name, **options)
-    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
   end
 
   # Asserts that a given gauge metric occurred inside the provided block.
@@ -95,9 +95,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_gauge(metric_name, datagrams: nil, **options, &block)
+  def assert_statsd_gauge(metric_name, datagrams: nil, client: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.gauge(metric_name, **options)
-    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
   end
 
   # Asserts that a given histogram metric occurred inside the provided block.
@@ -107,9 +107,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_histogram(metric_name, datagrams: nil, **options, &block)
+  def assert_statsd_histogram(metric_name, datagrams: nil, client: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.histogram(metric_name, **options)
-    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
   end
 
   # Asserts that a given distribution metric occurred inside the provided block.
@@ -119,9 +119,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_distribution(metric_name, datagrams: nil, **options, &block)
+  def assert_statsd_distribution(metric_name, datagrams: nil, client: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.distribution(metric_name, **options)
-    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
   end
 
   # Asserts that a given set metric occurred inside the provided block.
@@ -131,9 +131,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_set(metric_name, datagrams: nil, **options, &block)
+  def assert_statsd_set(metric_name, datagrams: nil, client: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.set(metric_name, **options)
-    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
   end
 
   # Asserts that a given key/value metric occurred inside the provided block.
@@ -143,9 +143,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_key_value(metric_name, datagrams: nil, **options, &block)
+  def assert_statsd_key_value(metric_name, datagrams: nil, client: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.key_value(metric_name, **options)
-    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
   end
 
   # Asserts that the set of provided metric expectations came true.
@@ -159,10 +159,10 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_expectations(expectations, datagrams: nil, &block)
+  def assert_statsd_expectations(expectations, datagrams: nil, client: nil, &block)
     if datagrams.nil?
       raise LocalJumpError, "assert_statsd_expectations requires a block" unless block_given?
-      datagrams = capture_statsd_datagrams_with_exception_handling(&block)
+      datagrams = capture_statsd_datagrams_with_exception_handling(client: client, &block)
     end
 
     expectations = Array(expectations)
@@ -215,8 +215,8 @@ module StatsD::Instrument::Assertions
 
   private
 
-  def capture_statsd_datagrams_with_exception_handling(&block)
-    capture_statsd_datagrams(&block)
+  def capture_statsd_datagrams_with_exception_handling(client:, &block)
+    capture_statsd_datagrams(client: client, &block)
   rescue => exception
     flunk(<<~MESSAGE)
       An exception occurred in the block provided to the StatsD assertion.

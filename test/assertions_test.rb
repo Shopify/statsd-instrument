@@ -211,6 +211,25 @@ class AssertionsTest < Minitest::Test
     @test_case.assert_statsd_increment('counter', tags: ['foo:2'], datagrams: datagrams)
   end
 
+  def test_capture_from_different_client
+    client = StatsD::Instrument::Client.new
+    @test_case.assert_statsd_increment('foo', client: client) do
+      client.increment('foo')
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('foo', client: client) do
+        StatsD.increment('foo')
+      end
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('foo') do
+        client.increment('foo')
+      end
+    end
+  end
+
   def test_multiple_expectations_are_not_order_dependent
     foo_1_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:1'])
     foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
