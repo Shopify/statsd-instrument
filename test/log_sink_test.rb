@@ -2,8 +2,6 @@
 
 require 'test_helper'
 
-require 'statsd/instrument/client'
-
 class LogSinktest < Minitest::Test
   def test_log_sink
     logger = Logger.new(log = StringIO.new)

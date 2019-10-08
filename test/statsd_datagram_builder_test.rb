@@ -2,8 +2,6 @@
 
 require 'test_helper'
 
-require 'statsd/instrument/client'
-
 class StatsDDatagramBuilderTest < Minitest::Test
   def setup
     @datagram_builder = StatsD::Instrument::StatsDDatagramBuilder.new

@@ -2,8 +2,6 @@
 
 require 'test_helper'
 
-require 'statsd/instrument/client'
-
 class CaptureSinktest < Minitest::Test
   def test_capture_sink_captures_datagram_instances
     capture_sink = StatsD::Instrument::CaptureSink.new(parent: [])

@@ -394,10 +394,7 @@ module StatsD
   end
 
   def client
-    @client ||= begin
-      require 'statsd/instrument/client'
-      StatsD::Instrument::Environment.from_env.default_client
-    end
+    @client ||= StatsD::Instrument::Environment.from_env.default_client
   end
 
   # Singleton methods will be delegated to the singleton client.
@@ -413,6 +410,7 @@ require 'statsd/instrument/version'
 require 'statsd/instrument/metric'
 require 'statsd/instrument/legacy_client'
 require 'statsd/instrument/backend'
+require 'statsd/instrument/client'
 require 'statsd/instrument/environment'
 require 'statsd/instrument/helpers'
 require 'statsd/instrument/assertions'

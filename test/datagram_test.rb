@@ -2,8 +2,6 @@
 
 require 'test_helper'
 
-require 'statsd/instrument/client'
-
 class DatagramTest < Minitest::Test
   def test_parsing_datagrams
     datagram = 'Kernel.Orders.order_creation_path:1|c|' \

@@ -2,8 +2,6 @@
 
 require 'test_helper'
 
-require 'statsd/instrument/client'
-
 class UDPSinktest < Minitest::Test
   def setup
     @receiver = UDPSocket.new
