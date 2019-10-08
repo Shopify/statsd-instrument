@@ -14,7 +14,6 @@ ENV['STATSD_ADDR'] = "#{legacy_receiver.addr[2]}:#{legacy_receiver.addr[1]}"
 ENV['STATSD_IMPLEMENTATION'] ||= 'datadog'
 
 require 'statsd-instrument'
-require 'statsd/instrument/client'
 
 legacy_client = StatsD
 

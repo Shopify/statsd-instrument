@@ -2,8 +2,6 @@
 
 require 'test_helper'
 
-require 'statsd/instrument/client'
-
 class NullSinktest < Minitest::Test
   def test_null_sink
     null_sink = StatsD::Instrument::NullSink.new
