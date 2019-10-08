@@ -71,9 +71,9 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise [Minitest::Assertion] If an exception occurs, or if the metric did
   #   not occur as specified during the execution the block.
-  def assert_statsd_increment(metric_name, **options, &block)
+  def assert_statsd_increment(metric_name, datagrams: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.increment(metric_name, **options)
-    assert_statsd_expectations([expectation], &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
   end
 
   # Asserts that a given timing metric occurred inside the provided block.
@@ -83,9 +83,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_measure(metric_name, **options, &block)
+  def assert_statsd_measure(metric_name, datagrams: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.measure(metric_name, **options)
-    assert_statsd_expectations([expectation], &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
   end
 
   # Asserts that a given gauge metric occurred inside the provided block.
@@ -95,9 +95,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_gauge(metric_name, **options, &block)
+  def assert_statsd_gauge(metric_name, datagrams: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.gauge(metric_name, **options)
-    assert_statsd_expectations([expectation], &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
   end
 
   # Asserts that a given histogram metric occurred inside the provided block.
@@ -107,9 +107,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_histogram(metric_name, **options, &block)
+  def assert_statsd_histogram(metric_name, datagrams: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.histogram(metric_name, **options)
-    assert_statsd_expectations([expectation], &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
   end
 
   # Asserts that a given distribution metric occurred inside the provided block.
@@ -119,9 +119,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_distribution(metric_name, **options, &block)
+  def assert_statsd_distribution(metric_name, datagrams: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.distribution(metric_name, **options)
-    assert_statsd_expectations([expectation], &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
   end
 
   # Asserts that a given set metric occurred inside the provided block.
@@ -131,9 +131,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_set(metric_name, **options, &block)
+  def assert_statsd_set(metric_name, datagrams: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.set(metric_name, **options)
-    assert_statsd_expectations([expectation], &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
   end
 
   # Asserts that a given key/value metric occurred inside the provided block.
@@ -143,9 +143,9 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_key_value(metric_name, **options, &block)
+  def assert_statsd_key_value(metric_name, datagrams: nil, **options, &block)
     expectation = StatsD::Instrument::Expectation.key_value(metric_name, **options)
-    assert_statsd_expectations([expectation], &block)
+    assert_statsd_expectation(expectation, datagrams: datagrams, &block)
   end
 
   # Asserts that the set of provided metric expectations came true.
@@ -165,6 +165,7 @@ module StatsD::Instrument::Assertions
       datagrams = capture_statsd_datagrams_with_exception_handling(&block)
     end
 
+    expectations = Array(expectations)
     matched_expectations = []
     expectations.each do |expectation|
       expectation_times = expectation.times
@@ -210,6 +211,7 @@ module StatsD::Instrument::Assertions
 
   # For backwards compatibility
   alias_method :assert_statsd_calls, :assert_statsd_expectations
+  alias_method :assert_statsd_expectation, :assert_statsd_expectations
 
   private
 

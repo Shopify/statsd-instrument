@@ -201,6 +201,16 @@ class AssertionsTest < Minitest::Test
     assert_includes assertion.message, "MyJob"
   end
 
+  def test_capture_and_assert
+    datagrams = @test_case.capture_statsd_datagrams do
+      StatsD.increment('counter', tags: { foo: 1 })
+      StatsD.increment('counter', tags: { foo: 2 })
+    end
+
+    @test_case.assert_statsd_increment('counter', tags: ['foo:1'], datagrams: datagrams)
+    @test_case.assert_statsd_increment('counter', tags: ['foo:2'], datagrams: datagrams)
+  end
+
   def test_multiple_expectations_are_not_order_dependent
     foo_1_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:1'])
     foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
