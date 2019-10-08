@@ -1,34 +1,18 @@
 # frozen_string_literal: true
 
 # @private
-class StatsD::Instrument::MetricExpectation
+class StatsD::Instrument::Expectation
   attr_accessor :times, :type, :name, :value, :sample_rate, :tags
   attr_reader :ignore_tags
 
-  def initialize(options = {})
-    if options[:type]
-      @type = options[:type]
-    else
-      raise ArgumentError, "Metric :type is required."
-    end
-
-    if options[:name]
-      @name = options[:name].to_s
-    else
-      raise ArgumentError, "Metric :name is required."
-    end
-
-    if options[:times]
-      @times = options[:times]
-    else
-      raise ArgumentError, "Metric :times is required."
-    end
-
-    @name = StatsD.prefix ? "#{StatsD.prefix}.#{@name}" : @name unless options[:no_prefix]
-    @tags = StatsD::Instrument::Metric.normalize_tags(options[:tags])
-    @sample_rate = options[:sample_rate]
-    @value = normalized_value_for_type(type, options[:value]) if options[:value]
-    @ignore_tags = StatsD::Instrument::Metric.normalize_tags(options[:ignore_tags])
+  def initialize(type:, name:, value: nil, sample_rate: nil, tags: nil, ignore_tags: nil, no_prefix: false, times: 1)
+    @type = type
+    @name = StatsD.prefix ? "#{StatsD.prefix}.#{name}" : name unless no_prefix
+    @value = normalized_value_for_type(type, value) if value
+    @sample_rate = sample_rate
+    @tags = StatsD::Instrument::Metric.normalize_tags(tags)
+    @ignore_tags = StatsD::Instrument::Metric.normalize_tags(ignore_tags)
+    @times = times
   end
 
   def normalized_value_for_type(type, value)
@@ -75,6 +59,9 @@ class StatsD::Instrument::MetricExpectation
   end
 
   def inspect
-    "#<StatsD::Instrument::MetricExpectation:\"#{self}\">"
+    "#<StatsD::Instrument::Expectation:\"#{self}\">"
   end
 end
+
+# For backwards compatibility
+StatsD::Instrument::MetricExpectation = StatsD::Instrument::Expectation

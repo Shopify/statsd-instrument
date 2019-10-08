@@ -52,12 +52,14 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise [Minitest::Assertion] If an exception occurs, or if any metric (with the
   #   provided name, or any), occurred during the execution of the provided block.
-  def assert_no_statsd_calls(metric_name = nil, &block)
-    raise ArgumentError, "assert_no_statsd_calls requires a block" unless block_given?
-    metrics = capture_statsd_datagrams_with_exception_handling(&block)
+  def assert_no_statsd_calls(metric_name = nil, datagrams: nil, &block)
+    if datagrams.nil?
+      raise LocalJumpError, "assert_no_statsd_calls requires a block" unless block_given?
+      datagrams = capture_statsd_datagrams_with_exception_handling(&block)
+    end
 
-    metrics.select! { |m| m.name == metric_name } if metric_name
-    assert(metrics.empty?, "No StatsD calls for metric #{metrics.map(&:name).join(', ')} expected.")
+    datagrams.select! { |m| m.name == metric_name } if metric_name
+    assert(datagrams.empty?, "No StatsD calls for metric #{datagrams.map(&:name).join(', ')} expected.")
   end
 
   # Asserts that a given counter metric occurred inside the provided block.
@@ -69,8 +71,8 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise [Minitest::Assertion] If an exception occurs, or if the metric did
   #   not occur as specified during the execution the block.
-  def assert_statsd_increment(metric_name, options = {}, &block)
-    assert_statsd_call(:c, metric_name, options, &block)
+  def assert_statsd_increment(metric_name, **options, &block)
+    assert_statsd_expectation(:c, metric_name, **options, &block)
   end
 
   # Asserts that a given timing metric occurred inside the provided block.
@@ -80,8 +82,8 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_measure(metric_name, options = {}, &block)
-    assert_statsd_call(:ms, metric_name, options, &block)
+  def assert_statsd_measure(metric_name, **options, &block)
+    assert_statsd_expectation(:ms, metric_name, **options, &block)
   end
 
   # Asserts that a given gauge metric occurred inside the provided block.
@@ -91,8 +93,8 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_gauge(metric_name, options = {}, &block)
-    assert_statsd_call(:g, metric_name, options, &block)
+  def assert_statsd_gauge(metric_name, **options, &block)
+    assert_statsd_expectation(:g, metric_name, **options, &block)
   end
 
   # Asserts that a given histogram metric occurred inside the provided block.
@@ -102,8 +104,8 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_histogram(metric_name, options = {}, &block)
-    assert_statsd_call(:h, metric_name, options, &block)
+  def assert_statsd_histogram(metric_name, **options, &block)
+    assert_statsd_expectation(:h, metric_name, **options, &block)
   end
 
   # Asserts that a given distribution metric occurred inside the provided block.
@@ -113,8 +115,8 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_distribution(metric_name, options = {}, &block)
-    assert_statsd_call(:d, metric_name, options, &block)
+  def assert_statsd_distribution(metric_name, **options, &block)
+    assert_statsd_expectation(:d, metric_name, **options, &block)
   end
 
   # Asserts that a given set metric occurred inside the provided block.
@@ -124,8 +126,8 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_set(metric_name, options = {}, &block)
-    assert_statsd_call(:s, metric_name, options, &block)
+  def assert_statsd_set(metric_name, **options, &block)
+    assert_statsd_expectation(:s, metric_name, **options, &block)
   end
 
   # Asserts that a given key/value metric occurred inside the provided block.
@@ -135,8 +137,8 @@ module StatsD::Instrument::Assertions
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_key_value(metric_name, options = {}, &block)
-    assert_statsd_call(:kv, metric_name, options, &block)
+  def assert_statsd_key_value(metric_name, **options, &block)
+    assert_statsd_expectation(:kv, metric_name, **options, &block)
   end
 
   # Asserts that the set of provided metric expectations came true.
@@ -145,57 +147,62 @@ module StatsD::Instrument::Assertions
   # {#assert_statsd_increment} and others.
   #
   # @private
-  # @param [Array<StatsD::Instrument::MetricExpectation>] expected_metrics The set of
-  #   metric expectations to verify.
+  # @param [Array<StatsD::Instrument::Expectation>] expectations The set of
+  #   expectations to verify.
   # @yield (see #assert_statsd_increment)
   # @return [void]
   # @raise (see #assert_statsd_increment)
-  def assert_statsd_calls(expected_metrics, &block)
-    raise ArgumentError, "assert_statsd_* requires a block" unless block_given?
-    metrics = capture_statsd_datagrams_with_exception_handling(&block)
+  def assert_statsd_expectations(expectations, datagrams: nil, &block)
+    if datagrams.nil?
+      raise LocalJumpError, "assert_statsd_expectations requires a block" unless block_given?
+      datagrams = capture_statsd_datagrams_with_exception_handling(&block)
+    end
 
-    matched_expected_metrics = []
-    expected_metrics.each do |expected_metric|
-      expected_metric_times = expected_metric.times
-      expected_metric_times_remaining = expected_metric.times
-      filtered_metrics = metrics.select { |m| m.type == expected_metric.type && m.name == expected_metric.name }
+    matched_expectations = []
+    expectations.each do |expectation|
+      expectation_times = expectation.times
+      expectation_times_remaining = expectation.times
+      filtered_datagrams = datagrams.select { |m| m.type == expectation.type && m.name == expectation.name }
 
-      if filtered_metrics.empty?
-        flunk("No StatsD calls for metric #{expected_metric.name} of type #{expected_metric.type} were made.")
+      if filtered_datagrams.empty?
+        flunk("No StatsD calls for metric #{expectation.name} of type #{expectation.type} were made.")
       end
 
-      filtered_metrics.each do |metric|
-        next unless expected_metric.matches(metric)
+      filtered_datagrams.each do |datagram|
+        next unless expectation.matches(datagram)
 
-        if expected_metric_times_remaining == 0
+        if expectation_times_remaining == 0
           flunk("Unexpected StatsD call; number of times this metric " \
-            "was expected exceeded: #{expected_metric.inspect}")
+            "was expected exceeded: #{expectation.inspect}")
         end
 
-        expected_metric_times_remaining -= 1
-        metrics.delete(metric)
-        if expected_metric_times_remaining == 0
-          matched_expected_metrics << expected_metric
+        expectation_times_remaining -= 1
+        datagrams.delete(datagram)
+        if expectation_times_remaining == 0
+          matched_expectations << expectation
         end
       end
 
-      next if expected_metric_times_remaining == 0
+      next if expectation_times_remaining == 0
 
-      msg = +"Metric expected #{expected_metric_times} times but seen " \
-        "#{expected_metric_times - expected_metric_times_remaining} " \
-        "times: #{expected_metric.inspect}."
-      msg << "\nCaptured metrics with the same key: #{filtered_metrics}" if filtered_metrics.any?
+      msg = +"Metric expected #{expectation_times} times but seen " \
+        "#{expectation_times - expectation_times_remaining} " \
+        "times: #{expectation.inspect}."
+      msg << "\nCaptured metrics with the same key: #{filtered_datagrams}" if filtered_datagrams.any?
       flunk(msg)
     end
-    expected_metrics -= matched_expected_metrics
+    expectations -= matched_expectations
 
-    unless expected_metrics.empty?
+    unless expectations.empty?
       flunk("Unexpected StatsD calls; the following metric expectations " \
-        "were not satisfied: #{expected_metrics.inspect}")
+        "were not satisfied: #{expectations.inspect}")
     end
 
     pass
   end
+
+  # For backwards compatibility
+  alias_method :assert_statsd_calls, :assert_statsd_expectations
 
   private
 
@@ -213,11 +220,8 @@ module StatsD::Instrument::Assertions
     MESSAGE
   end
 
-  def assert_statsd_call(metric_type, metric_name, options = {}, &block)
-    options[:name] = metric_name
-    options[:type] = metric_type
-    options[:times] ||= 1
-    expected_metric = StatsD::Instrument::MetricExpectation.new(options)
-    assert_statsd_calls([expected_metric], &block)
+  def assert_statsd_expectation(type, name, **options, &block)
+    expectation = StatsD::Instrument::Expectation.new(type: type, name: name, **options)
+    assert_statsd_expectations([expectation], &block)
   end
 end
