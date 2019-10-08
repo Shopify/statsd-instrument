@@ -76,10 +76,6 @@ class StatsD::Instrument::Expectation
     true
   end
 
-  def default_value
-    1 if type == :c
-  end
-
   def to_s
     str = +"#{name}:#{value || '<anything>'}|#{type}"
     str << "|@#{sample_rate}" if sample_rate
