@@ -72,7 +72,8 @@ module StatsD::Instrument::Assertions
   # @raise [Minitest::Assertion] If an exception occurs, or if the metric did
   #   not occur as specified during the execution the block.
   def assert_statsd_increment(metric_name, **options, &block)
-    assert_statsd_expectation(:c, metric_name, **options, &block)
+    expectation = StatsD::Instrument::Expectation.increment(metric_name, **options)
+    assert_statsd_expectations([expectation], &block)
   end
 
   # Asserts that a given timing metric occurred inside the provided block.
@@ -83,7 +84,8 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise (see #assert_statsd_increment)
   def assert_statsd_measure(metric_name, **options, &block)
-    assert_statsd_expectation(:ms, metric_name, **options, &block)
+    expectation = StatsD::Instrument::Expectation.measure(metric_name, **options)
+    assert_statsd_expectations([expectation], &block)
   end
 
   # Asserts that a given gauge metric occurred inside the provided block.
@@ -94,7 +96,8 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise (see #assert_statsd_increment)
   def assert_statsd_gauge(metric_name, **options, &block)
-    assert_statsd_expectation(:g, metric_name, **options, &block)
+    expectation = StatsD::Instrument::Expectation.gauge(metric_name, **options)
+    assert_statsd_expectations([expectation], &block)
   end
 
   # Asserts that a given histogram metric occurred inside the provided block.
@@ -105,7 +108,8 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise (see #assert_statsd_increment)
   def assert_statsd_histogram(metric_name, **options, &block)
-    assert_statsd_expectation(:h, metric_name, **options, &block)
+    expectation = StatsD::Instrument::Expectation.histogram(metric_name, **options)
+    assert_statsd_expectations([expectation], &block)
   end
 
   # Asserts that a given distribution metric occurred inside the provided block.
@@ -116,7 +120,8 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise (see #assert_statsd_increment)
   def assert_statsd_distribution(metric_name, **options, &block)
-    assert_statsd_expectation(:d, metric_name, **options, &block)
+    expectation = StatsD::Instrument::Expectation.distribution(metric_name, **options)
+    assert_statsd_expectations([expectation], &block)
   end
 
   # Asserts that a given set metric occurred inside the provided block.
@@ -127,7 +132,8 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise (see #assert_statsd_increment)
   def assert_statsd_set(metric_name, **options, &block)
-    assert_statsd_expectation(:s, metric_name, **options, &block)
+    expectation = StatsD::Instrument::Expectation.set(metric_name, **options)
+    assert_statsd_expectations([expectation], &block)
   end
 
   # Asserts that a given key/value metric occurred inside the provided block.
@@ -138,7 +144,8 @@ module StatsD::Instrument::Assertions
   # @return [void]
   # @raise (see #assert_statsd_increment)
   def assert_statsd_key_value(metric_name, **options, &block)
-    assert_statsd_expectation(:kv, metric_name, **options, &block)
+    expectation = StatsD::Instrument::Expectation.key_value(metric_name, **options)
+    assert_statsd_expectations([expectation], &block)
   end
 
   # Asserts that the set of provided metric expectations came true.
@@ -218,10 +225,5 @@ module StatsD::Instrument::Assertions
       If this exception is expected, make sure to handle it using `assert_raises`
       inside the block provided to the StatsD assertion.
     MESSAGE
-  end
-
-  def assert_statsd_expectation(type, name, **options, &block)
-    expectation = StatsD::Instrument::Expectation.new(type: type, name: name, **options)
-    assert_statsd_expectations([expectation], &block)
   end
 end
