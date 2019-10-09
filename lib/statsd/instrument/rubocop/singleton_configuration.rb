@@ -39,7 +39,7 @@ module RuboCop
             and assign it to `StatsD.singleton_client`. The client constructor accepts many of the
             same options.
           - If you have to, you can call the old methods on `StatsD.legacy_singleton_client`. Note
-            that thios option will go away in the next major version.
+            that this option will go away in the next major version.
         MESSAGE
 
         def on_send(node)
