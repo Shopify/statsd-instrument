@@ -8,6 +8,76 @@ section below.
 
 _Nothing yet!_
 
+## Version 2.7.0
+
+This release allows you to switch the StatsD singleton to use the new, more
+performant client. By setting `STATSD_USE_NEW_CLIENT` as environment variable
+methods called on the StatsD singleton (e.g. `StatsD.increment`) will be
+delegated to an instance of the new client, configured using environment
+variables.
+
+The new client should be mostly compatible with the legacy client, but some
+deprecated functionality will no longer work. See the changelog for version
+2.6.0 and 2.5.0 for more information about the deprecations, and how to find
+and fix deprecations in your code base.
+
+- The old legacy client that was implemented on the `StatsD` singleton has
+  been moved to `StatsD::LegacyClient.singleton`. By default, all method
+  calls on the `StatsD` singleton will be delegated to this legacy client.
+- By setting `STATSD_USE_NEW_CLIENT` as environment variable, these method
+  calls will be delegated to an instance of the new client instead. This
+  client is configured using the xisting `STATD_*` environment variables,
+  like `STATSD_ADDR` and `STATSD_IMPLEMENTATION`.
+- You can also assign a custom client to `StatsD.singleton_client`.
+
+The `assert_statsd_*` methods have been reworked to support asserting StatsD
+datagrams coming from a legacy client, or from a new client.
+
+- By default, the assertion methods will capture metrics emitted from
+  `StatsD.singleton_client`.
+- You can provide a `client` argument if you want to assert metrics being
+  emitted by a different client. E.g.
+
+  ``` ruby
+    assert_statsd_increment('foo', client: my_custom_client) do
+      my_custom_client.increment('foo')
+    end
+  ```
+
+- You can also capture metrics yourself, and then run assertions on them
+  by providing a `datagrams` argument:
+
+  ``` ruby
+    datagrams = my_custom_client.capture do
+      my_custom_client.increment('foo')
+    end
+    assert_statsd_increment('foo', datagrams: datagrams)
+  ```
+
+  This makes it easy to run multiple assertions on the set of metrics that
+  was emitted without having to nest calls.
+
+- **⚠️ DEPRECATION**: The following methods to configure the legacy client
+  are deprecated:
+
+  - `Statsd.backend`
+  - `StatsD.default_sample_rate`
+  - `StatsD.default_tags`
+  - `StatsD.prefix`
+
+  We recommend configuring StatsD using environment variables, which will be
+  picked up by the new client as well. You can also instantiate a new client
+  yourself; you can provide similar configuration options to
+  `StatsD::Instrument::Client.new`.
+
+  You can use the following Rubocop invocation to find any occurrences of
+  these deprecated method calls:
+
+  ``` sh
+    rubocop --require `bundle show statsd-instrument`/lib/statsd/instrument/rubocop.rb \
+      --only StatsD/SingletonConfiguration
+  ```
+
 ## Version 2.6.0
 
 This release contains a new `StatsD::Instrument::Client` class, which is
