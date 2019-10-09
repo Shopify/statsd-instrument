@@ -103,7 +103,7 @@ class EnvironmentTest < Minitest::Test
   def test_default_client_has_sensible_defaults
     env = StatsD::Instrument::Environment.new('STATSD_ENV' => 'production')
 
-    assert_equal StatsD::Instrument::StatsDDatagramBuilder, env.default_client.datagram_builder_class
+    assert_equal StatsD::Instrument::DogStatsDDatagramBuilder, env.default_client.datagram_builder_class
     assert_equal 'localhost', env.default_client.sink.host
     assert_equal 8125, env.default_client.sink.port
     assert_equal 1.0, env.default_client.default_sample_rate

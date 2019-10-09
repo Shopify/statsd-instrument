@@ -76,7 +76,7 @@ class StatsD::Instrument::Environment
   end
 
   def statsd_implementation
-    env.fetch('STATSD_IMPLEMENTATION', 'statsd')
+    env.fetch('STATSD_IMPLEMENTATION', 'datadog')
   end
 
   def statsd_sample_rate
