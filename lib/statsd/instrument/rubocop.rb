@@ -21,6 +21,17 @@ module RuboCop
         statsd_count
       }
 
+      SINGLETON_CONFIGURATION_METHODS = %i{
+        backend
+        backend=
+        prefix
+        prefix=
+        default_tags
+        default_tags=
+        default_sample_rate
+        default_sample_rate=
+      }
+
       private
 
       def metaprogramming_method?(node)
@@ -31,6 +42,12 @@ module RuboCop
         node.receiver&.type == :const &&
           node.receiver&.const_name == "StatsD" &&
           METRIC_METHODS.include?(node.method_name)
+      end
+
+      def singleton_configuration_method?(node)
+        node.receiver&.type == :const &&
+          node.receiver&.const_name == "StatsD" &&
+          SINGLETON_CONFIGURATION_METHODS.include?(node.method_name)
       end
 
       def has_keyword_argument?(node, sym)
@@ -62,3 +79,4 @@ require_relative 'rubocop/positional_arguments'
 require_relative 'rubocop/splat_arguments'
 require_relative 'rubocop/measure_as_dist_argument'
 require_relative 'rubocop/metric_prefix_argument'
+require_relative 'rubocop/singleton_configuration'
