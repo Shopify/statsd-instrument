@@ -206,7 +206,7 @@ s
 
   See #193, #184, and #166 for more information.
 
-## Verison 2.5.1
+## Version 2.5.1
 
 - **Bugfix:** when using metaprogramming methods, changes to `StatsD.prefix` after
   the metaprogramming method was evaluated would not be respected. This
