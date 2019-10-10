@@ -57,6 +57,11 @@ datagrams coming from a legacy client, or from a new client.
   This makes it easy to run multiple assertions on the set of metrics that
   was emitted without having to nest calls.
 
+- **⚠️ DEPRECATION** The `assert_statsd_*`-family of methods now use keyword
+  arguments, rather than option hashes. This means that calls that use
+  unsupported arguments will raise an `ArgumentError` now, rather than silently
+  ignoring unknown keys.
+
 - **⚠️ DEPRECATION**: The following methods to configure the legacy client
   are deprecated:
 
