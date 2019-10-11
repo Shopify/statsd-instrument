@@ -26,7 +26,7 @@ and fix deprecations in your code base.
   calls on the `StatsD` singleton will be delegated to this legacy client.
 - By setting `STATSD_USE_NEW_CLIENT` as environment variable, these method
   calls will be delegated to an instance of the new client instead. This
-  client is configured using the xisting `STATD_*` environment variables,
+  client is configured using the existing `STATD_*` environment variables,
   like `STATSD_ADDR` and `STATSD_IMPLEMENTATION`.
 - You can also assign a custom client to `StatsD.singleton_client`.
 
