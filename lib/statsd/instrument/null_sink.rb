@@ -4,7 +4,7 @@
 #   to become the new default in the next major release of this library.
 class StatsD::Instrument::NullSink
   def sample?(_sample_rate)
-    false
+    true
   end
 
   def <<(_datagram)
