@@ -96,7 +96,7 @@ class StatsD::Instrument::Client
   #
   # You should use a gauge if you are reporting the current value of
   # something that can only have one value at the time. E.g., the
-  # speed of your car. A newly reported value will repla e the previously
+  # speed of your car. A newly reported value will replace the previously
   # reported value.
   #
   #

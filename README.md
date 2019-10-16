@@ -1,4 +1,5 @@
 # StatsD client for Ruby apps
+# foo
 
 This is a ruby client for statsd (http://github.com/etsy/statsd). It provides
 a lightweight way to track and measure metrics in your application.
