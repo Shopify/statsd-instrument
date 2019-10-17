@@ -417,6 +417,32 @@ class StatsDInstrumentationTest < Minitest::Test
     end
   end
 
+  def test_statsd_measure_with_new_client
+    old_client = StatsD.singleton_client
+    StatsD.singleton_client = StatsD::Instrument::Client.new
+
+    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3
+    assert_statsd_measure('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3) do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
+  ensure
+    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    StatsD.singleton_client = old_client
+  end
+
+  def test_statsd_count_with_new_client
+    old_client = StatsD.singleton_client
+    StatsD.singleton_client = StatsD::Instrument::Client.new
+
+    ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    assert_statsd_increment('ActiveMerchant.Gateway.ssl_post') do
+      ActiveMerchant::Gateway.new.purchase(true)
+    end
+  ensure
+    ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    StatsD.singleton_client = old_client
+  end
+
   private
 
   def assert_scope(klass, method, expected_scope)
