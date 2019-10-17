@@ -106,22 +106,11 @@ class StatsD::Instrument::Environment
   def default_client
     @default_client ||= StatsD::Instrument::Client.new(
       sink: default_sink_for_environment,
-      datagram_builder_class: default_datagram_builder_class_for_implementation,
+      implementation: statsd_implementation,
       default_sample_rate: statsd_sample_rate,
       prefix: statsd_prefix,
       default_tags: statsd_default_tags,
     )
-  end
-
-  def default_datagram_builder_class_for_implementation
-    case statsd_implementation
-    when 'statsd'
-      StatsD::Instrument::StatsDDatagramBuilder
-    when 'datadog', 'dogstatsd'
-      StatsD::Instrument::DogStatsDDatagramBuilder
-    else
-      raise NotImplementedError, "No implementation for #{statsd_implementation}"
-    end
   end
 
   def default_sink_for_environment

@@ -5,9 +5,7 @@ require 'test_helper'
 class ClientTest < Minitest::Test
   def setup
     @client = StatsD::Instrument::Client.new(datagram_builder_class: StatsD::Instrument::StatsDDatagramBuilder)
-    @dogstatsd_client = StatsD::Instrument::Client.new(
-      datagram_builder_class: StatsD::Instrument::DogStatsDDatagramBuilder,
-    )
+    @dogstatsd_client = StatsD::Instrument::Client.new(implementation: 'datadog')
   end
 
   def test_capture

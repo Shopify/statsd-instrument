@@ -22,7 +22,8 @@ class StatsD::Instrument::Client
     prefix: nil,
     default_sample_rate: 1,
     default_tags: nil,
-    datagram_builder_class: StatsD::Instrument::StatsDDatagramBuilder
+    implementation: 'datadog',
+    datagram_builder_class: datagram_builder_class_from_implementation(implementation)
   )
     @sink = sink
     @datagram_builder_class = datagram_builder_class
@@ -32,6 +33,17 @@ class StatsD::Instrument::Client
     @default_sample_rate = default_sample_rate
 
     @datagram_builder = { false => nil, true => nil }
+  end
+
+  def datagram_builder_class_from_implementation(implementation)
+    case implementation.to_s
+    when 'statsd'
+      StatsD::Instrument::StatsDDatagramBuilder
+    when 'datadog', 'dogstatsd'
+      StatsD::Instrument::DogStatsDDatagramBuilder
+    else
+      raise NotImplementedError, "No implementation for #{statsd_implementation}"
+    end
   end
 
   # @!group Metric Methods
@@ -271,7 +283,7 @@ class StatsD::Instrument::Client
   def capture_sink
     StatsD::Instrument::CaptureSink.new(
       parent: @sink,
-      datagram_class: datagram_builder(no_prefix: false).datagram_class,
+      datagram_class: datagram_builder_class.datagram_class,
     )
   end
 

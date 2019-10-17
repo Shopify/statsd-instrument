@@ -23,6 +23,10 @@ class StatsD::Instrument::DatagramBuilder
     end
   end
 
+  def self.datagram_class
+    StatsD::Instrument::Datagram
+  end
+
   def initialize(prefix: nil, default_tags: nil)
     @prefix = prefix.nil? ? "" : "#{normalize_name(prefix)}."
     @default_tags = normalize_tags(default_tags)
@@ -54,10 +58,6 @@ class StatsD::Instrument::DatagramBuilder
 
   def kv(name, value, sample_rate, tags)
     generate_generic_datagram(name, value, 'kv', sample_rate, tags)
-  end
-
-  def datagram_class
-    StatsD::Instrument::Datagram
   end
 
   def latency_metric_type
