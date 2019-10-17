@@ -8,6 +8,17 @@ section below.
 
 _Nothing yet!_
 
+## Version 2.7.1
+
+This release has some small fixes related to the new client only:
+
+- Bugfix: Fix the metaprogramming methods so they work with a new client when
+  strict mode is _not_ enabled.
+- Make it easier to instantiate new clients by specifying an implementation
+  (e.g. `datadog`) rather than a DatagramBuilder class.
+- Change `NullSink#sample?` to always return `true`, so it's easier to verify
+  business rules by using a different DatabagramBuilder in test suites.
+
 ## Version 2.7.0
 
 This release allows you to switch the StatsD singleton to use the new, more
