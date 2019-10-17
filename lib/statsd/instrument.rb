@@ -104,8 +104,10 @@ module StatsD
     end
 
     # @private
-    def self.generate_metric_name(metric_name, callee, *args)
-      metric_name.respond_to?(:call) ? metric_name.call(callee, args).gsub('::', '.') : metric_name.gsub('::', '.')
+    def self.generate_metric_name(prefix, key, callee, *args)
+      name = key.respond_to?(:call) ? key.call(callee, args).gsub('::', '.') : key.gsub('::', '.')
+      name = "#{prefix}.#{name}" if prefix
+      name
     end
 
     # Even though this method is considered private, and is no longer used internally,
@@ -140,13 +142,16 @@ module StatsD
     def statsd_measure(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil, as_dist: false,
       sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg, prefix: nil, no_prefix: false)
 
+      if as_dist
+        return statsd_distribution(method, name, # rubocop:disable StatsD/MetricPrefixArgument
+          sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
+      end
+
       add_to_method(method, name, :measure) do
         define_method(method) do |*args, &block|
-          key = StatsD::Instrument.generate_metric_name(name, self, *args)
-          prefix ||= StatsD.prefix
-          StatsD.measure( # rubocop:disable StatsD/MeasureAsDistArgument, StatsD/MetricPrefixArgument
-            key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix, as_dist: as_dist
-          ) do
+          prefix ||= StatsD.prefix unless no_prefix
+          key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
+          StatsD.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: true) do
             super(*args, &block)
           end
         end
@@ -166,11 +171,9 @@ module StatsD
 
       add_to_method(method, name, :distribution) do
         define_method(method) do |*args, &block|
-          key = StatsD::Instrument.generate_metric_name(name, self, *args)
-          prefix ||= StatsD.prefix
-          StatsD.distribution( # rubocop:disable StatsD/MetricPrefixArgument
-            key, sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix
-          ) do
+          prefix ||= StatsD.prefix unless no_prefix
+          key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
+          StatsD.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: true) do
             super(*args, &block)
           end
         end
@@ -213,10 +216,9 @@ module StatsD
             result
           ensure
             suffix = truthiness == false ? 'failure' : 'success'
-            key = "#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}"
-            prefix ||= StatsD.prefix
-            StatsD.increment(key, prefix: prefix, # rubocop:disable StatsD/MetricPrefixArgument
-              sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+            prefix ||= StatsD.prefix unless no_prefix
+            key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
+            StatsD.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: tags, no_prefix: true)
           end
         end
       end
@@ -255,10 +257,9 @@ module StatsD
             result
           ensure
             if truthiness
-              key = StatsD::Instrument.generate_metric_name(name, self, *args)
-              prefix ||= StatsD.prefix
-              StatsD.increment(key, prefix: prefix, # rubocop:disable StatsD/MetricPrefixArgument
-                sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+              prefix ||= StatsD.prefix unless no_prefix
+              key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
+              StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: true)
             end
           end
         end
@@ -279,10 +280,9 @@ module StatsD
 
       add_to_method(method, name, :count) do
         define_method(method) do |*args, &block|
-          key = StatsD::Instrument.generate_metric_name(name, self, *args)
-          prefix ||= StatsD.prefix
-          StatsD.increment(key, prefix: prefix, # rubocop:disable StatsD/MetricPrefixArgument
-            sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+          prefix ||= StatsD.prefix unless no_prefix
+          key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
+          StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: true)
           super(*args, &block)
         end
       end

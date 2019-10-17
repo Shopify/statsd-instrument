@@ -114,7 +114,7 @@ module StatsD
         # Stats.measure call to not use the `as_dist` and `prefix` arguments.
         add_to_method(method, name, :measure) do
           define_method(method) do |*args, &block|
-            key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
             StatsD.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
               super(*args, &block)
             end
@@ -130,7 +130,7 @@ module StatsD
 
         add_to_method(method, name, :distribution) do
           define_method(method) do |*args, &block|
-            key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
             StatsD.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
               super(*args, &block)
             end
@@ -162,7 +162,7 @@ module StatsD
               result
             ensure
               suffix = truthiness == false ? 'failure' : 'success'
-              key = "#{StatsD::Instrument.generate_metric_name(name, self, *args)}.#{suffix}"
+              key = "#{StatsD::Instrument.generate_metric_name(nil, name, self, *args)}.#{suffix}"
               StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
             end
           end
@@ -193,7 +193,7 @@ module StatsD
               result
             ensure
               if truthiness
-                key = StatsD::Instrument.generate_metric_name(name, self, *args)
+                key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
                 StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
               end
             end
@@ -209,7 +209,7 @@ module StatsD
 
         add_to_method(method, name, :count) do
           define_method(method) do |*args, &block|
-            key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
             StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
             super(*args, &block)
           end
