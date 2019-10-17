@@ -142,13 +142,16 @@ module StatsD
     def statsd_measure(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil, as_dist: false,
       sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg, prefix: nil, no_prefix: false)
 
+      if as_dist
+        return statsd_distribution(method, name, # rubocop:disable StatsD/MetricPrefixArgument
+          sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
+      end
+
       add_to_method(method, name, :measure) do
         define_method(method) do |*args, &block|
           prefix ||= StatsD.prefix unless no_prefix
           key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
-          StatsD.measure( # rubocop:disable StatsD/MeasureAsDistArgument
-            key, sample_rate: sample_rate, tags: tags, no_prefix: true, as_dist: as_dist
-          ) do
+          StatsD.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: true) do
             super(*args, &block)
           end
         end
