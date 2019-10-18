@@ -381,7 +381,7 @@ module StatsD
   end
 
   attr_accessor :logger
-  attr_writer :client, :singleton_client
+  attr_writer :singleton_client
 
   extend Forwardable
 
@@ -391,10 +391,6 @@ module StatsD
 
   def singleton_client
     @singleton_client ||= StatsD::Instrument::Environment.current.client
-  end
-
-  def client
-    @client ||= StatsD::Instrument::Client.from_env
   end
 
   # Singleton methods will be delegated to the singleton client.

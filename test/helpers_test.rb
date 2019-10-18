@@ -25,7 +25,7 @@ class HelpersTest < Minitest::Test
 
   def test_capture_metrics_with_new_client
     @old_client = StatsD.singleton_client
-    StatsD.singleton_client = StatsD.client
+    StatsD.singleton_client = StatsD::Instrument::Client.new
 
     StatsD.increment('counter')
     metrics = @test_case.capture_statsd_datagrams do
