@@ -15,15 +15,48 @@ require 'statsd/instrument/log_sink'
 #   next major release of this library. While this class may already be functional,
 #   we provide no guarantees about the API and the behavior may change.
 class StatsD::Instrument::Client
+  class << self
+    def from_env(
+      env = StatsD::Instrument::Environment.current,
+      prefix: env.statsd_prefix,
+      default_sample_rate: env.statsd_sample_rate,
+      default_tags: env.statsd_default_tags,
+      implementation: env.statsd_implementation,
+      sink: env.default_sink_for_environment,
+      datagram_builder_class: datagram_builder_class_for_implementation(implementation)
+    )
+      new(
+        prefix: prefix,
+        default_sample_rate: default_sample_rate,
+        default_tags: default_tags,
+        implementation: implementation,
+        sink: sink,
+        datagram_builder_class: datagram_builder_class,
+      )
+    end
+
+    # @private
+    def datagram_builder_class_for_implementation(implementation)
+      case implementation.to_s
+      when 'statsd'
+        StatsD::Instrument::StatsDDatagramBuilder
+      when 'datadog', 'dogstatsd'
+        StatsD::Instrument::DogStatsDDatagramBuilder
+      else
+        raise NotImplementedError, "No implementation for #{statsd_implementation}"
+      end
+    end
+  end
+
   attr_reader :sink, :datagram_builder_class, :prefix, :default_tags, :default_sample_rate
 
   def initialize(
-    sink: StatsD::Instrument::NullSink.new,
     prefix: nil,
-    default_sample_rate: 1,
+    default_sample_rate: 1.0,
     default_tags: nil,
     implementation: 'datadog',
-    datagram_builder_class: datagram_builder_class_from_implementation(implementation)
+    sink: StatsD::Instrument::NullSink.new,
+    datagram_builder_class: self.class.datagram_builder_class_for_implementation(implementation)
   )
     @sink = sink
     @datagram_builder_class = datagram_builder_class
@@ -33,17 +66,6 @@ class StatsD::Instrument::Client
     @default_sample_rate = default_sample_rate
 
     @datagram_builder = { false => nil, true => nil }
-  end
-
-  def datagram_builder_class_from_implementation(implementation)
-    case implementation.to_s
-    when 'statsd'
-      StatsD::Instrument::StatsDDatagramBuilder
-    when 'datadog', 'dogstatsd'
-      StatsD::Instrument::DogStatsDDatagramBuilder
-    else
-      raise NotImplementedError, "No implementation for #{statsd_implementation}"
-    end
   end
 
   # @!group Metric Methods
