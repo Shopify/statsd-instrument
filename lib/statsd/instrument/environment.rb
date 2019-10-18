@@ -97,20 +97,10 @@ class StatsD::Instrument::Environment
 
   def client
     if env.key?('STATSD_USE_NEW_CLIENT')
-      default_client
+      StatsD::Instrument::Client.from_env(self)
     else
       StatsD::Instrument::LegacyClient.singleton
     end
-  end
-
-  def default_client
-    @default_client ||= StatsD::Instrument::Client.new(
-      sink: default_sink_for_environment,
-      implementation: statsd_implementation,
-      default_sample_rate: statsd_sample_rate,
-      prefix: statsd_prefix,
-      default_tags: statsd_default_tags,
-    )
   end
 
   def default_sink_for_environment

@@ -62,52 +62,33 @@ class EnvironmentTest < Minitest::Test
     assert_equal 'development', env.environment
   end
 
-  def test_default_client_uses_log_sink_in_development_environment
-    env = StatsD::Instrument::Environment.new('STATSD_ENV' => 'development')
-    assert_kind_of StatsD::Instrument::LogSink, env.default_client.sink
+  def test_legacy_client_is_default_client
+    env = StatsD::Instrument::Environment.new({})
+    assert_kind_of StatsD::Instrument::LegacyClient, env.client
   end
 
-  def test_default_client_uses_null_sink_in_test_environment
-    env = StatsD::Instrument::Environment.new('STATSD_ENV' => 'test')
-    assert_kind_of StatsD::Instrument::NullSink, env.default_client.sink
+  def test_client_returns_new_client_if_envcironment_asks_for_it
+    env = StatsD::Instrument::Environment.new('STATSD_USE_NEW_CLIENT' => '1')
+    assert_kind_of StatsD::Instrument::Client, env.client
   end
 
-  def test_default_client_uses_udp_sink_in_staging_environment
-    env = StatsD::Instrument::Environment.new('STATSD_ENV' => 'staging')
-    assert_kind_of StatsD::Instrument::UDPSink, env.default_client.sink
+  def test_client_from_env_uses_log_sink_in_development_environment
+    env = StatsD::Instrument::Environment.new('STATSD_USE_NEW_CLIENT' => '1', 'STATSD_ENV' => 'development')
+    assert_kind_of StatsD::Instrument::LogSink, env.client.sink
   end
 
-  def test_default_client_uses_udp_sink_in_production_environment
-    env = StatsD::Instrument::Environment.new('STATSD_ENV' => 'production')
-    assert_kind_of StatsD::Instrument::UDPSink, env.default_client.sink
+  def test_client_from_env_uses_null_sink_in_test_environment
+    env = StatsD::Instrument::Environment.new('STATSD_USE_NEW_CLIENT' => '1', 'STATSD_ENV' => 'test')
+    assert_kind_of StatsD::Instrument::NullSink, env.client.sink
   end
 
-  def test_default_client_respects_statsd_environment_variables
-    env = StatsD::Instrument::Environment.new(
-      'STATSD_ENV' => 'production',
-      'STATSD_IMPLEMENTATION' => 'datadog',
-      'STATSD_ADDR' => 'foo:8125',
-      'STATSD_SAMPLE_RATE' => "0.1",
-      'STATSD_PREFIX' => "foo",
-      'STATSD_DEFAULT_TAGS' => "foo,bar:baz",
-    )
-
-    assert_equal StatsD::Instrument::DogStatsDDatagramBuilder, env.default_client.datagram_builder_class
-    assert_equal 'foo', env.default_client.sink.host
-    assert_equal 8125, env.default_client.sink.port
-    assert_equal 0.1, env.default_client.default_sample_rate
-    assert_equal "foo", env.default_client.prefix
-    assert_equal ["foo", "bar:baz"], env.default_client.default_tags
+  def test_client_from_env_uses_udp_sink_in_staging_environment
+    env = StatsD::Instrument::Environment.new('STATSD_USE_NEW_CLIENT' => '1', 'STATSD_ENV' => 'staging')
+    assert_kind_of StatsD::Instrument::UDPSink, env.client.sink
   end
 
-  def test_default_client_has_sensible_defaults
-    env = StatsD::Instrument::Environment.new('STATSD_ENV' => 'production')
-
-    assert_equal StatsD::Instrument::DogStatsDDatagramBuilder, env.default_client.datagram_builder_class
-    assert_equal 'localhost', env.default_client.sink.host
-    assert_equal 8125, env.default_client.sink.port
-    assert_equal 1.0, env.default_client.default_sample_rate
-    assert_nil env.default_client.prefix
-    assert_nil env.default_client.default_tags
+  def test_client_from_env_uses_udp_sink_in_production_environment
+    env = StatsD::Instrument::Environment.new('STATSD_USE_NEW_CLIENT' => '1', 'STATSD_ENV' => 'production')
+    assert_kind_of StatsD::Instrument::UDPSink, env.client.sink
   end
 end

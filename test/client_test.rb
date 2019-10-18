@@ -8,7 +8,7 @@ class ClientTest < Minitest::Test
     @dogstatsd_client = StatsD::Instrument::Client.new(implementation: 'datadog')
   end
 
-  def test_from_env
+  def test_client_from_env
     env = StatsD::Instrument::Environment.new(
       'STATSD_ENV' => 'production',
       'STATSD_SAMPLE_RATE' => '0.1',
@@ -29,7 +29,18 @@ class ClientTest < Minitest::Test
     assert_equal 8125, client.sink.port
   end
 
-  def test_from_env_with_overrides
+  def test_client_from_env_has_sensible_defaults
+    env = StatsD::Instrument::Environment.new({})
+    client = StatsD::Instrument::Client.from_env(env)
+
+    assert_equal 1.0, client.default_sample_rate
+    assert_nil client.prefix
+    assert_nil client.default_tags
+    assert_equal StatsD::Instrument::DogStatsDDatagramBuilder, client.datagram_builder_class
+    assert_kind_of StatsD::Instrument::LogSink, client.sink
+  end
+
+  def test_client_from_env_with_overrides
     env = StatsD::Instrument::Environment.new(
       'STATSD_SAMPLE_RATE' => '0.1',
       'STATSD_PREFIX' => 'foo',

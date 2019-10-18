@@ -394,7 +394,7 @@ module StatsD
   end
 
   def client
-    @client ||= StatsD::Instrument::Environment.current.default_client
+    @client ||= StatsD::Instrument::Client.from_env
   end
 
   # Singleton methods will be delegated to the singleton client.
