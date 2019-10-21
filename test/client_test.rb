@@ -8,6 +8,57 @@ class ClientTest < Minitest::Test
     @dogstatsd_client = StatsD::Instrument::Client.new(implementation: 'datadog')
   end
 
+  def test_client_from_env
+    env = StatsD::Instrument::Environment.new(
+      'STATSD_ENV' => 'production',
+      'STATSD_SAMPLE_RATE' => '0.1',
+      'STATSD_PREFIX' => 'foo',
+      'STATSD_DEFAULT_TAGS' => 'shard:1,env:production',
+      'STATSD_IMPLEMENTATION' => 'statsd',
+      'STATSD_ADDR' => '1.2.3.4:8125',
+    )
+    client = StatsD::Instrument::Client.from_env(env)
+
+    assert_equal 0.1, client.default_sample_rate
+    assert_equal 'foo', client.prefix
+    assert_equal ['shard:1', 'env:production'], client.default_tags
+    assert_equal StatsD::Instrument::StatsDDatagramBuilder, client.datagram_builder_class
+
+    assert_kind_of StatsD::Instrument::UDPSink, client.sink
+    assert_equal '1.2.3.4', client.sink.host
+    assert_equal 8125, client.sink.port
+  end
+
+  def test_client_from_env_has_sensible_defaults
+    env = StatsD::Instrument::Environment.new({})
+    client = StatsD::Instrument::Client.from_env(env)
+
+    assert_equal 1.0, client.default_sample_rate
+    assert_nil client.prefix
+    assert_nil client.default_tags
+    assert_equal StatsD::Instrument::DogStatsDDatagramBuilder, client.datagram_builder_class
+    assert_kind_of StatsD::Instrument::LogSink, client.sink
+  end
+
+  def test_client_from_env_with_overrides
+    env = StatsD::Instrument::Environment.new(
+      'STATSD_SAMPLE_RATE' => '0.1',
+      'STATSD_PREFIX' => 'foo',
+      'STATSD_DEFAULT_TAGS' => 'shard:1,env:production',
+      'STATSD_IMPLEMENTATION' => 'statsd',
+      'STATSD_ADDR' => '1.2.3.4:8125',
+    )
+    client = StatsD::Instrument::Client.from_env(env,
+      prefix: 'bar', implementation: 'dogstatsd', sink: StatsD::Instrument::NullSink.new)
+
+    assert_equal 0.1, client.default_sample_rate
+    assert_equal 'bar', client.prefix
+    assert_equal ['shard:1', 'env:production'], client.default_tags
+    assert_equal StatsD::Instrument::DogStatsDDatagramBuilder, client.datagram_builder_class
+
+    assert_kind_of StatsD::Instrument::NullSink, client.sink
+  end
+
   def test_capture
     inner_datagrams = nil
 

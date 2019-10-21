@@ -4,8 +4,8 @@
 # which this library is active. It will use different default values based on the environment.
 class StatsD::Instrument::Environment
   class << self
-    def from_env
-      @from_env ||= StatsD::Instrument::Environment.new(ENV)
+    def current
+      @current ||= StatsD::Instrument::Environment.new(ENV)
     end
 
     # Detects the current environment, either by asking Rails, or by inspecting environment variables.
@@ -16,7 +16,7 @@ class StatsD::Instrument::Environment
     #
     # @return [String] The detected environment.
     def environment
-      from_env.environment
+      current.environment
     end
 
     # Instantiates a default backend for the current environment.
@@ -26,7 +26,7 @@ class StatsD::Instrument::Environment
     def default_backend
       case environment
       when 'production', 'staging'
-        StatsD::Instrument::Backends::UDPBackend.new(from_env.statsd_addr, from_env.statsd_implementation)
+        StatsD::Instrument::Backends::UDPBackend.new(current.statsd_addr, current.statsd_implementation)
       when 'test'
         StatsD::Instrument::Backends::NullBackend.new
       else
@@ -45,9 +45,9 @@ class StatsD::Instrument::Environment
     #
     # @return [void]
     def setup
-      StatsD.prefix = from_env.statsd_prefix
-      StatsD.default_tags = from_env.statsd_default_tags
-      StatsD.default_sample_rate = from_env.statsd_sample_rate
+      StatsD.prefix = current.statsd_prefix
+      StatsD.default_tags = current.statsd_default_tags
+      StatsD.default_sample_rate = current.statsd_sample_rate
       StatsD.logger = Logger.new($stderr)
     end
   end
@@ -97,20 +97,10 @@ class StatsD::Instrument::Environment
 
   def client
     if env.key?('STATSD_USE_NEW_CLIENT')
-      default_client
+      StatsD::Instrument::Client.from_env(self)
     else
       StatsD::Instrument::LegacyClient.singleton
     end
-  end
-
-  def default_client
-    @default_client ||= StatsD::Instrument::Client.new(
-      sink: default_sink_for_environment,
-      implementation: statsd_implementation,
-      default_sample_rate: statsd_sample_rate,
-      prefix: statsd_prefix,
-      default_tags: statsd_default_tags,
-    )
   end
 
   def default_sink_for_environment

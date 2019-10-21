@@ -11,6 +11,15 @@ section below.
   addressed since. It's highly unlikely that you are using this feature.
   However, if you are, you can capture StatsD datagrams using the
   `capture_statsd_datagrams` method, and run your own assertions on the list.
+- ⚠️ Remove `StatsD.client`. This was added in version 2.6.0 in order to
+  experiment with the new client. However, at this point thereare better ways
+  to do this.
+  - You can set `StatsD.singleton_client` to a new client, which causes the
+    calls to the StatsD singleton to be handled by a new client. If you set
+    `STATSD_USE_NEW_CLIENT`, it will be initialized to a new client.
+  - If that doesn't work for you, you can instantiate a client using
+    `StatsD::Instrument::Client.from_env` and assign it to a variable of your
+    own choosing.
 - Fix some compatibility issues when using `assert_statsd_*` methods when
   using a new client with prefix.
 

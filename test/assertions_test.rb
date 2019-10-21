@@ -6,7 +6,7 @@ class AssertionsTest < Minitest::Test
   def setup
     @old_client = StatsD.singleton_client
     env = StatsD::Instrument::Environment.new('STATSD_IMPLEMENTATION' => 'datadog')
-    StatsD.singleton_client = env.default_client
+    StatsD.singleton_client = StatsD::Instrument::Client.from_env(env)
 
     test_class = Class.new(Minitest::Test)
     test_class.send(:include, StatsD::Instrument::Assertions)
