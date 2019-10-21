@@ -6,6 +6,10 @@ section below.
 
 ### Unreleased changes
 
+_Nothing yet_
+
+## Version 2.8.0
+
 - ⚠️ Remove support for `assert_statsd_*(..., ignore_tags: ...)`. This feature
   was never documented, and the only use case we were aware of has been
   addressed since. It's highly unlikely that you are using this feature.
