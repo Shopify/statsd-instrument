@@ -107,7 +107,9 @@ module StatsD
     end
 
     module StrictMetaprogramming
-      def statsd_measure(method, name, sample_rate: nil, tags: nil, no_prefix: false)
+      def statsd_measure(method, name, sample_rate: nil, tags: nil,
+        no_prefix: false, client: StatsD.singleton_client)
+
         check_method_and_metric_name(method, name)
 
         # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
@@ -115,14 +117,16 @@ module StatsD
         add_to_method(method, name, :measure) do
           define_method(method) do |*args, &block|
             key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
-            StatsD.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
+            client.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
               super(*args, &block)
             end
           end
         end
       end
 
-      def statsd_distribution(method, name, sample_rate: nil, tags: nil, no_prefix: false)
+      def statsd_distribution(method, name, sample_rate: nil, tags: nil,
+        no_prefix: false, client: StatsD.singleton_client)
+
         check_method_and_metric_name(method, name)
 
         # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
@@ -131,14 +135,16 @@ module StatsD
         add_to_method(method, name, :distribution) do
           define_method(method) do |*args, &block|
             key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
-            StatsD.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
+            client.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
               super(*args, &block)
             end
           end
         end
       end
 
-      def statsd_count_success(method, name, sample_rate: nil, tags: nil, no_prefix: false)
+      def statsd_count_success(method, name, sample_rate: nil, tags: nil,
+        no_prefix: false, client: StatsD.singleton_client)
+
         check_method_and_metric_name(method, name)
 
         # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
@@ -163,13 +169,15 @@ module StatsD
             ensure
               suffix = truthiness == false ? 'failure' : 'success'
               key = "#{StatsD::Instrument.generate_metric_name(nil, name, self, *args)}.#{suffix}"
-              StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+              client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
             end
           end
         end
       end
 
-      def statsd_count_if(method, name, sample_rate: nil, tags: nil, no_prefix: false)
+      def statsd_count_if(method, name, sample_rate: nil, tags: nil,
+        no_prefix: false, client: StatsD.singleton_client)
+
         check_method_and_metric_name(method, name)
 
         # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
@@ -194,14 +202,16 @@ module StatsD
             ensure
               if truthiness
                 key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
-                StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+                client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
               end
             end
           end
         end
       end
 
-      def statsd_count(method, name, sample_rate: nil, tags: nil, no_prefix: false)
+      def statsd_count(method, name, sample_rate: nil, tags: nil,
+        no_prefix: false, client: StatsD.singleton_client)
+
         check_method_and_metric_name(method, name)
 
         # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
@@ -210,7 +220,7 @@ module StatsD
         add_to_method(method, name, :count) do
           define_method(method) do |*args, &block|
             key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
-            StatsD.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+            client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
             super(*args, &block)
           end
         end

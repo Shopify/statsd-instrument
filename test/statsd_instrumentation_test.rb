@@ -443,6 +443,17 @@ class StatsDInstrumentationTest < Minitest::Test
     StatsD.singleton_client = old_client
   end
 
+  def test_statsd_count_with_injected_client
+    client = StatsD::Instrument::Client.new(prefix: 'prefix')
+
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', client: client)
+    assert_statsd_increment('prefix.ActiveMerchant.Gateway.ssl_post', client: client) do
+      ActiveMerchant::Gateway.new.purchase(true)
+    end
+  ensure
+    ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  end
+
   private
 
   def assert_scope(klass, method, expected_scope)
