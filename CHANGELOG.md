@@ -6,7 +6,8 @@ section below.
 
 ### Unreleased changes
 
-_Nothing yet!_
+- Fix some compatibility issues when using `assert_statsd_*` methods when
+  using a new client with prefix.
 
 ## Version 2.7.1
 
