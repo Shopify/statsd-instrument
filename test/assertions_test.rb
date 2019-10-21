@@ -100,38 +100,6 @@ class AssertionsTest < Minitest::Test
     end
 
     assert_raises(Minitest::Assertion) do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a', 'b'], ignore_tags: ['b']) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: ['a'])
-      end
-    end
-
-    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a'], ignore_tags: ['b']) do
-      StatsD.increment('counter', sample_rate: 0.5, tags: ['a', 'b'])
-    end
-
-    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a'], ignore_tags: ['b']) do
-      StatsD.increment('counter', sample_rate: 0.5, tags: ['a'])
-    end
-
-    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: { b: 2 }) do
-      StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
-    end
-
-    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: { b: 2 }) do
-      StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 3 })
-    end
-
-    assert_raises(Minitest::Assertion) do
-      @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1, b: 3 }, ignore_tags: ['b']) do
-        StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
-      end
-    end
-
-    @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }, ignore_tags: ['b']) do
-      StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })
-    end
-
-    assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: ['a', 'b']) do
         StatsD.increment('counter', sample_rate: 0.2, tags: ['c'])
       end

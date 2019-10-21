@@ -6,6 +6,11 @@ section below.
 
 ### Unreleased changes
 
+- ⚠️ Remove support for `assert_statsd_*(..., ignore_tags: ...)`. This feature
+  was never documented, and the only use case we were aware of has been
+  addressed since. It's highly unlikely that you are using this feature.
+  However, if you are, you can capture StatsD datagrams using the
+  `capture_statsd_datagrams` method, and run your own assertions on the list.
 - Fix some compatibility issues when using `assert_statsd_*` methods when
   using a new client with prefix.
 

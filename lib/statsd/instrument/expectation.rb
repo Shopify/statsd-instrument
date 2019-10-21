@@ -33,17 +33,15 @@ class StatsD::Instrument::Expectation
   end
 
   attr_accessor :times, :type, :name, :value, :sample_rate, :tags
-  attr_reader :ignore_tags
 
-  def initialize(client: StatsD.singleton_client, type:, name:, value: nil, sample_rate: nil,
-    tags: nil, ignore_tags: nil, no_prefix: false, times: 1)
+  def initialize(client: StatsD.singleton_client, type:, name:, value: nil,
+    sample_rate: nil, tags: nil, no_prefix: false, times: 1)
 
     @type = type
     @name = client.prefix ? "#{client.prefix}.#{name}" : name unless no_prefix
     @value = normalized_value_for_type(type, value) if value
     @sample_rate = sample_rate
     @tags = StatsD::Instrument::Metric.normalize_tags(tags)
-    @ignore_tags = StatsD::Instrument::Metric.normalize_tags(ignore_tags)
     @times = times
   end
 
@@ -63,16 +61,6 @@ class StatsD::Instrument::Expectation
     if tags
       expected_tags = Set.new(tags)
       actual_tags = Set.new(actual_metric.tags)
-
-      if ignore_tags
-        ignored_tags = Set.new(ignore_tags) - expected_tags
-        actual_tags -= ignored_tags
-
-        if ignore_tags.is_a?(Array)
-          actual_tags.delete_if { |key| ignore_tags.include?(key.split(":").first) }
-        end
-      end
-
       return expected_tags.subset?(actual_tags)
     end
     true
