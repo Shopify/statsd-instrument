@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# The Datagram class parses and inspects a StatsD datagrans
+# The Datagram class parses and inspects a StatsD datagrams
 #
 # @note This class is part of the new Client implementation that is intended
 #   to become the new default in the next major release of this library.
@@ -72,7 +72,6 @@ class StatsD::Instrument::Datagram
     \n? # In some implementations, the datagram may include a trailing newline.
     \z
   }x
-  private_constant :PARSER
 
   def parsed_datagram
     @parsed ||= if (match_info = PARSER.match(@source))
