@@ -363,7 +363,7 @@ class AssertionsTest < Minitest::Test
   end
 
   def test_assertion_block_with_other_assertion_failures
-    # If another assertion failure happens inside the block, that failrue should have priority
+    # If another assertion failure happens inside the block, that failure should have priority
     assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_statsd_increment('counter') do
         @test_case.flunk('other assertion failure')

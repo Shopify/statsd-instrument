@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class CaptureSinktest < Minitest::Test
+class CaptureSinkTest < Minitest::Test
   def test_capture_sink_captures_datagram_instances
     capture_sink = StatsD::Instrument::CaptureSink.new(parent: [])
     capture_sink << 'foo:1|c'

@@ -101,7 +101,7 @@ module Compatibility
       assert_equal_datagrams { |client| client.event('foo', "bar\nbaz") }
       assert_equal_datagrams { |client| client.event('foo', "bar\nbaz", no_prefix: true) }
       assert_equal_datagrams do |client|
-        client.event('Something happend', "And it's not good", timestamp: Time.parse('2019-09-09T04:22:17Z'),
+        client.event('Something happened', "And it's not good", timestamp: Time.parse('2019-09-09T04:22:17Z'),
           hostname: 'localhost', tags: ['foo'], alert_type: 'warning', priority: 'low',
           aggregation_key: 'foo', source_type_name: 'logs')
       end

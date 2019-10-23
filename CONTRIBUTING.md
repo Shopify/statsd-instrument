@@ -4,7 +4,7 @@ This project is MIT licensed.
 
 > **Note**: this project is currently not actively maintained, but is heavily used in production.
 > As a result, pull requests and issues may not be responded to. Also, due to the limited time we have
-> avaibale to work on this library, we cannot accept PRs that do not maintain backwards compatibility,
+> available to work on this library, we cannot accept PRs that do not maintain backwards compatibility,
 > or PRs that would affect the performance of the hot code paths.
 
 ## Reporting issues
@@ -28,9 +28,9 @@ Some notes:
 - Make sure to follow to coding style. This is enforced by Rubocop
 - Make sure your changes are properly documented using [yardoc syntax](http://www.rubydoc.info/gems/yard/file/docs/GettingStarted.md).
 - Add an entry to the "unreleased changes" section of [CHANGELOG.md](./CHANGELOG.md).
-- **Do not** update `StatsD::Instrument::VERSION`. This will be done during the release prodecure.
+- **Do not** update `StatsD::Instrument::VERSION`. This will be done during the release procedure.
 
-### On perfomance & benchmarking
+### On performance & benchmarking
 
 This gem is used in production at Shopify, and is used to instrument some of
 our hottest code paths. This means that we are very careful about not

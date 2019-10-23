@@ -8,7 +8,7 @@ class StatsD::Instrument::Backend
   # @param metric [StatsD::Instrument::Metric] The metric to collect
   # @return [void]
   def collect_metric(_metric)
-    raise NotImplementedError, "Use a concerete backend implementation"
+    raise NotImplementedError, "Use a concrete backend implementation"
   end
 end
 

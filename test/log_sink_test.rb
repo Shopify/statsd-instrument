@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class LogSinktest < Minitest::Test
+class LogSinkTest < Minitest::Test
   def test_log_sink
     logger = Logger.new(log = StringIO.new)
     logger.formatter = proc do |severity, _datetime, _progname, msg|

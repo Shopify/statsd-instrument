@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class NullSinktest < Minitest::Test
+class NullSinkTest < Minitest::Test
   def test_null_sink
     null_sink = StatsD::Instrument::NullSink.new
     null_sink << 'foo:1|c' << 'bar:1|c'

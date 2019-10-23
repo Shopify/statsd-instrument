@@ -5,7 +5,7 @@
 #
 # Every metric type has its own assertion method, like {#assert_statsd_increment}
 # to assert `StatsD.increment` calls. You can also assert other properties of the
-# metric that was emitted, lioke the sample rate or presence of tags.
+# metric that was emitted, like the sample rate or presence of tags.
 # To check for the absence of metrics, use {#assert_no_statsd_calls}.
 #
 # @example Check for metric properties:

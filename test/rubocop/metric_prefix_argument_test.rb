@@ -19,7 +19,7 @@ module Rubocop
 
     def test_ok_for_metaprogramming_method_without_prefix_argument
       assert_no_offenses("statsd_measure(:method, 'metric_name')")
-      assert_no_offenses("statsd_count(:method, 'metric_name', sample_rate: 1, no_pefix: true)")
+      assert_no_offenses("statsd_count(:method, 'metric_name', sample_rate: 1, no_prefix: true)")
       assert_no_offenses("statsd_count_if(:method, 'metric_name', sample_rate: 1) {}")
     end
 

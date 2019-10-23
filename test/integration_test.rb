@@ -35,7 +35,7 @@ class IntegrationTest < Minitest::Test
     Process.kill('TERM', pid)
     _, exit_status = Process.waitpid2(pid)
 
-    assert_equal 0, exit_status, "The foked process did not exit cleanly"
+    assert_equal 0, exit_status, "The forked process did not exit cleanly"
     assert_equal "exiting:1|c", @server.recvfrom_nonblock(100).first
 
   rescue NotImplementedError

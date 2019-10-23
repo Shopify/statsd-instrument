@@ -163,7 +163,7 @@ class StatsD::Instrument::Client
   # values.
   #
   # @note The distribution metric type is not available on all implementations.
-  #   A `NotImplemetedError` will be raised if you call this method, but
+  #   A `NotImplementedError` will be raised if you call this method, but
   #   the active implementation does not support it.
   #
   # @param name (see #increment)
@@ -184,7 +184,7 @@ class StatsD::Instrument::Client
   # Emits a histogram metric, which builds a histogram of the reported values.
   #
   # @note The histogram metric type is not available on all implementations.
-  #   A `NotImplemetedError` will be raised if you call this method, but
+  #   A `NotImplementedError` will be raised if you call this method, but
   #   the active implementation does not support it.
   #
   # @param name (see #increment)
@@ -209,7 +209,7 @@ class StatsD::Instrument::Client
   #   use the preferred metric type of the implementation. The default is `:ms`.
   #   Generally, you should not have to set this.
   # @yield The latency (execution time) of the block
-  # @return The return value of the proivded block will be passed through.
+  # @return The return value of the provided block will be passed through.
   def latency(name, sample_rate: nil, tags: nil, metric_type: nil, no_prefix: false)
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     begin

@@ -120,7 +120,7 @@ class StatsD::Instrument::LegacyClient
   #
   # Emits a set metric, which counts the number of distinct values that have occurred.
   #
-  # @example Couning the number of unique visitors
+  # @example Counting the number of unique visitors
   #   StatsD.set('visitors.unique', Current.user.id)
   #
   # @param key [String] The name of the metric.
@@ -222,7 +222,7 @@ class StatsD::Instrument::LegacyClient
   # @param title [String] Title of the event. A configured prefix may be applied to this title.
   # @param text [String] Body of the event. Can contain newlines.
   # @param [String] hostname The hostname to associate with the event.
-  # @param [Time] timestamp The moment the status of the service was checkes. Defaults to now.
+  # @param [Time] timestamp The moment the status of the service was checked. Defaults to now.
   # @param [String] aggregation_key A key to aggregate similar events into groups.
   # @param [String] priority The event's priority, either `"low"` or `"normal"` (default).
   # @param [String] source_type_name The source type.
@@ -254,7 +254,7 @@ class StatsD::Instrument::LegacyClient
   # @param [String] name Name of the service. A configured prefix may be applied to this title.
   # @param [Symbol] status Current status of the service. Either `:ok`, `:warning`, `:critical`, or `:unknown`.
   # @param [String] hostname The hostname to associate with the event.
-  # @param [Time] timestamp The moment the status of the service was checkes. Defaults to now.
+  # @param [Time] timestamp The moment the status of the service was checked. Defaults to now.
   # @param [String] message A message that describes the current status.
   # @param tags (see #increment)
   # @return [void]

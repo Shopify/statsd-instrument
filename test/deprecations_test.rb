@@ -74,7 +74,7 @@ class DeprecationsTest < Minitest::Test
   # rubocop:enable StatsD/MetricValueKeywordArgument
 
   # rubocop:disable StatsD/MetricReturnValue
-  def test__deprecated__statsd_increment_retuns_metric_instance
+  def test__deprecated__statsd_increment_returns_metric_instance
     metric = StatsD.increment('key')
     assert_kind_of StatsD::Instrument::Metric, metric
     assert_equal 'key', metric.name

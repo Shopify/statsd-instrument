@@ -54,11 +54,11 @@ class StatsD::Instrument::Metric
   # The default value for this metric, which will be used if it is not set.
   #
   # A default value is only defined for counter metrics (<tt>1</tt>). For all other
-  # metric types, this emthod will raise an <tt>ArgumentError</tt>.
+  # metric types, this method will raise an <tt>ArgumentError</tt>.
   #
   #
   # A default value is only defined for counter metrics (<tt>1</tt>). For all other
-  # metric types, this emthod will raise an <tt>ArgumentError</tt>.
+  # metric types, this method will raise an <tt>ArgumentError</tt>.
   #
   # @return [Numeric, String] The default value for this metric.
   # @raise ArgumentError if the metric type doesn't have a default value

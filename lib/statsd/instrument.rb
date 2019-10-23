@@ -89,7 +89,7 @@ module StatsD
   extend self
 
   # The StatsD::Instrument module provides metaprogramming methods to instrument your methods with
-  # StatsD metrics. E.g., yopu can create counters on how often a method is called, how often it is
+  # StatsD metrics. E.g., you can create counters on how often a method is called, how often it is
   # successful, the duration of the methods call, etc.
   module Instrument
     # @private
@@ -194,7 +194,7 @@ module StatsD
     # @yield You can pass a block to this method if you want to define yourself what is a successful call
     #   based on the return value of the method.
     # @yieldparam result The return value of the instrumented method.
-    # @yieldreturn [Boolean] Return true iff the return value is consisered a success, false otherwise.
+    # @yieldreturn [Boolean] Return true iff the return value is considered a success, false otherwise.
     # @return [void]
     # @see #statsd_count_if
     def statsd_count_success(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
