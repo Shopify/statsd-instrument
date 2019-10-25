@@ -9,18 +9,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-18.04, windows-2019, macOS-10.14]
-        ruby: [2.3, 2.4, 2.5, 2.6]
-
-        exclude:
-        # The Windows environment does not support older Ruby versions. We only test against the latest version
-        - platform: windows-2019
-          ruby: 2.3
-        - platform: windows-2019
-          ruby: 2.4
-        - platform: windows-2019
-          ruby: 2.5
-
         # Windows started failing on the following command for some reason.
         #
         #     gem install bundler && bundle install --jobs 4 --retry 3
@@ -28,9 +16,19 @@ jobs:
         #     The token '&&' is not a valid statement separator in this version.
         #
         # Temporarily disable Windows builds to unblock CI.
-        - platform: windows-2019
-          ruby: 2.6
+        #
+        # platform: [ubuntu-18.04, windows-2019, macOS-10.14]
+        platform: [ubuntu-18.04, macOS-10.14]
+        ruby: [2.3, 2.4, 2.5, 2.6]
 
+        exclude:
+        # The Windows environment does not support older Ruby versions. We only test against the latest version
+        # - platform: windows-2019
+        #   ruby: 2.3
+        # - platform: windows-2019
+        #   ruby: 2.4
+        # - platform: windows-2019
+        #   ruby: 2.5
 
         # On macOS, we only test against the Ruby version macOS ships with (2.3)
         - platform: macOS-10.14
