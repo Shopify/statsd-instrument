@@ -75,11 +75,11 @@ class ClientTest < Minitest::Test
     assert_equal ['baz'], inner_datagrams.map(&:name)
   end
 
-  def test_metric_methods_return_nil
-    assert_nil @client.increment('foo')
-    assert_nil @client.measure('bar', 122.54)
-    assert_nil @client.set('baz', 123)
-    assert_nil @client.gauge('baz', 12.3)
+  def test_metric_methods_return_truish_void
+    assert @client.increment('foo')
+    assert @client.measure('bar', 122.54)
+    assert @client.set('baz', 123)
+    assert @client.gauge('baz', 12.3)
   end
 
   def test_increment_with_default_value
