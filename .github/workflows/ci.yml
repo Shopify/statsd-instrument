@@ -21,6 +21,17 @@ jobs:
         - platform: windows-2019
           ruby: 2.5
 
+        # Windows started failing on the following command for some reason.
+        #
+        #     gem install bundler && bundle install --jobs 4 --retry 3
+        #                         ~~
+        #     The token '&&' is not a valid statement separator in this version.
+        #
+        # Temporarily disable Windows builds to unblock CI.
+        - platform: windows-2019
+          ruby: 2.6
+
+
         # On macOS, we only test against the Ruby version macOS ships with (2.3)
         - platform: macOS-10.14
           ruby: 2.4
