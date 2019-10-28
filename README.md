@@ -15,7 +15,7 @@ project](http://github.com/etsy/statsd).
 
 ## Configuration
 
-It's recommended to configure this librray by setting environment variables.
+It's recommended to configure this library by setting environment variables.
 The following environment variables are supported:
 
 - `STATSD_ADDR`: (default `localhost:8125`) The address to send the StatsD UDP
@@ -27,7 +27,7 @@ The following environment variables are supported:
   explicitly, this will be determined based on other environment variables,
   like `RAILS_ENV` or `ENV`. The library will behave differently:
 
-  - In the **production** and **staging** environment, thre librray will
+  - In the **production** and **staging** environment, thre library will
     actually send UDP packets.
   - In the **test** environment, it will swallow all calls, but allows you to
     capture them for testing purposes. See below for notes on writing tests.
@@ -41,7 +41,7 @@ The following environment variables are supported:
 - `STATSD_PREFIX`: The prefix to apply to all metric names. This can be
   overridden in a metric method call.
 - `STATSD_DEFAULT_TAGS`: A comma-separated list of tags to apply to all metrics.
-  (Note: tags are not supported by all iomplementations.)
+  (Note: tags are not supported by all implementations.)
 
 ## StatsD keys
 
@@ -110,28 +110,28 @@ StatsD.histogram('Order.value', order.value_in_usd.to_f tags: { source: 'POS' })
 
 Because you are counting unique values, the results of using a sampling value less than 1.0 can lead to unexpected, hard to interpret results.
 
-*Note: This is only supported by the beta datadog implementatation.*
+*Note: This is only supported by the beta datadog implementation.*
 
 #### StatsD.distribution
 
-A modified gauge that submits a distribution of values over a sample period. Arithmetic and statistical calculations (percetiles, average, etc.) on the data set are peformed server side rather than client side like a histogram.
+A modified gauge that submits a distribution of values over a sample period. Arithmetic and statistical calculations (percentiles, average, etc.) on the data set are performed server side rather than client side like a histogram.
 
 ```ruby
 StatsD.distribution('shipit.redis_connection', 3)
 ```
 
-*Note: This is only supported by the beta datadog implementatation.*
+*Note: This is only supported by the beta datadog implementation.*
 
 #### StatsD.event
 
-An event is a (title, text) tuple that can be used to correlate metrics with something that occured within the system.
+An event is a (title, text) tuple that can be used to correlate metrics with something that occurred within the system.
 This is a good fit for instance to correlate response time variation with a deploy of the new code.
 
 ```ruby
 StatsD.event('shipit.deploy', 'started', sample_rate: 1.0)
 ```
 
-*Note: This is only supported by the [datadog implementatation](https://docs.datadoghq.com/guides/dogstatsd/#events).*
+*Note: This is only supported by the [datadog implementation](https://docs.datadoghq.com/guides/dogstatsd/#events).*
 
 Events support additional metadata such as `date_happened`, `hostname`, `aggregation_key`, `priority`, `source_type_name`, `alert_type`.
 
@@ -143,7 +143,7 @@ An event is a (check_name, status) tuple that can be used to monitor the status 
 StatsD.service_check('shipit.redis_connection', 'ok')
 ```
 
-*Note: This is only supported by the [datadog implementatation](https://docs.datadoghq.com/guides/dogstatsd/#service-checks).*
+*Note: This is only supported by the [datadog implementation](https://docs.datadoghq.com/guides/dogstatsd/#service-checks).*
 
 Service checks support additional metadata such as `timestamp`, `hostname`, `message`.
 
@@ -272,12 +272,12 @@ class MyTestcase < Minitest::Test
   end
 
   def test_no_udp_traffic
-    # Verifies no StatsD calls occured at all.
+    # Verifies no StatsD calls occurred at all.
     assert_no_statsd_calls do
       do_some_work
     end
 
-    # Verifies no StatsD calls occured for the given metric.
+    # Verifies no StatsD calls occurred for the given metric.
     assert_no_statsd_calls('metric_name') do
       do_some_work
     end

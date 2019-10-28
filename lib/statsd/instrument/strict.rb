@@ -15,7 +15,7 @@ module StatsD
     # - Only accept a position argument for value, rather than a keyword argument.
     # - The provided arguments have the right type.
     #
-    # You can enable thois monkeypatch by changing your Gemfile as follows:
+    # You can enable this monkeypatch by changing your Gemfile as follows:
     #
     #     gem 'statsd-instrument', require: 'statsd/instrument/strict'
     #
@@ -112,7 +112,7 @@ module StatsD
 
         check_method_and_metric_name(method, name)
 
-        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Unfortunately, we have to inline the new method implementation because we have to fix the
         # Stats.measure call to not use the `as_dist` and `prefix` arguments.
         add_to_method(method, name, :measure) do
           define_method(method) do |*args, &block|
@@ -129,7 +129,7 @@ module StatsD
 
         check_method_and_metric_name(method, name)
 
-        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Unfortunately, we have to inline the new method implementation because we have to fix the
         # Stats.distribution call to not use the `prefix` argument.
 
         add_to_method(method, name, :distribution) do
@@ -147,7 +147,7 @@ module StatsD
 
         check_method_and_metric_name(method, name)
 
-        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Unfortunately, we have to inline the new method implementation because we have to fix the
         # Stats.increment call to not use the `prefix` argument.
 
         add_to_method(method, name, :count_success) do
@@ -180,7 +180,7 @@ module StatsD
 
         check_method_and_metric_name(method, name)
 
-        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Unfortunately, we have to inline the new method implementation because we have to fix the
         # Stats.increment call to not use the `prefix` argument.
 
         add_to_method(method, name, :count_if) do
@@ -214,7 +214,7 @@ module StatsD
 
         check_method_and_metric_name(method, name)
 
-        # Unfortunately, we have to inline the new method implementation ebcause we have to fix the
+        # Unfortunately, we have to inline the new method implementation because we have to fix the
         # Stats.increment call to not use the `prefix` argument.
 
         add_to_method(method, name, :count) do

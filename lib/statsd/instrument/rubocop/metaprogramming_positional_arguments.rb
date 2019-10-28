@@ -6,7 +6,7 @@ module RuboCop
   module Cop
     module StatsD
       # This Rubocop will check for using the metaprogramming macros for positional
-      # argument usage, which is deprecated. These macros include `statd_count_if`,
+      # argument usage, which is deprecated. These macros include `statsd_count_if`,
       # `statsd_measure`, etc.
       #
       # Use the following Rubocop invocation to check your project's codebase:

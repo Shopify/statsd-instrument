@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class UDPSinktest < Minitest::Test
+class UDPSinkTest < Minitest::Test
   def setup
     @receiver = UDPSocket.new
     @receiver.bind('localhost', 0)

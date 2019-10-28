@@ -42,16 +42,16 @@ module RuboCop
 
         def autocorrect(node)
           -> (corrector) do
-            positial_arguments = if node.arguments.last.type == :block_pass
+            positional_arguments = if node.arguments.last.type == :block_pass
               node.arguments[2...node.arguments.length - 1]
             else
               node.arguments[2...node.arguments.length]
             end
 
-            case positial_arguments[0].type
+            case positional_arguments[0].type
             when *UNKNOWN_ARGUMENT_TYPES
               # We don't know whether the method returns a hash, in which case it would be interpreted
-              # as keyword arguments. In this case, the fix would be to add a keywordf splat:
+              # as keyword arguments. In this case, the fix would be to add a keyword splat:
               #
               # `StatsD.instrument('foo', 1, method_call)`
               # => `StatsD.instrument('foo', 1, **method_call)`
@@ -68,17 +68,17 @@ module RuboCop
             when *POSITIONAL_ARGUMENT_TYPES
               value_argument = node.arguments[1]
               from = value_argument.source_range.end_pos
-              to = positial_arguments.last.source_range.end_pos
+              to = positional_arguments.last.source_range.end_pos
               range = Parser::Source::Range.new(node.source_range.source_buffer, from, to)
               corrector.remove(range)
 
               keyword_arguments = []
-              sample_rate = positial_arguments[0]
+              sample_rate = positional_arguments[0]
               if sample_rate && sample_rate.type != :nil
                 keyword_arguments << "sample_rate: #{sample_rate.source}"
               end
 
-              tags = positial_arguments[1]
+              tags = positional_arguments[1]
               if tags && tags.type != :nil
                 keyword_arguments << if tags.type == :hash && tags.source[0] != '{'
                   "tags: { #{tags.source} }"

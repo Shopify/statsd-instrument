@@ -16,7 +16,7 @@ _Nothing yet_
   However, if you are, you can capture StatsD datagrams using the
   `capture_statsd_datagrams` method, and run your own assertions on the list.
 - ⚠️ Remove `StatsD.client`. This was added in version 2.6.0 in order to
-  experiment with the new client. However, at this point thereare better ways
+  experiment with the new client. However, at this point there are better ways
   to do this.
   - You can set `StatsD.singleton_client` to a new client, which causes the
     calls to the StatsD singleton to be handled by a new client. If you set
@@ -36,7 +36,7 @@ This release has some small fixes related to the new client only:
 - Make it easier to instantiate new clients by specifying an implementation
   (e.g. `datadog`) rather than a DatagramBuilder class.
 - Change `NullSink#sample?` to always return `true`, so it's easier to verify
-  business rules by using a different DatabagramBuilder in test suites.
+  business rules by using a different DatagramBuilder in test suites.
 
 ## Version 2.7.0
 
@@ -56,7 +56,7 @@ and fix deprecations in your code base.
   calls on the `StatsD` singleton will be delegated to this legacy client.
 - By setting `STATSD_USE_NEW_CLIENT` as environment variable, these method
   calls will be delegated to an instance of the new client instead. This
-  client is configured using the existing `STATD_*` environment variables,
+  client is configured using the existing `STATSD_*` environment variables,
   like `STATSD_ADDR` and `STATSD_IMPLEMENTATION`.
 - You can also assign a custom client to `StatsD.singleton_client`.
 
@@ -188,7 +188,7 @@ deprecated patterns. See below for more info.
 - Slight behaviour change when using the `assert_statsd_*` assertion methods in
   combination with `assert_raises`: we now do not allow the block passed to the
   `assert_statsd_` call to raise an exception. This may cause tests to fail that
-  previousloy were succeeding.
+  previously were succeeding.
 
   Consider the following example:
 
@@ -318,7 +318,7 @@ s
 
   ``` ruby
   # In your Gemfile
-  gem 'statd-instrument', require: 'statsd/instrument/strict'
+  gem 'statsd-instrument', require: 'statsd/instrument/strict'
 
   # Or, in your test helper:
   require 'statsd/instrument/strict'

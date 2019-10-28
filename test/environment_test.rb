@@ -67,7 +67,7 @@ class EnvironmentTest < Minitest::Test
     assert_kind_of StatsD::Instrument::LegacyClient, env.client
   end
 
-  def test_client_returns_new_client_if_envcironment_asks_for_it
+  def test_client_returns_new_client_if_environment_asks_for_it
     env = StatsD::Instrument::Environment.new('STATSD_USE_NEW_CLIENT' => '1')
     assert_kind_of StatsD::Instrument::Client, env.client
   end

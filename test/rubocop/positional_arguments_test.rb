@@ -21,7 +21,7 @@ module Rubocop
       assert_no_offenses("StatsD.gauge('foo', 2, **kwargs)")
     end
 
-    def test_no_offense_for_now_when_using_value_keyword_argumenr
+    def test_no_offense_for_now_when_using_value_keyword_argument
       assert_no_offenses("StatsD.increment 'foo', value: 3")
       assert_no_offenses("StatsD.increment 'foo', value: 3, sample_rate: 0.5")
       assert_no_offenses("StatsD.increment('foo', value: 3, tags: ['foo']) { foo }")
@@ -29,7 +29,7 @@ module Rubocop
 
     def test_offense_when_using_method_or_constant
       assert_offense("StatsD.gauge('foo', 2, SAMPLE_RATE_CONSTANT)")
-      assert_offense("StatsD.gauge('foo', 2, method_ruturning_a_hash)")
+      assert_offense("StatsD.gauge('foo', 2, method_returning_a_hash)")
     end
 
     def test_offense_when_using_local_variable
@@ -46,7 +46,7 @@ module Rubocop
 
     def test_no_autocorrect_when_using_method_or_constant
       assert_no_autocorrect("StatsD.gauge('foo', 2, SAMPLE_RATE_CONSTANT)")
-      assert_no_autocorrect("StatsD.gauge('foo', 2, method_ruturning_a_hash)")
+      assert_no_autocorrect("StatsD.gauge('foo', 2, method_returning_a_hash)")
     end
 
     def test_autocorrect_only_sample_rate

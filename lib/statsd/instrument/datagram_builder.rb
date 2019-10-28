@@ -18,7 +18,7 @@ class StatsD::Instrument::DatagramBuilder
   def self.unsupported_datagram_types(*types)
     types.each do |type|
       define_method(type) do |_, _, _, _|
-        raise NotImplementedError, "Type #{type} metrics are not suppered by #{self.class.name}."
+        raise NotImplementedError, "Type #{type} metrics are not supported by #{self.class.name}."
       end
     end
   end

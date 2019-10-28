@@ -5,7 +5,7 @@ require_relative '../rubocop' unless defined?(RuboCop::Cop::StatsD)
 module RuboCop
   module Cop
     module StatsD
-      # This Rubocop will check for calls to StatsD singleton congfiguration methods
+      # This Rubocop will check for calls to StatsD singleton configuration methods
       # (e.g. `StatsD.prefix`). The library is moving away from having just a single
       # singleton client, so these methods are deprecated.
       #
