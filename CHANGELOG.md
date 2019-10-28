@@ -6,7 +6,18 @@ section below.
 
 ### Unreleased changes
 
-_Nothing yet_
+- Add support for variadic arguments to `assert_no_statsd_calls`. This allows
+  consolidation of assertions about specific metrics. For example:
+    ```diff
+    -assert_no_statsd_calls('foo') do
+    -  assert_no_statsd_calls('bar') do
+    -    assert_no_statsd_calls('biz.baz') do
+    +assert_no_statsd_calls('foo', 'bar', 'biz.baz') do
+           # do work...
+    -    end
+    -  end
+     end
+    ```
 
 ## Version 2.8.0
 

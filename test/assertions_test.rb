@@ -33,6 +33,31 @@ class AssertionsTest < Minitest::Test
     end
     assert_equal assertion.message, "No StatsD calls for metric counter expected."
 
+    @test_case.assert_no_statsd_calls('counter1', 'counter2') do
+      # noop
+    end
+
+    @test_case.assert_no_statsd_calls('counter1', 'counter2') do
+      StatsD.increment('counter')
+    end
+
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_no_statsd_calls('counter1', 'counter2') do
+        StatsD.increment('counter0')
+        StatsD.increment('counter1')
+        StatsD.increment('counter2')
+        StatsD.increment('counter3')
+      end
+    end
+    assert_equal assertion.message, "No StatsD calls for metric counter1, counter2 expected."
+
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_no_statsd_calls('counter0', 'counter1', 'counter2') do
+        StatsD.increment('counter1')
+      end
+    end
+    assert_equal assertion.message, "No StatsD calls for metric counter1 expected."
+
     assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_no_statsd_calls do
         StatsD.increment('other')

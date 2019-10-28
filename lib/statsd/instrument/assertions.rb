@@ -44,21 +44,21 @@ module StatsD::Instrument::Assertions
 
   # Asserts no metric occurred during the execution of the provided block.
   #
-  # @param [String] metric_name (default: nil) The metric name that is not allowed
-  #   to happen inside the block. If this is set to `nil`, the assertion will fail
-  #   if any metric occurs.
+  # @param [Array<String>] metric_names (default: []) The metric names that are not
+  #   allowed to happen inside the block. If this is set to `[]`, the assertion
+  #   will fail if any metric occurs.
   # @yield A block in which the specified metric should not occur. This block
   #   should not raise any exceptions.
   # @return [void]
   # @raise [Minitest::Assertion] If an exception occurs, or if any metric (with the
-  #   provided name, or any), occurred during the execution of the provided block.
-  def assert_no_statsd_calls(metric_name = nil, datagrams: nil, client: nil, &block)
+  #   provided names, or any), occurred during the execution of the provided block.
+  def assert_no_statsd_calls(*metric_names, datagrams: nil, client: nil, &block)
     if datagrams.nil?
       raise LocalJumpError, "assert_no_statsd_calls requires a block" unless block_given?
       datagrams = capture_statsd_datagrams_with_exception_handling(client: client, &block)
     end
 
-    datagrams.select! { |m| m.name == metric_name } if metric_name
+    datagrams.select! { |metric| metric_names.include?(metric.name) } unless metric_names.empty?
     assert(datagrams.empty?, "No StatsD calls for metric #{datagrams.map(&:name).join(', ')} expected.")
   end
 
