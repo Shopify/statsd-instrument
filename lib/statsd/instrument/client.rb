@@ -106,7 +106,7 @@ class StatsD::Instrument::Client
   # @return [void]
   def increment(name, value = 1, sample_rate: nil, tags: nil, no_prefix: false)
     sample_rate ||= @default_sample_rate
-    return VOID unless sample?(sample_rate)
+    return StatsD::Instrument::VOID unless sample?(sample_rate)
     emit(datagram_builder(no_prefix: no_prefix).c(name, value, sample_rate, tags))
   end
 
@@ -123,7 +123,7 @@ class StatsD::Instrument::Client
     end
 
     sample_rate ||= @default_sample_rate
-    return VOID unless sample?(sample_rate)
+    return StatsD::Instrument::VOID unless sample?(sample_rate)
     emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
   end
 
@@ -142,7 +142,7 @@ class StatsD::Instrument::Client
   # @return [void]
   def gauge(name, value, sample_rate: nil, tags: nil, no_prefix: false)
     sample_rate ||= @default_sample_rate
-    return VOID unless sample?(sample_rate)
+    return StatsD::Instrument::VOID unless sample?(sample_rate)
     emit(datagram_builder(no_prefix: no_prefix).g(name, value, sample_rate, tags))
   end
 
@@ -155,7 +155,7 @@ class StatsD::Instrument::Client
   # @return [void]
   def set(name, value, sample_rate: nil, tags: nil, no_prefix: false)
     sample_rate ||= @default_sample_rate
-    return VOID unless sample?(sample_rate)
+    return StatsD::Instrument::VOID unless sample?(sample_rate)
     emit(datagram_builder(no_prefix: no_prefix).s(name, value, sample_rate, tags))
   end
 
@@ -177,7 +177,7 @@ class StatsD::Instrument::Client
     end
 
     sample_rate ||= @default_sample_rate
-    return VOID unless sample?(sample_rate)
+    return StatsD::Instrument::VOID unless sample?(sample_rate)
     emit(datagram_builder(no_prefix: no_prefix).d(name, value, sample_rate, tags))
   end
 
@@ -194,7 +194,7 @@ class StatsD::Instrument::Client
   # @return [void]
   def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
     sample_rate ||= @default_sample_rate
-    return VOID unless sample?(sample_rate)
+    return StatsD::Instrument::VOID unless sample?(sample_rate)
     emit(datagram_builder(no_prefix: no_prefix).h(name, value, sample_rate, tags))
   end
 
@@ -343,10 +343,6 @@ class StatsD::Instrument::Client
 
   def emit(datagram)
     @sink << datagram
-    VOID
+    StatsD::Instrument::VOID
   end
-
-  VoidClass = Class.new(BasicObject)
-  VOID = VoidClass.new
-  private_constant :VoidClass, :VOID
 end

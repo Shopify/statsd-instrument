@@ -99,10 +99,14 @@ module StatsD
           raise ArgumentError, "The tags argument should be a hash or an array, got #{tags.inspect}"
         end
       end
+    end
+
+    module VoidCollectMetric
+      protected
 
       def collect_metric(type, name, value, sample_rate:, tags: nil, prefix:, metadata: nil)
         super
-        nil # We explicitly discard the return value, so people cannot depend on it.
+        StatsD::Instrument::VOID
       end
     end
 
@@ -242,4 +246,5 @@ module StatsD
 end
 
 StatsD.singleton_class.prepend(StatsD::Instrument::Strict)
+StatsD::Instrument::LegacyClient.prepend(StatsD::Instrument::VoidCollectMetric)
 StatsD::Instrument.prepend(StatsD::Instrument::StrictMetaprogramming)
