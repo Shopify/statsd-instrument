@@ -338,6 +338,10 @@ module StatsD
       remove_from_method(method, name, :distribution)
     end
 
+    VoidClass = Class.new(BasicObject)
+    private_constant :VoidClass
+    VOID = VoidClass.new
+
     private
 
     def statsd_instrumentation_for(method, name, action)
