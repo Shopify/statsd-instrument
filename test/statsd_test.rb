@@ -189,13 +189,6 @@ class StatsDTest < Minitest::Test
     assert_nil return_value
   end
 
-  def test_statsd_key_value
-    metric = capture_statsd_call { StatsD.key_value('values.foobar', 42) }
-    assert_equal :kv, metric.type
-    assert_equal 'values.foobar', metric.name
-    assert_equal 42, metric.value
-  end
-
   def test_statsd_duration_returns_time_in_seconds
     duration = StatsD::Instrument.duration {}
     assert_kind_of Float, duration

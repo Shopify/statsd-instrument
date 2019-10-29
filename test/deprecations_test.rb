@@ -122,6 +122,13 @@ class DeprecationsTest < Minitest::Test
   end
   # rubocop:enable StatsD/MetricPrefixArgument
 
+  def test__deprecated__statsd_key_value
+    metric = capture_statsd_call { StatsD.key_value('values.foobar', 42) }
+    assert_equal :kv, metric.type
+    assert_equal 'values.foobar', metric.name
+    assert_equal 42, metric.value
+  end
+
   protected
 
   def capture_statsd_call(&block)
