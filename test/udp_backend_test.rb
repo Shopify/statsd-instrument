@@ -160,6 +160,7 @@ class UDPBackendTest < Minitest::Test
   end
 
   def test_supports_key_value_syntax_on_statsite
+    skip if StatsD::Instrument.strict_mode_enabled?
     @backend.implementation = :statsite
     @backend.expects(:write_packet).with("fooy:42|kv\n")
     StatsD.key_value('fooy', 42)
@@ -173,6 +174,7 @@ class UDPBackendTest < Minitest::Test
 
   # rubocop:disable StatsD/PositionalArguments
   def test_supports_key_value_with_timestamp_on_statsite
+    skip if StatsD::Instrument.strict_mode_enabled?
     @backend.implementation = :statsite
     @backend.expects(:write_packet).with("fooy:42|kv|@123456\n")
     StatsD.key_value('fooy', 42, 123456)
@@ -180,6 +182,7 @@ class UDPBackendTest < Minitest::Test
   # rubocop:enable StatsD/PositionalArguments
 
   def test_warn_when_using_key_value_and_not_on_statsite
+    skip if StatsD::Instrument.strict_mode_enabled?
     @backend.implementation = :other
     @backend.expects(:write_packet).never
     @logger.expects(:warn)

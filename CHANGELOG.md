@@ -6,6 +6,11 @@ section below.
 
 ### Unreleased changes
 
+- ⚠️ **DEPRECATION:**  The `StatsD.key_value` metric method is deprecated
+  and will be removed in version 3.0. The new client does not have StatSite
+  support. Due to the lack of active contributors that can port this metric
+  type to the new client, we have decided to drop it until somebody else
+  steps up and re-adds it to the new client.
 - Add support for variadic arguments to `assert_no_statsd_calls`. This allows
   consolidation of assertions about specific metrics. For example:
     ```diff
