@@ -100,9 +100,11 @@ module StatsD
         end
       end
 
+      protected
+
       def collect_metric(type, name, value, sample_rate:, tags: nil, prefix:, metadata: nil)
         super
-        nil # We explicitly discard the return value, so people cannot depend on it.
+        StatsD::Instrument::Client::VOID
       end
     end
 
