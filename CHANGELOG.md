@@ -11,6 +11,9 @@ section below.
   support. Due to the lack of active contributors that can port this metric
   type to the new client, we have decided to drop it until somebody else
   steps up and re-adds it to the new client.
+- Metric methods (e.g. `StatsD.increment`) on the new client will now return a
+  `VOID` object that evaluates to `true` rather than nil. This is for better
+  backwards compatibility with the legacy client.
 - Add support for variadic arguments to `assert_no_statsd_calls`. This allows
   consolidation of assertions about specific metrics. For example:
     ```diff
