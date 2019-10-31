@@ -4,6 +4,7 @@
 require 'bundler/setup'
 require 'benchmark/ips'
 require 'socket'
+require 'statsd-instrument'
 
 revision = %x(git rev-parse HEAD).rstrip
 master_revision = %x(git rev-parse origin/master).rstrip
@@ -20,11 +21,11 @@ FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
 receiver = UDPSocket.new
 receiver.bind('localhost', 0)
 
-ENV['ENV'] = "production"
-ENV['STATSD_ADDR'] = "#{receiver.addr[2]}:#{receiver.addr[1]}"
-ENV['STATSD_IMPLEMENTATION'] ||= 'datadog'
-
-require 'statsd-instrument'
+StatsD.singleton_client = StatsD::Instrument::Environment.new(
+  'STATSD_ADDR' => "#{receiver.addr[2]}:#{receiver.addr[1]}",
+  'STATSD_IMPLEMENTATION' => 'dogstatsd',
+  'STATSD_ENV' => 'production',
+).client
 
 report = Benchmark.ips do |bench|
   bench.report("StatsD metrics to local UDP receiver (branch: #{branch}, sha: #{revision[0, 7]})") do
@@ -32,7 +33,7 @@ report = Benchmark.ips do |bench|
     StatsD.measure('StatsD.measure') { 1 + 1 }
     StatsD.gauge('StatsD.gauge', 12.0, tags: ["foo:bar", "quc"])
     StatsD.set('StatsD.set', 'value', tags: { foo: 'bar', baz: 'quc' })
-    if StatsD.backend.implementation == :datadog
+    if StatsD.singleton_client.datagram_builder_class == StatsD::Instrument::DogStatsDDatagramBuilder
       StatsD.event('StasD.event', "12345")
       StatsD.service_check("StatsD.service_check", "ok")
     end
