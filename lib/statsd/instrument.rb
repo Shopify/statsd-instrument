@@ -135,19 +135,11 @@ module StatsD
     #    callable to dynamically generate a metric name
     # @param metric_options (see StatsD#measure)
     # @return [void]
-    def statsd_measure(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
-      as_dist: false, sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
-      prefix: nil, no_prefix: false, client: nil)
-
-      if as_dist
-        return statsd_distribution(method, name, # rubocop:disable StatsD/MetricPrefixArgument
-          sample_rate: sample_rate, tags: tags, prefix: prefix, no_prefix: no_prefix)
-      end
-
+    def statsd_measure(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
       add_to_method(method, name, :measure) do
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
-          prefix ||= client.prefix unless no_prefix
+          prefix = no_prefix ? nil : client.prefix
           key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
           client.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: true) do
             super(*args, &block)
@@ -164,14 +156,11 @@ module StatsD
     # @param metric_options (see StatsD#measure)
     # @return [void]
     # @note Supported by the datadog implementation only (in beta)
-    def statsd_distribution(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
-      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
-      prefix: nil, no_prefix: false, client: nil)
-
+    def statsd_distribution(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
       add_to_method(method, name, :distribution) do
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
-          prefix ||= client.prefix unless no_prefix
+          prefix = no_prefix ? nil : client.prefix
           key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
           client.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: true) do
             super(*args, &block)
@@ -195,10 +184,7 @@ module StatsD
     # @yieldreturn [Boolean] Return true iff the return value is considered a success, false otherwise.
     # @return [void]
     # @see #statsd_count_if
-    def statsd_count_success(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
-      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
-      prefix: nil, no_prefix: false, client: nil)
-
+    def statsd_count_success(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
       add_to_method(method, name, :count_success) do
         define_method(method) do |*args, &block|
           begin
@@ -218,7 +204,7 @@ module StatsD
           ensure
             client ||= StatsD.singleton_client
             suffix = truthiness == false ? 'failure' : 'success'
-            prefix ||= client.prefix unless no_prefix
+            prefix = no_prefix ? nil : client.prefix
             key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
             client.increment("#{key}.#{suffix}",
               sample_rate: sample_rate, tags: tags, no_prefix: true)
@@ -239,10 +225,7 @@ module StatsD
     # @yieldreturn (see #statsd_count_success)
     # @return [void]
     # @see #statsd_count_success
-    def statsd_count_if(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
-      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
-      prefix: nil, no_prefix: false, client: nil)
-
+    def statsd_count_if(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
       add_to_method(method, name, :count_if) do
         define_method(method) do |*args, &block|
           begin
@@ -262,7 +245,7 @@ module StatsD
           ensure
             if truthiness
               client ||= StatsD.singleton_client
-              prefix ||= client.prefix unless no_prefix
+              prefix = no_prefix ? nil : client.prefix
               key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
               client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: true)
             end
@@ -280,14 +263,11 @@ module StatsD
     # @param name (see #statsd_measure)
     # @param metric_options (see #statsd_measure)
     # @return [void]
-    def statsd_count(method, name, deprecated_sample_rate_arg = nil, deprecated_tags_arg = nil,
-      sample_rate: deprecated_sample_rate_arg, tags: deprecated_tags_arg,
-      prefix: nil, no_prefix: false, client: nil)
-
+    def statsd_count(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
       add_to_method(method, name, :count) do
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
-          prefix ||= client.prefix unless no_prefix
+          prefix = no_prefix ? nil : client.prefix
           key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
           client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: true)
           super(*args, &block)
