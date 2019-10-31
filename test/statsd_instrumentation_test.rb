@@ -326,30 +326,42 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_respects_global_prefix_changes
-    StatsD.prefix = 'Foo'
+    old_client = StatsD.singleton_client
+
+    StatsD.singleton_client = StatsD::Instrument::Client.new(prefix: 'Foo')
     ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
     ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
-    StatsD.prefix = 'Quc'
+    StatsD.singleton_client = StatsD::Instrument::Client.new(prefix: 'Quc')
 
-    statsd_calls = capture_statsd_calls { ActiveMerchant::Gateway.sync }
-    assert_equal 1, statsd_calls.length
-    assert_equal "Quc.ActiveMerchant.Gateway.sync", statsd_calls.first.name
+    datagrams = capture_statsd_calls { ActiveMerchant::Gateway.sync }
+    assert_equal 1, datagrams.length
+    assert_equal "Quc.ActiveMerchant.Gateway.sync", datagrams.first.name
   ensure
-    StatsD.prefix = nil
+    StatsD.singleton_client = old_client
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
   end
 
-  def test_statsd_macro_can_disable_prefix
-    StatsD.prefix = 'Foo'
-    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
-    ActiveMerchant::Gateway.singleton_class.statsd_count_success :sync, 'ActiveMerchant.Gateway.sync', no_prefix: true
-    StatsD.prefix = 'Quc'
+  def test_statsd_count_with_injected_client
+    client = StatsD::Instrument::Client.new(prefix: 'prefix')
 
-    statsd_calls = capture_statsd_calls { ActiveMerchant::Gateway.sync }
-    assert_equal 1, statsd_calls.length
-    assert_equal "ActiveMerchant.Gateway.sync.success", statsd_calls.first.name
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', client: client)
+    assert_statsd_increment('prefix.ActiveMerchant.Gateway.ssl_post', client: client) do
+      ActiveMerchant::Gateway.new.purchase(true)
+    end
   ensure
-    StatsD.prefix = nil
+    ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+  end
+
+  def test_statsd_macro_can_disable_prefix
+    client = StatsD::Instrument::Client.new(prefix: 'foo')
+    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.statsd_count_success(:sync,
+      'ActiveMerchant.Gateway.sync', no_prefix: true, client: client)
+
+    datagrams = client.capture { ActiveMerchant::Gateway.sync }
+    assert_equal 1, datagrams.length
+    assert_equal "ActiveMerchant.Gateway.sync.success", datagrams.first.name
+  ensure
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count_success :sync, 'ActiveMerchant.Gateway.sync'
   end
 
@@ -415,43 +427,6 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment("foo") do
       klass.new.foo
     end
-  end
-
-  def test_statsd_measure_with_new_client
-    old_client = StatsD.singleton_client
-    StatsD.singleton_client = StatsD::Instrument::Client.new
-
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3
-    assert_statsd_measure('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3) do
-      ActiveMerchant::UniqueGateway.new.purchase(true)
-    end
-  ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
-    StatsD.singleton_client = old_client
-  end
-
-  def test_statsd_count_with_new_client
-    old_client = StatsD.singleton_client
-    StatsD.singleton_client = StatsD::Instrument::Client.new
-
-    ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
-    assert_statsd_increment('ActiveMerchant.Gateway.ssl_post') do
-      ActiveMerchant::Gateway.new.purchase(true)
-    end
-  ensure
-    ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
-    StatsD.singleton_client = old_client
-  end
-
-  def test_statsd_count_with_injected_client
-    client = StatsD::Instrument::Client.new(prefix: 'prefix')
-
-    ActiveMerchant::Gateway.statsd_count(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', client: client)
-    assert_statsd_increment('prefix.ActiveMerchant.Gateway.ssl_post', client: client) do
-      ActiveMerchant::Gateway.new.purchase(true)
-    end
-  ensure
-    ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
   end
 
   private

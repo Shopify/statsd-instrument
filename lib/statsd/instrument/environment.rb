@@ -19,21 +19,6 @@ class StatsD::Instrument::Environment
       current.environment
     end
 
-    # Instantiates a default backend for the current environment.
-    #
-    # @return [StatsD::Instrument::Backend]
-    # @see #environment
-    def default_backend
-      case environment
-      when 'production', 'staging'
-        StatsD::Instrument::Backends::UDPBackend.new(current.statsd_addr, current.statsd_implementation)
-      when 'test'
-        StatsD::Instrument::Backends::NullBackend.new
-      else
-        StatsD::Instrument::Backends::LoggerBackend.new(StatsD.logger)
-      end
-    end
-
     # Sets default values for sample rate and logger.
     #
     # - Default sample rate is set to the value in the STATSD_SAMPLE_RATE environment variable,
@@ -45,9 +30,6 @@ class StatsD::Instrument::Environment
     #
     # @return [void]
     def setup
-      StatsD.prefix = current.statsd_prefix
-      StatsD.default_tags = current.statsd_default_tags
-      StatsD.default_sample_rate = current.statsd_sample_rate
       StatsD.logger = Logger.new($stderr)
     end
   end
@@ -96,11 +78,7 @@ class StatsD::Instrument::Environment
   end
 
   def client
-    if env.key?('STATSD_USE_NEW_CLIENT')
-      StatsD::Instrument::Client.from_env(self)
-    else
-      StatsD::Instrument::LegacyClient.singleton
-    end
+    StatsD::Instrument::Client.from_env(self)
   end
 
   def default_sink_for_environment

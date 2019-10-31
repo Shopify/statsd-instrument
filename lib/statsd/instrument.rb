@@ -48,40 +48,36 @@ require 'forwardable'
 #   @return [Array<String>, Hash<String, String>, nil] The default tags, or <tt>nil</tt> when no default tags is used
 #   @deprecated
 #
-# @!attribute legacy_singleton_client
-#   @nodoc
-#   @deprecated
-#
 # @!attribute singleton_client
 #   @nodoc
 #   @deprecated
 #
 # @!method measure(name, value = nil, sample_rate: nil, tags: nil, &block)
-#   (see StatsD::Instrument::LegacyClient#measure)
+#   (see StatsD::Instrument::Client#measure)
 #
 # @!method increment(name, value = 1, sample_rate: nil, tags: nil)
-#   (see StatsD::Instrument::LegacyClient#increment)
+#   (see StatsD::Instrument::Client#increment)
 #
 # @!method gauge(name, value, sample_rate: nil, tags: nil)
-#   (see StatsD::Instrument::LegacyClient#gauge)
+#   (see StatsD::Instrument::Client#gauge)
 #
 # @!method set(name, value, sample_rate: nil, tags: nil)
-#   (see StatsD::Instrument::LegacyClient#set)
+#   (see StatsD::Instrument::Client#set)
 #
 # @!method histogram(name, value, sample_rate: nil, tags: nil)
-#   (see StatsD::Instrument::LegacyClient#histogram)
+#   (see StatsD::Instrument::Client#histogram)
 #
 # @!method distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
-#   (see StatsD::Instrument::LegacyClient#distribution)
+#   (see StatsD::Instrument::Client#distribution)
 #
 # @!method key_value(name, value)
-#   (see StatsD::Instrument::LegacyClient#key_value)
+#   (see StatsD::Instrument::Client#key_value)
 #
 # @!method event(title, text, tags: nil, hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil) # rubocop:disable Metrics/LineLength
-#   (see StatsD::Instrument::LegacyClient#event)
+#   (see StatsD::Instrument::Client#event)
 #
 # @!method service_check(name, status, tags: nil, hostname: nil, timestamp: nil, message: nil)
-#   (see StatsD::Instrument::LegacyClient#service_check)
+#   (see StatsD::Instrument::Client#service_check)
 #
 # @see StatsD::Instrument <tt>StatsD::Instrument</tt> contains module to instrument
 #    existing methods with StatsD metrics
@@ -400,10 +396,6 @@ module StatsD
 
   extend Forwardable
 
-  def legacy_singleton_client
-    StatsD::Instrument::LegacyClient.singleton
-  end
-
   def singleton_client
     @singleton_client ||= StatsD::Instrument::Environment.current.client
   end
@@ -411,17 +403,19 @@ module StatsD
   # Singleton methods will be delegated to the singleton client.
   def_delegators :singleton_client, :increment, :gauge, :set, :measure,
     :histogram, :distribution, :key_value, :event, :service_check
-
-  # Deprecated methods will be delegated to the legacy client
-  def_delegators :legacy_singleton_client, :default_tags, :default_tags=,
-    :default_sample_rate, :default_sample_rate=, :prefix, :prefix=, :backend, :backend=
 end
 
 require 'statsd/instrument/version'
-require 'statsd/instrument/metric'
-require 'statsd/instrument/legacy_client'
-require 'statsd/instrument/backend'
 require 'statsd/instrument/client'
+require 'statsd/instrument/datagram'
+require 'statsd/instrument/dogstatsd_datagram'
+require 'statsd/instrument/datagram_builder'
+require 'statsd/instrument/statsd_datagram_builder'
+require 'statsd/instrument/dogstatsd_datagram_builder'
+require 'statsd/instrument/null_sink'
+require 'statsd/instrument/udp_sink'
+require 'statsd/instrument/capture_sink'
+require 'statsd/instrument/log_sink'
 require 'statsd/instrument/environment'
 require 'statsd/instrument/helpers'
 require 'statsd/instrument/assertions'
