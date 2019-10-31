@@ -25,8 +25,10 @@ report = Benchmark.ips do |bench|
     StatsD.measure('StatsD.measure') { 1 + 1 }
     StatsD.gauge('StatsD.gauge', 12.0, tags: ["foo:bar", "quc"])
     StatsD.set('StatsD.set', 'value', tags: { foo: 'bar', baz: 'quc' })
-    StatsD.event('StasD.event', "12345")
-    StatsD.service_check("StatsD.service_check", "ok")
+    if StatsD.singleton_client.datagram_builder_class == StatsD::Instrument::DogStatsDDatagramBuilder
+      StatsD.event('StasD.event', "12345")
+      StatsD.service_check("StatsD.service_check", "ok")
+    end
   end
 
   # Store the results in between runs
