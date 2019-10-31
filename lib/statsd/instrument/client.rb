@@ -120,6 +120,8 @@ class StatsD::Instrument::Client
   def measure(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
     if block_given?
       return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :ms, no_prefix: no_prefix, &block)
+    elsif value.nil?
+      raise ArgumentError, "#measure requires a value argument, or a block"
     end
 
     sample_rate ||= @default_sample_rate
@@ -174,6 +176,8 @@ class StatsD::Instrument::Client
   def distribution(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
     if block_given?
       return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :d, no_prefix: no_prefix, &block)
+    elsif value.nil?
+      raise ArgumentError, "#distribution requires a value argument, or a block"
     end
 
     sample_rate ||= @default_sample_rate
