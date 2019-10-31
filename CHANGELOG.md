@@ -6,6 +6,16 @@ section below.
 
 ### Unreleased changes
 
+_Nothing yet_
+
+## Version 2.9.1
+
+- The `VOID` object being returned by metric methods (e.g. `StatsD.increment`)
+  is now a subclass of `Object` rather than `BasicObject`, which means that
+  common methods will work as expected (`#class`, `#tap`).
+
+## Version 2.9.0
+
 - ⚠️ **DEPRECATION:**  The `StatsD.key_value` metric method is deprecated
   and will be removed in version 3.0. The new client does not have StatSite
   support. Due to the lack of active contributors that can port this metric
