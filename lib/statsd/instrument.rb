@@ -100,10 +100,8 @@ module StatsD
     end
 
     # @private
-    def self.generate_metric_name(prefix, key, callee, *args)
-      name = key.respond_to?(:call) ? key.call(callee, args).gsub('::', '.') : key.gsub('::', '.')
-      name = "#{prefix}.#{name}" if prefix
-      name
+    def self.generate_metric_name(name, callee, *args)
+      name.respond_to?(:call) ? name.call(callee, args).gsub('::', '.') : name.gsub('::', '.')
     end
 
     # Even though this method is considered private, and is no longer used internally,
@@ -139,9 +137,8 @@ module StatsD
       add_to_method(method, name, :measure) do
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
-          prefix = no_prefix ? nil : client.prefix
-          key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
-          client.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: true) do
+          key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          client.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
             super(*args, &block)
           end
         end
@@ -160,9 +157,8 @@ module StatsD
       add_to_method(method, name, :distribution) do
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
-          prefix = no_prefix ? nil : client.prefix
-          key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
-          client.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: true) do
+          key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          client.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
             super(*args, &block)
           end
         end
@@ -204,10 +200,8 @@ module StatsD
           ensure
             client ||= StatsD.singleton_client
             suffix = truthiness == false ? 'failure' : 'success'
-            prefix = no_prefix ? nil : client.prefix
-            key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
-            client.increment("#{key}.#{suffix}",
-              sample_rate: sample_rate, tags: tags, no_prefix: true)
+            key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            client.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           end
         end
       end
@@ -245,9 +239,8 @@ module StatsD
           ensure
             if truthiness
               client ||= StatsD.singleton_client
-              prefix = no_prefix ? nil : client.prefix
-              key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
-              client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: true)
+              key = StatsD::Instrument.generate_metric_name(name, self, *args)
+              client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
             end
           end
         end
@@ -267,9 +260,8 @@ module StatsD
       add_to_method(method, name, :count) do
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
-          prefix = no_prefix ? nil : client.prefix
-          key = StatsD::Instrument.generate_metric_name(prefix, name, self, *args)
-          client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: true)
+          key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           super(*args, &block)
         end
       end
