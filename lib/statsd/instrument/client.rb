@@ -1,15 +1,5 @@
 # frozen_string_literal: true
 
-require 'statsd/instrument/datagram'
-require 'statsd/instrument/dogstatsd_datagram'
-require 'statsd/instrument/datagram_builder'
-require 'statsd/instrument/statsd_datagram_builder'
-require 'statsd/instrument/dogstatsd_datagram_builder'
-require 'statsd/instrument/null_sink'
-require 'statsd/instrument/udp_sink'
-require 'statsd/instrument/capture_sink'
-require 'statsd/instrument/log_sink'
-
 # The Client is the main interface for using StatsD.
 #
 # @note This new Client implementation is intended to become the new default in the

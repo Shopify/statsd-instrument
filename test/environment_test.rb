@@ -5,37 +5,6 @@ require 'test_helper'
 module Rails; end
 
 class EnvironmentTest < Minitest::Test
-  def setup
-    ENV['STATSD_ADDR'] = nil
-    ENV['IMPLEMENTATION'] = nil
-  end
-
-  def test_default_backend_uses_logger_in_development_environment
-    StatsD::Instrument::Environment.stubs(:environment).returns('development')
-    assert_instance_of StatsD::Instrument::Backends::LoggerBackend, StatsD::Instrument::Environment.default_backend
-  end
-
-  def test_default_backend_uses_null_backend_in_test_environment
-    StatsD::Instrument::Environment.stubs(:environment).returns('test')
-    assert_instance_of StatsD::Instrument::Backends::NullBackend, StatsD::Instrument::Environment.default_backend
-  end
-
-  def test_default_backend_uses_udp_backend_in_production_environment
-    StatsD::Instrument::Environment.stubs(:environment).returns('production')
-    assert_instance_of StatsD::Instrument::Backends::UDPBackend, StatsD::Instrument::Environment.default_backend
-  end
-
-  def test_default_backend_uses_environment_variables_in_production_environment
-    StatsD::Instrument::Environment.stubs(:environment).returns('production')
-    ENV['STATSD_ADDR'] = '127.0.0.1:1234'
-    ENV['STATSD_IMPLEMENTATION'] = 'datadog'
-
-    backend = StatsD::Instrument::Environment.default_backend
-    assert_equal '127.0.0.1', backend.host
-    assert_equal 1234, backend.port
-    assert_equal :datadog, backend.implementation
-  end
-
   def test_environment_prefers_statsd_env_if_available
     env = StatsD::Instrument::Environment.new(
       'STATSD_ENV' => 'set_from_STATSD_ENV',
@@ -62,13 +31,8 @@ class EnvironmentTest < Minitest::Test
     assert_equal 'development', env.environment
   end
 
-  def test_legacy_client_is_default_client
+  def test_client_returns_client_instance
     env = StatsD::Instrument::Environment.new({})
-    assert_kind_of StatsD::Instrument::LegacyClient, env.client
-  end
-
-  def test_client_returns_new_client_if_environment_asks_for_it
-    env = StatsD::Instrument::Environment.new('STATSD_USE_NEW_CLIENT' => '1')
     assert_kind_of StatsD::Instrument::Client, env.client
   end
 
