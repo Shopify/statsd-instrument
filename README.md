@@ -269,6 +269,13 @@ class MyTestcase < Minitest::Test
       StatsD.increment('counter.name', sample_rate: 1.0) # matches
       StatsD.increment('counter.name', sample_rate: 0.1) # matches too
     end
+    
+    # Set `value` if incrementing by more than 1:
+    assert_statsd_increment('counter.name', value: 5) do
+      StatsD.increment('unrelated', 5) # doesn't match
+      StatsD.increment('counter.name', 5) # matches
+      StatsD.increment('counter.name') # doesn't match
+    end
   end
 
   def test_no_udp_traffic
