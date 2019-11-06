@@ -3,32 +3,32 @@
 # @private
 class StatsD::Instrument::Expectation
   class << self
-    def increment(name, **options)
-      new(type: :c, name: name, **options)
+    def increment(name, value = nil, **options)
+      new(type: :c, name: name, value: value, **options)
     end
 
-    def measure(name, **options)
-      new(type: :ms, name: name, **options)
+    def measure(name, value = nil, **options)
+      new(type: :ms, name: name, value: value, **options)
     end
 
-    def gauge(name, **options)
-      new(type: :g, name: name, **options)
+    def gauge(name, value = nil, **options)
+      new(type: :g, name: name, value: value, **options)
     end
 
-    def set(name, **options)
-      new(type: :s, name: name, **options)
+    def set(name, value = nil, **options)
+      new(type: :s, name: name, value: value, **options)
     end
 
-    def key_value(name, **options)
-      new(type: :kv, name: name, **options)
+    def key_value(name, value = nil, **options)
+      new(type: :kv, name: name, value: value, **options)
     end
 
-    def distribution(name, **options)
-      new(type: :d, name: name, **options)
+    def distribution(name, value = nil, **options)
+      new(type: :d, name: name, value: value, **options)
     end
 
-    def histogram(name, **options)
-      new(type: :h, name: name, **options)
+    def histogram(name, value = nil, **options)
+      new(type: :h, name: name, value: value, **options)
     end
   end
 
