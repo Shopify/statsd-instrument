@@ -132,42 +132,54 @@ class AssertionsTest < Minitest::Test
   end
 
   def test_assert_statsd_gauge_call_with_numeric_value
-    @test_case.assert_statsd_gauge('gauge', value: 42) do
+    @test_case.assert_statsd_gauge('gauge', 42) do
       StatsD.gauge('gauge', 42)
     end
 
-    @test_case.assert_statsd_gauge('gauge', value: '42') do
+    @test_case.assert_statsd_gauge('gauge', '42') do
       StatsD.gauge('gauge', 42)
     end
 
     assert_raises(Minitest::Assertion) do
-      @test_case.assert_statsd_gauge('gauge', value: 42) do
+      @test_case.assert_statsd_gauge('gauge', 42) do
         StatsD.gauge('gauge', 45)
       end
+    end
+
+    @test_case.assert_statsd_gauge('gauge', value: 42) do
+      StatsD.gauge('gauge', 42)
     end
   end
 
   def test_assert_statsd_set_call_with_string_value
-    @test_case.assert_statsd_set('set', value: 12345) do
+    @test_case.assert_statsd_set('set', 12345) do
       StatsD.set('set', '12345')
     end
 
-    @test_case.assert_statsd_set('set', value: '12345') do
+    @test_case.assert_statsd_set('set', '12345') do
       StatsD.set('set', '12345')
     end
 
-    @test_case.assert_statsd_set('set', value: 12345) do
+    @test_case.assert_statsd_set('set', 12345) do
       StatsD.set('set', 12345)
     end
 
-    @test_case.assert_statsd_set('set', value: '12345') do
+    @test_case.assert_statsd_set('set', '12345') do
       StatsD.set('set', 12345)
     end
 
     assert_raises(Minitest::Assertion) do
-      @test_case.assert_statsd_set('set', value: '42') do
+      @test_case.assert_statsd_set('set', '42') do
         StatsD.set('set', 45)
       end
+    end
+
+    @test_case.assert_statsd_set('set', value: 12345) do
+      StatsD.set('set', '12345')
+    end
+
+    @test_case.assert_statsd_set('set', 'wrong_value', value: 12345) do
+      StatsD.set('set', '12345')
     end
   end
 
@@ -285,7 +297,7 @@ class AssertionsTest < Minitest::Test
     end
 
     foo_1_metric = StatsD::Instrument::Expectation.increment('counter', times: 2, tags: ['foo:1'])
-    foo_2_metric = StatsD::Instrument::Expectation.increment('counter', tags: ['foo:2'])
+    foo_2_metric = StatsD::Instrument::Expectation.increment('counter', 1, tags: ['foo:2'])
     @test_case.assert_statsd_expectations([foo_1_metric, foo_2_metric]) do
       StatsD.increment('counter', tags: { foo: 1 })
       StatsD.increment('counter', tags: { foo: 1 })
