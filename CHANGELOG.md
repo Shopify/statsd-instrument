@@ -8,6 +8,17 @@ section below.
 
 _Nothing yet_
 
+## Version 2.9.2
+
+- Allow providing a value as second positional argument to `assert_statsd_*`
+  methods, rather than as keyword argument. This matches the arguments to the
+  StatsD metric call.
+  ``` ruby
+    assert_statsd_increment('batch_size', 10) do
+      StatsD.increment('batch_size', 10)
+    end
+  ```
+
 ## Version 2.9.1
 
 - The `VOID` object being returned by metric methods (e.g. `StatsD.increment`)
