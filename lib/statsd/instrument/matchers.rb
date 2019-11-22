@@ -11,7 +11,6 @@ module StatsD::Instrument::Matchers
     histogram: :h,
     distribution: :d,
     set: :s,
-    key_value: :kv,
   }
 
   class Matcher

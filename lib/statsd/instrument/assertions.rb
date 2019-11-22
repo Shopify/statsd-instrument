@@ -136,18 +136,6 @@ module StatsD::Instrument::Assertions
     assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
   end
 
-  # Asserts that a given key/value metric occurred inside the provided block.
-  #
-  # @param metric_name (see #assert_statsd_increment)
-  # @param options (see #assert_statsd_increment)
-  # @yield (see #assert_statsd_increment)
-  # @return [void]
-  # @raise (see #assert_statsd_increment)
-  def assert_statsd_key_value(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
-    expectation = StatsD::Instrument::Expectation.key_value(metric_name, value, **options)
-    assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
-  end
-
   # Asserts that the set of provided metric expectations came true.
   #
   # Generally, it's recommended to  use more specific assertion methods, like

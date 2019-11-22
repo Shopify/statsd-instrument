@@ -70,9 +70,6 @@ require 'forwardable'
 # @!method distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
 #   (see StatsD::Instrument::Client#distribution)
 #
-# @!method key_value(name, value)
-#   (see StatsD::Instrument::Client#key_value)
-#
 # @!method event(title, text, tags: nil, hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil) # rubocop:disable Metrics/LineLength
 #   (see StatsD::Instrument::Client#event)
 #
@@ -374,7 +371,7 @@ module StatsD
 
   # Singleton methods will be delegated to the singleton client.
   def_delegators :singleton_client, :increment, :gauge, :set, :measure,
-    :histogram, :distribution, :key_value, :event, :service_check
+    :histogram, :distribution, :event, :service_check
 end
 
 require 'statsd/instrument/version'

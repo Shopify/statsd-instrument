@@ -79,11 +79,6 @@ module StatsD
         super
       end
 
-      def key_value(*)
-        raise NotImplementedError, "The key_value metric type will be removed " \
-          "from the next major version of statsd-instrument"
-      end
-
       private
 
       def check_block_or_numeric_value(value)
