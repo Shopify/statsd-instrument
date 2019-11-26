@@ -55,9 +55,7 @@ module StatsD
         super
       end
 
-      def service_check(name, status, tags: nil, no_prefix: false,
-        hostname: nil, timestamp: nil, message: nil)
-
+      def service_check(name, status, tags: nil, no_prefix: false, hostname: nil, timestamp: nil, message: nil)
         super
       end
 
@@ -81,11 +79,6 @@ module StatsD
         super
       end
 
-      def key_value(*)
-        raise NotImplementedError, "The key_value metric type will be removed " \
-          "from the next major version of statsd-instrument"
-      end
-
       private
 
       def check_block_or_numeric_value(value)
@@ -106,133 +99,30 @@ module StatsD
       end
     end
 
-    module VoidCollectMetric
-      protected
-
-      def collect_metric(type, name, value, sample_rate:, tags: nil, prefix:, metadata: nil)
-        super
-        StatsD::Instrument::VOID
-      end
-    end
-
     module StrictMetaprogramming
-      def statsd_measure(method, name, sample_rate: nil, tags: nil,
-        no_prefix: false, client: StatsD.singleton_client)
-
+      def statsd_measure(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
         check_method_and_metric_name(method, name)
-
-        # Unfortunately, we have to inline the new method implementation because we have to fix the
-        # Stats.measure call to not use the `as_dist` and `prefix` arguments.
-        add_to_method(method, name, :measure) do
-          define_method(method) do |*args, &block|
-            key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
-            client.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
-              super(*args, &block)
-            end
-          end
-        end
+        super
       end
 
-      def statsd_distribution(method, name, sample_rate: nil, tags: nil,
-        no_prefix: false, client: StatsD.singleton_client)
-
+      def statsd_distribution(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
         check_method_and_metric_name(method, name)
-
-        # Unfortunately, we have to inline the new method implementation because we have to fix the
-        # Stats.distribution call to not use the `prefix` argument.
-
-        add_to_method(method, name, :distribution) do
-          define_method(method) do |*args, &block|
-            key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
-            client.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
-              super(*args, &block)
-            end
-          end
-        end
+        super
       end
 
-      def statsd_count_success(method, name, sample_rate: nil, tags: nil,
-        no_prefix: false, client: StatsD.singleton_client)
-
+      def statsd_count_success(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
         check_method_and_metric_name(method, name)
-
-        # Unfortunately, we have to inline the new method implementation because we have to fix the
-        # Stats.increment call to not use the `prefix` argument.
-
-        add_to_method(method, name, :count_success) do
-          define_method(method) do |*args, &block|
-            begin
-              truthiness = result = super(*args, &block)
-            rescue
-              truthiness = false
-              raise
-            else
-              if block_given?
-                begin
-                  truthiness = yield(result)
-                rescue
-                  truthiness = false
-                end
-              end
-              result
-            ensure
-              suffix = truthiness == false ? 'failure' : 'success'
-              key = "#{StatsD::Instrument.generate_metric_name(nil, name, self, *args)}.#{suffix}"
-              client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
-            end
-          end
-        end
+        super
       end
 
-      def statsd_count_if(method, name, sample_rate: nil, tags: nil,
-        no_prefix: false, client: StatsD.singleton_client)
-
+      def statsd_count_if(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
         check_method_and_metric_name(method, name)
-
-        # Unfortunately, we have to inline the new method implementation because we have to fix the
-        # Stats.increment call to not use the `prefix` argument.
-
-        add_to_method(method, name, :count_if) do
-          define_method(method) do |*args, &block|
-            begin
-              truthiness = result = super(*args, &block)
-            rescue
-              truthiness = false
-              raise
-            else
-              if block_given?
-                begin
-                  truthiness = yield(result)
-                rescue
-                  truthiness = false
-                end
-              end
-              result
-            ensure
-              if truthiness
-                key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
-                client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
-              end
-            end
-          end
-        end
+        super
       end
 
-      def statsd_count(method, name, sample_rate: nil, tags: nil,
-        no_prefix: false, client: StatsD.singleton_client)
-
+      def statsd_count(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
         check_method_and_metric_name(method, name)
-
-        # Unfortunately, we have to inline the new method implementation because we have to fix the
-        # Stats.increment call to not use the `prefix` argument.
-
-        add_to_method(method, name, :count) do
-          define_method(method) do |*args, &block|
-            key = StatsD::Instrument.generate_metric_name(nil, name, self, *args)
-            client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
-            super(*args, &block)
-          end
-        end
+        super
       end
 
       private
@@ -250,6 +140,5 @@ module StatsD
   end
 end
 
-StatsD.singleton_class.prepend(StatsD::Instrument::Strict)
-StatsD::Instrument::LegacyClient.prepend(StatsD::Instrument::VoidCollectMetric)
+StatsD::Instrument::Client.prepend(StatsD::Instrument::Strict)
 StatsD::Instrument.prepend(StatsD::Instrument::StrictMetaprogramming)

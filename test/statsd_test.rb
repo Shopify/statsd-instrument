@@ -5,24 +5,11 @@ require 'test_helper'
 class StatsDTest < Minitest::Test
   include StatsD::Instrument::Assertions
 
-  def teardown
-    StatsD.default_tags = nil
-  end
-
-  def test_statsd_passed_collections_to_backend
-    StatsD.backend.expects(:collect_metric).with(instance_of(StatsD::Instrument::Metric))
-    StatsD.increment('test')
-  end
-
   def test_statsd_measure_with_explicit_value
     metric = capture_statsd_call { StatsD.measure('values.foobar', 42) }
     assert_equal 'values.foobar', metric.name
     assert_equal 42, metric.value
     assert_equal :ms, metric.type
-  end
-
-  def test_statsd_measure_without_value_or_block
-    assert_raises(ArgumentError) { StatsD.measure('values.foobar', tags: 123) }
   end
 
   def test_statsd_measure_with_explicit_value_and_sample_rate
@@ -85,7 +72,7 @@ class StatsDTest < Minitest::Test
 
   def test_statsd_increment_with_hash_argument
     metric = capture_statsd_call { StatsD.increment('values.foobar', tags: ['test']) }
-    assert_equal StatsD.default_sample_rate, metric.sample_rate
+    assert_equal StatsD.singleton_client.default_sample_rate, metric.sample_rate
     assert_equal ['test'], metric.tags
     assert_equal 1, metric.value
   end
@@ -98,7 +85,7 @@ class StatsDTest < Minitest::Test
   end
 
   def test_statsd_gauge_without_value
-    assert_raises(ArgumentError) { StatsD.gauge('values.foobar', tags: 123) }
+    assert_raises(ArgumentError) { StatsD.gauge('values.foobar') }
   end
 
   def test_statsd_set
@@ -198,20 +185,6 @@ class StatsDTest < Minitest::Test
     assert_raises(RuntimeError) do
       StatsD::Instrument.duration { raise "Foo" }
     end
-  end
-
-  def test_statsd_default_tags_get_normalized
-    StatsD.default_tags = { first_tag: 'first_value', second_tag: 'second_value' }
-    assert_equal ['first_tag:first_value', 'second_tag:second_value'], StatsD.default_tags
-  end
-
-  def test_name_prefix
-    StatsD.legacy_singleton_client.stubs(:prefix).returns('prefix')
-    m = capture_statsd_call { StatsD.increment('counter') }
-    assert_equal 'prefix.counter', m.name
-
-    m = capture_statsd_call { StatsD.increment('counter', no_prefix: true) }
-    assert_equal 'counter', m.name
   end
 
   protected

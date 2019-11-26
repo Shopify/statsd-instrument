@@ -19,10 +19,6 @@ class StatsD::Instrument::Expectation
       new(type: :s, name: name, value: value, **options)
     end
 
-    def key_value(name, value = nil, **options)
-      new(type: :kv, name: name, value: value, **options)
-    end
-
     def distribution(name, value = nil, **options)
       new(type: :d, name: name, value: value, **options)
     end

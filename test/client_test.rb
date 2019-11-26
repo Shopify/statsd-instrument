@@ -186,6 +186,17 @@ class ClientTest < Minitest::Test
     assert_equal "bar", datagrams[1].name
   end
 
+  def test_default_tags_normalization
+    client = StatsD::Instrument::Client.new(default_tags: { first_tag: 'f|irst_value', second_tag: 'sec,ond_value' })
+    datagrams = client.capture do
+      client.increment('bar', tags: ['th|ird_#,tag'])
+    end
+
+    assert_includes datagrams.first.tags, 'first_tag:first_value'
+    assert_includes datagrams.first.tags, 'second_tag:second_value'
+    assert_includes datagrams.first.tags, 'third_#tag'
+  end
+
   def test_sampling
     mock_sink = mock('sink')
     mock_sink.stubs(:sample?).returns(false, true, false, false, true)
