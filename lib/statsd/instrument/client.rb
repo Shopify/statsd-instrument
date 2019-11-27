@@ -10,7 +10,7 @@
 # environment variables
 #
 # You are encouraged to instantiate multiple clients, and instantiate variants
-# of an existing clients using {#clone_with_options}. We recommend instiating
+# of an existing clients using {#clone_with_options}. We recommend instantiating
 # a separate client for every logical component of your application using
 # `clone_with_options`, and setting a different metric `prefix`.
 #
@@ -61,7 +61,7 @@ class StatsD::Instrument::Client
     end
   end
 
-  # The class to use to build StatsD datagrams. The build the actual datagrams,
+  # The class to use to build StatsD datagrams. To build the actual datagrams,
   # the class will be instantiated, potentially multiple times, by the client.
   #
   # @return [Class] A subclass of {StatsD::Instrument::DatagramBuilder}
@@ -72,7 +72,7 @@ class StatsD::Instrument::Client
   #
   # This can be set to any object that responds to the following methods:
   #
-  # - `sample?` which should return true if the metric should sampled, i.e.
+  # - `sample?` which should return true if the metric should be sampled, i.e.
   #   actually sent to the sink.
   # - `#<<` which takes a UDP datagram as string to emit the datagram. This
   #   method will only be called if `sample?` returned `true`.
@@ -83,7 +83,7 @@ class StatsD::Instrument::Client
   # - {StatsD::Instrument::UDPSink} A sink that will actually emit the provided
   #   datagrams over UDP.
   # - {StatsD::Instrument::NullSink} A sink that will simply swallow every
-  #   datagram. This sink is when testing your application.
+  #   datagram. This sink is for use when testing your application.
   # - {StatsD::Instrument::LogSink} A sink that log all provided datagrams to
   #   a Logger, normally {StatsD.logger}.
   #
@@ -95,7 +95,7 @@ class StatsD::Instrument::Client
   # set to `foo`, and you emit a metric named `bar`, the metric name will be
   # `foo.bar`.
   #
-  # Generally all the metreics you emit to the same StatsD server will share a
+  # Generally all the metrics you emit to the same StatsD server will share a
   # single, global namespace. If you are emitting metrics from multiple
   # applications, using a prefix is recommended to prevent metric name
   # collisions.
