@@ -4,83 +4,14 @@ require 'socket'
 require 'logger'
 require 'forwardable'
 
-# The StatsD module contains low-level metrics for collecting metrics and sending them to the backend.
+# The `StatsD` module contains low-level metrics for collecting metrics and
+# sending them to the backend.
 #
-# @!attribute client
-#   @return [StatsD::Instrument::Backend] The client that will handle singleton method calls in the next
-#     major version of this library.
-#   @note This new Client implementation is intended to become the new default in
-#     the next major release of this library. While this class may already be functional,
-#     we provide no guarantees about the API and the behavior may change.
-#
-# @!attribute backend
-#   The backend that is being used to emit the metrics.
-#   @return [StatsD::Instrument::Backend] the currently active backend. If there is no active backend
-#     yet, it will call {StatsD::Instrument::Environment#default_backend} to obtain a
-#     default backend for the environment.
-#   @see StatsD::Instrument::Environment#default_backend
-#   @deprecated
-#
-# @!attribute prefix
-#   The prefix to apply to metric names. This can be useful to group all the metrics
-#   for an application in a shared StatsD server.
-#
-#   When using a prefix a dot will be included automatically to separate the prefix
-#   from the metric name.
-#
-#   @return [String, nil] The prefix, or <tt>nil</tt> when no prefix is used
-#   @see StatsD::Instrument::Metric#name
-#   @deprecated
-#
-# @!attribute default_sample_rate
-#   The sample rate to use if the sample rate is unspecified for a metric call.
-#   @return [Float] Default is 1.0.
-#   @deprecated
-#
-# @!attribute logger
-#   The logger to use in case of any errors. The logger is also used as default logger
-#   for the LoggerBackend (although this can be overwritten).
-#   @see StatsD::Instrument::Backends::LoggerBackend
-#   @return [Logger]
-#
-# @!attribute default_tags
-#   The tags to apply to all metrics.
-#   @return [Array<String>, Hash<String, String>, nil] The default tags, or <tt>nil</tt> when no default tags is used
-#   @deprecated
-#
-# @!attribute singleton_client
-#   @nodoc
-#   @deprecated
-#
-# @!method measure(name, value = nil, sample_rate: nil, tags: nil, &block)
-#   (see StatsD::Instrument::Client#measure)
-#
-# @!method increment(name, value = 1, sample_rate: nil, tags: nil)
-#   (see StatsD::Instrument::Client#increment)
-#
-# @!method gauge(name, value, sample_rate: nil, tags: nil)
-#   (see StatsD::Instrument::Client#gauge)
-#
-# @!method set(name, value, sample_rate: nil, tags: nil)
-#   (see StatsD::Instrument::Client#set)
-#
-# @!method histogram(name, value, sample_rate: nil, tags: nil)
-#   (see StatsD::Instrument::Client#histogram)
-#
-# @!method distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
-#   (see StatsD::Instrument::Client#distribution)
-#
-# @!method event(title, text, tags: nil, hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil) # rubocop:disable Metrics/LineLength
-#   (see StatsD::Instrument::Client#event)
-#
-# @!method service_check(name, status, tags: nil, hostname: nil, timestamp: nil, message: nil)
-#   (see StatsD::Instrument::Client#service_check)
-#
-# @see StatsD::Instrument <tt>StatsD::Instrument</tt> contains module to instrument
+# @see .singleton_client Metric method calls on the `StatsD` singleton will
+#   be handled by the client assigned to `StatsD.singleton_client`.
+# @see StatsD::Instrument `StatsD::Instrument` contains module to instrument
 #    existing methods with StatsD metrics
 module StatsD
-  extend self
-
   # The StatsD::Instrument module provides metaprogramming methods to instrument your methods with
   # StatsD metrics. E.g., you can create counters on how often a method is called, how often it is
   # successful, the duration of the methods call, etc.
@@ -96,7 +27,9 @@ module StatsD
       end
     end
 
+    # Generates a metric name for an instrumented method.
     # @private
+    # @return [String]
     def self.generate_metric_name(name, callee, *args)
       name.respond_to?(:call) ? name.call(callee, args).gsub('::', '.') : name.gsub('::', '.')
     end
@@ -360,18 +293,55 @@ module StatsD
     end
   end
 
-  attr_accessor :logger
-  attr_writer :singleton_client
+  class << self
+    extend Forwardable
 
-  extend Forwardable
+    # The logger to use in case of any errors.
+    #
+    # @return [Logger]
+    # @see StatsD::Instrument::LogSink
+    attr_accessor :logger
 
-  def singleton_client
-    @singleton_client ||= StatsD::Instrument::Environment.current.client
+    # The StatsD client that handles method calls on the StatsD singleton.
+    #
+    # E.g. a call to `StatsD.increment` will be handled by this client.
+    #
+    # @return [StatsD::Instrument::Client]
+    attr_writer :singleton_client
+
+    # The StatsD client that handles method calls on the StatsD singleton
+    # @return [StatsD::Instrument::Client]
+    def singleton_client
+      @singleton_client ||= StatsD::Instrument::Environment.current.client
+    end
+
+    # @!method measure(name, value = nil, sample_rate: nil, tags: nil, &block)
+    #   (see StatsD::Instrument::Client#measure)
+    #
+    # @!method increment(name, value = 1, sample_rate: nil, tags: nil)
+    #   (see StatsD::Instrument::Client#increment)
+    #
+    # @!method gauge(name, value, sample_rate: nil, tags: nil)
+    #   (see StatsD::Instrument::Client#gauge)
+    #
+    # @!method set(name, value, sample_rate: nil, tags: nil)
+    #   (see StatsD::Instrument::Client#set)
+    #
+    # @!method histogram(name, value, sample_rate: nil, tags: nil)
+    #   (see StatsD::Instrument::Client#histogram)
+    #
+    # @!method distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
+    #   (see StatsD::Instrument::Client#distribution)
+    #
+    # @!method event(title, text, tags: nil, hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil) # rubocop:disable Metrics/LineLength
+    #   (see StatsD::Instrument::Client#event)
+    #
+    # @!method service_check(name, status, tags: nil, hostname: nil, timestamp: nil, message: nil)
+    #   (see StatsD::Instrument::Client#service_check)
+
+    def_delegators :singleton_client, :increment, :gauge, :set, :measure,
+      :histogram, :distribution, :event, :service_check
   end
-
-  # Singleton methods will be delegated to the singleton client.
-  def_delegators :singleton_client, :increment, :gauge, :set, :measure,
-    :histogram, :distribution, :event, :service_check
 end
 
 require 'statsd/instrument/version'
