@@ -20,7 +20,7 @@ The following environment variables are supported:
 
 - `STATSD_ADDR`: (default `localhost:8125`) The address to send the StatsD UDP
   datagrams to.
-- `STATSD_IMPLEMENTATION`: (default: `statsd`). The StatsD implementation you
+- `STATSD_IMPLEMENTATION`: (default: `datadog`). The StatsD implementation you
   are using. `statsd`, `statsite` and `datadog` are supported. Some features
   are only available on certain implementations,
 - `STATSD_ENV`: The environment StatsD will run in. If this is not set
