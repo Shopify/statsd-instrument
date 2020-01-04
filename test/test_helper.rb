@@ -4,7 +4,7 @@ ENV['ENV'] = 'test'
 
 require 'minitest/autorun'
 require 'minitest/pride'
-require 'mocha/setup'
+require 'mocha/minitest'
 require 'statsd-instrument'
 
 require_relative 'helpers/rubocop_helper'
