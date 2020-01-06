@@ -8,6 +8,29 @@ section below.
 
 _Nothing yet_
 
+## Version 3.0.0
+
+This version makes the new client dat was added in version 2.6+ the default
+client, and removes the legacy client.
+
+- All previously deprecated functionality has been removed (since version 2.5,
+  see below).
+- Support for the StatSite implementation has been dropped.
+- Support for Ruby version older than 2.4 has been dropped.
+- The default implementation has been changed to DataDog. To use the standard
+  StatsD implementation (which was the default in v2), set the
+  `STATSD_IMPLEMENTATION` environment variable to `statsd`.
+
+To upgrade, follow the following process:
+
+1. Upgrade to version 2.9.2.
+2. Switch to the new client by setting the `STATSD_USE_NEW_CLIENT` environment
+   variable to 1.
+   - You may want to use the Rubocop rules that ship with this library, and
+     strict mode to find and fix deprecated usage patterns. See below for more
+     information about strict mode and the available Rubocop rules.
+3. Upgrade to version 3.0.0, and unset `STATSD_USE_NEW_CLIENT`.
+
 ## Version 2.9.2
 
 - Allow providing a value as second positional argument to `assert_statsd_*`
