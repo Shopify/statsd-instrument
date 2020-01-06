@@ -55,7 +55,8 @@ class StatsDTest < Minitest::Test
 
       begin
         result = lambda.call
-      rescue # rubocop:disable Lint/HandleExceptions:
+      rescue
+        # noop
       end
     end
 
@@ -146,7 +147,8 @@ class StatsDTest < Minitest::Test
 
       begin
         result = lambda.call
-      rescue # rubocop:disable Lint/HandleExceptions
+      rescue
+        # noop
       end
     end
 
