@@ -11,7 +11,7 @@ jobs:
       matrix:
         # Windows on macOS builds started failing, so they are disabled for noew
 
-        ruby: [2.3, 2.4, 2.5, 2.6]
+        ruby: [2.4, 2.5, 2.6]
         # platform: [windows-2019, macOS-10.14, ubuntu-18.04]
 
         # exclude:

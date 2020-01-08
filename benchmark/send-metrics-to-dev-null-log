@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
+require 'tmpdir'
 require 'benchmark/ips'
 
 revision = %x(git rev-parse HEAD).rstrip
