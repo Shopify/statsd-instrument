@@ -10,7 +10,7 @@ _Nothing yet_
 
 ## Version 3.0.0
 
-This version makes the new client dat was added in version 2.6+ the default
+This version makes the new client that was added in version 2.6+ the default
 client, and removes the legacy client.
 
 - All previously deprecated functionality has been removed (since version 2.5,
