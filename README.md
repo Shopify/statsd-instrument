@@ -128,7 +128,7 @@ An event is a (title, text) tuple that can be used to correlate metrics with som
 This is a good fit for instance to correlate response time variation with a deploy of the new code.
 
 ```ruby
-StatsD.event('shipit.deploy', 'started', sample_rate: 1.0)
+StatsD.event('shipit.deploy', 'started')
 ```
 
 *Note: This is only supported by the [datadog implementation](https://docs.datadoghq.com/guides/dogstatsd/#events).*
