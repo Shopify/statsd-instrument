@@ -12,6 +12,7 @@ class DatagramBuilderTest < Minitest::Test
     assert_equal 'fo_o', @datagram_builder.send(:normalize_name, 'fo|o')
     assert_equal 'fo_o', @datagram_builder.send(:normalize_name, 'fo@o')
     assert_equal 'fo_o', @datagram_builder.send(:normalize_name, 'fo:o')
+    assert_equal 'foo_', @datagram_builder.send(:normalize_name, 'foo:')
   end
 
   def test_normalize_unsupported_tag_names
