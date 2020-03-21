@@ -17,3 +17,4 @@ module StatsD::Instrument
 end
 
 StatsD.logger = Logger.new(File::NULL)
+GC.stress = true if ENV['GC_STRESS']
