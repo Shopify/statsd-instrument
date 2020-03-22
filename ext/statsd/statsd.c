@@ -71,8 +71,6 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
   int len = 0, tags_len = 0, i = 0;
   long chunk_len = 0;
 
-  MEMZERO(&datagram, char, DATAGRAM_SIZE_MAX);
-
   prefix = rb_ivar_get(self, idPrefix);
   if ((chunk_len = RSTRING_LEN(prefix)) != 0) {
     if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
