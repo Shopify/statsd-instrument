@@ -116,4 +116,32 @@ class DatagramBuilderTest < Minitest::Test
     datagram = datagram_builder.c('bar', 1, nil, nil)
     assert_equal 'bar:1|c|#foo', datagram
   end
+
+  def test_builder_buffer_overflow
+    # prefix + name overflow
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new(prefix: 'a' * 2047)
+    datagram = datagram_builder.c('b' * 2048, 1, nil, nil)
+    assert_equal ('a' * 2047) + "." + ('b' * 2048), datagram
+    # name overflows
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new
+    datagram = datagram_builder.c('a' * 4096, 1, nil, nil)
+    assert_equal 'a' * 4096, datagram
+    # value overflows
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new
+    datagram = datagram_builder.c('a' * 4093, 100, nil, nil)
+    assert_equal ('a' * 4093) + ":", datagram
+    # type overflows
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new
+    datagram = datagram_builder.c('a' * 4093, 1, nil, nil)
+    assert_equal ('a' * 4093) + ":1|", datagram
+    # sample rate overflows
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new
+    datagram = datagram_builder.c('a' * 4088, 1, 0.5, nil)
+    assert_equal ('a' * 4088) + ":1|c|@", datagram
+    # tag overflows
+    tags = 1000.times {|i| "tag:#{i}" }
+    datagram_builder = StatsD::Instrument::DatagramBuilder.new
+    datagram = datagram_builder.c('a' * 2048, 1, 0.5, tags)
+    assert_equal ('a' * 2048) + ":1|c|@0.5", datagram
+  end
 end

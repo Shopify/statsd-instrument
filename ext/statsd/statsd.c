@@ -35,36 +35,50 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
   char datagram[MAX_DATAGRAM_SIZE];
   int empty_default_tags = 1, empty_tags = 1;
   int len = 0, tags_len = 0, i = 0;
+  long chunk_len = 0;
 
   MEMZERO(&datagram, char, MAX_DATAGRAM_SIZE);
 
   prefix = rb_ivar_get(self, idPrefix);
   if (RSTRING_LEN(prefix) != 0) {
-    memcpy(datagram, StringValuePtr(prefix), RSTRING_LEN(prefix));
-    len += RSTRING_LEN(prefix);
+    chunk_len = RSTRING_LEN(prefix);
+    if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+    memcpy(datagram, StringValuePtr(prefix), chunk_len);
+    len += chunk_len;
   }
 
   normalized_name = normalize_name(self, name);
-  memcpy(datagram + len, StringValuePtr(normalized_name), RSTRING_LEN(normalized_name));
-  len += RSTRING_LEN(normalized_name);
+  chunk_len = RSTRING_LEN(normalized_name);
+  if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+  memcpy(datagram + len, StringValuePtr(normalized_name), chunk_len);
+  len += chunk_len;
 
+  if (len + 1 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
   memcpy(datagram + len, ":", 1);
   len += 1;
   str_value = rb_obj_as_string(value);
-  memcpy(datagram + len, StringValuePtr(str_value), RSTRING_LEN(str_value));
-  len += RSTRING_LEN(str_value);
+  chunk_len = RSTRING_LEN(str_value);
+  if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+  memcpy(datagram + len, StringValuePtr(str_value), chunk_len);
+  len += chunk_len;
 
+  if (len + 1 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
   memcpy(datagram + len, "|", 1);
   len += 1;
-  memcpy(datagram + len, StringValuePtr(type), RSTRING_LEN(type));
-  len += RSTRING_LEN(type);
+  chunk_len = RSTRING_LEN(type);
+  if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+  memcpy(datagram + len, StringValuePtr(type), chunk_len);
+  len += chunk_len;
 
   if (RTEST(sample_rate) && NUM2INT(sample_rate) < 1) {
+    if (len + 2 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
     memcpy(datagram + len, "|@", 2);
     len += 2;
     str_sample_rate = rb_obj_as_string(sample_rate);
-    memcpy(datagram + len, StringValuePtr(str_sample_rate), RSTRING_LEN(str_sample_rate));
-    len += RSTRING_LEN(str_sample_rate);
+    chunk_len = RSTRING_LEN(str_sample_rate);
+    if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+    memcpy(datagram + len, StringValuePtr(str_sample_rate), chunk_len);
+    len += chunk_len;
   }
 
   default_tags = rb_ivar_get(self, idDefaultTags);
@@ -85,21 +99,26 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
   }
 
   if (RTEST(normalized_tags)) {
+    if (len + 2 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
     memcpy(datagram + len, "|#", 2);
     len += 2;
 
     tags_len = RARRAY_LEN(normalized_tags);
     for (i = 0; i < tags_len; ++i) {
       tag = RARRAY_AREF(normalized_tags, i);
-      memcpy(datagram + len, StringValuePtr(tag), RSTRING_LEN(tag));
-      len += RSTRING_LEN(tag);
+      chunk_len = RSTRING_LEN(tag);
+      if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+      memcpy(datagram + len, StringValuePtr(tag), chunk_len);
+      len += chunk_len;
       if (i < tags_len - 1) {
+        if (len + 1 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
         memcpy(datagram + len, ",", 1);
         len += 1;
       }
     }
   }
 
+finalize_datagram:
   return rb_str_new(datagram, len);
   RB_GC_GUARD(normalized_tags);
 }
