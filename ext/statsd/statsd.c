@@ -4,8 +4,16 @@
 #define DATAGRAM_SIZE_MAX 4096
 #define TAGS_CACHE_MAX 1024
 
-static ID idTr, idNormalizeTags, idDefaultTags, idPrefix, idTagsCache;
+static ID idTr, idNormalizeTags, idDefaultTags, idPrefix, idNormalizedTagsCache;
 static VALUE strNormalizeChars, strNormalizeReplacement;
+
+static VALUE
+initialize(int argc, VALUE *argv, VALUE self)
+{
+  rb_call_super(argc, argv);
+  rb_ivar_set(self, idNormalizedTagsCache, rb_hash_new());
+  return self;
+}
 
 static VALUE
 normalize_name(VALUE self, VALUE name) {
@@ -34,7 +42,7 @@ static VALUE
 normalized_tags_cached(VALUE self, VALUE tags)
 {
   VALUE cached;
-  VALUE cache = rb_ivar_get(self, idTagsCache);
+  VALUE cache = rb_ivar_get(self, idNormalizedTagsCache);
   VALUE key = rb_hash(tags);
   cached = rb_hash_aref(cache, key);
   if (RTEST(cached)) {
@@ -146,22 +154,26 @@ finalize_datagram:
 
 void Init_statsd()
 {
-  VALUE mStatsd, mInstrument, cDatagramBuilder;
+  VALUE mStatsd, mInstrument, cDatagramBuilder, mCDatagramBuilder;
 
   mStatsd = rb_define_module("StatsD");
   mInstrument = rb_define_module_under(mStatsd, "Instrument");
   cDatagramBuilder = rb_define_class_under(mInstrument, "DatagramBuilder", rb_cObject);
+  mCDatagramBuilder = rb_define_module_under(mInstrument, "CDatagramBuilder");
 
   idTr = rb_intern("tr");
   idNormalizeTags = rb_intern("normalize_tags");
   idDefaultTags = rb_intern("@default_tags");
   idPrefix = rb_intern("@prefix");
-  idTagsCache = rb_intern("@tags_cache");
+  idNormalizedTagsCache = rb_intern("@__normalized_tags_cache");
   strNormalizeChars = rb_str_new_cstr(":|@");
   rb_global_variable(&strNormalizeChars);
   strNormalizeReplacement = rb_str_new_cstr("_");
   rb_global_variable(&strNormalizeReplacement);
 
-  rb_define_protected_method(cDatagramBuilder, "normalize_name", normalize_name, 1);
-  rb_define_protected_method(cDatagramBuilder, "generate_generic_datagram", generate_generic_datagram, 5);
+  rb_define_method(mCDatagramBuilder, "initialize", initialize, -1);
+  rb_define_protected_method(mCDatagramBuilder, "normalize_name", normalize_name, 1);
+  rb_define_protected_method(mCDatagramBuilder, "generate_generic_datagram", generate_generic_datagram, 5);
+
+  rb_prepend_module(cDatagramBuilder, mCDatagramBuilder);
 }

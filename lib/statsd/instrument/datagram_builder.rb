@@ -30,7 +30,6 @@ class StatsD::Instrument::DatagramBuilder
   def initialize(prefix: nil, default_tags: nil)
     @prefix = prefix.nil? ? "" : "#{normalize_name(prefix)}."
     @default_tags = normalize_tags(default_tags)
-    @tags_cache = {}
   end
 
   def c(name, value, sample_rate, tags)
