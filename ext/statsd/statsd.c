@@ -2,6 +2,7 @@
 #include <ruby/encoding.h>
 
 #define DATAGRAM_SIZE_MAX 4096
+#define TAGS_CACHE_ENABLED 1
 #define TAGS_CACHE_MAX 1024
 
 static ID idTr, idNormalizeTags, idDefaultTags, idPrefix, idNormalizedTagsCache;
@@ -41,6 +42,7 @@ normalize_name(VALUE self, VALUE name) {
 static VALUE
 normalized_tags_cached(VALUE self, VALUE tags)
 {
+#ifdef TAGS_CACHE_ENABLED
   VALUE cached;
   VALUE cache = rb_ivar_get(self, idNormalizedTagsCache);
   VALUE key = rb_hash(tags);
@@ -55,6 +57,9 @@ normalized_tags_cached(VALUE self, VALUE tags)
   return rb_funcall(self, idNormalizeTags, 1, tags);
   RB_GC_GUARD(key);
   RB_GC_GUARD(cached);
+#else
+  return rb_funcall(self, idNormalizeTags, 1, tags);
+#endif
 }
 
 static VALUE
@@ -69,8 +74,7 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
   MEMZERO(&datagram, char, DATAGRAM_SIZE_MAX);
 
   prefix = rb_ivar_get(self, idPrefix);
-  if (RSTRING_LEN(prefix) != 0) {
-    chunk_len = RSTRING_LEN(prefix);
+  if ((chunk_len = RSTRING_LEN(prefix)) != 0) {
     if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
     memcpy(datagram, StringValuePtr(prefix), chunk_len);
     len += chunk_len;
