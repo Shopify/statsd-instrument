@@ -1,9 +1,10 @@
 #include <ruby.h>
 #include <ruby/encoding.h>
 
-#define MAX_DATAGRAM_SIZE 4096
+#define DATAGRAM_SIZE_MAX 4096
+#define TAGS_CACHE_MAX 1024
 
-static ID idTr, idNormalizeTags, idDefaultTags, idPrefix;
+static ID idTr, idNormalizeTags, idDefaultTags, idPrefix, idTagsCache;
 static VALUE strNormalizeChars, strNormalizeReplacement;
 
 static VALUE
@@ -28,55 +29,75 @@ normalize_name(VALUE self, VALUE name) {
   return rb_funcall(name, idTr, 2, strNormalizeChars, strNormalizeReplacement);
 }
 
+/* pure function not exposed to ruby with an intermediate bounded cache */
+static VALUE
+normalized_tags_cached(VALUE self, VALUE tags)
+{
+  VALUE cached;
+  VALUE cache = rb_ivar_get(self, idTagsCache);
+  VALUE key = rb_hash(tags);
+  cached = rb_hash_aref(cache, key);
+  if (RTEST(cached)) {
+    return cached;
+  } else if (rb_hash_size_num(cache) < TAGS_CACHE_MAX) {
+    cached = rb_funcall(self, idNormalizeTags, 1, tags);
+    rb_hash_aset(cache, key, cached);
+    return cached;
+  }
+  return rb_funcall(self, idNormalizeTags, 1, tags);
+  RB_GC_GUARD(key);
+  RB_GC_GUARD(cached);
+}
+
 static VALUE
 generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE sample_rate, VALUE tags) {
   VALUE prefix, normalized_name, str_value, str_sample_rate, default_tags, tag;
   VALUE normalized_tags = Qnil;
-  char datagram[MAX_DATAGRAM_SIZE];
+  char datagram[DATAGRAM_SIZE_MAX];
   int empty_default_tags = 1, empty_tags = 1;
   int len = 0, tags_len = 0, i = 0;
   long chunk_len = 0;
 
-  MEMZERO(&datagram, char, MAX_DATAGRAM_SIZE);
+  MEMZERO(&datagram, char, DATAGRAM_SIZE_MAX);
 
   prefix = rb_ivar_get(self, idPrefix);
   if (RSTRING_LEN(prefix) != 0) {
     chunk_len = RSTRING_LEN(prefix);
-    if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+    if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
     memcpy(datagram, StringValuePtr(prefix), chunk_len);
     len += chunk_len;
   }
 
   normalized_name = normalize_name(self, name);
   chunk_len = RSTRING_LEN(normalized_name);
-  if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+  if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(datagram + len, StringValuePtr(normalized_name), chunk_len);
   len += chunk_len;
 
-  if (len + 1 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+  if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(datagram + len, ":", 1);
   len += 1;
   str_value = rb_obj_as_string(value);
   chunk_len = RSTRING_LEN(str_value);
-  if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+  if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(datagram + len, StringValuePtr(str_value), chunk_len);
   len += chunk_len;
 
-  if (len + 1 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+  if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(datagram + len, "|", 1);
   len += 1;
   chunk_len = RSTRING_LEN(type);
-  if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+  if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(datagram + len, StringValuePtr(type), chunk_len);
   len += chunk_len;
 
   if (RTEST(sample_rate) && NUM2INT(sample_rate) < 1) {
-    if (len + 2 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+    if (len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
     memcpy(datagram + len, "|@", 2);
     len += 2;
     str_sample_rate = rb_obj_as_string(sample_rate);
     chunk_len = RSTRING_LEN(str_sample_rate);
-    if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+    if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
     memcpy(datagram + len, StringValuePtr(str_sample_rate), chunk_len);
     len += chunk_len;
   }
@@ -91,15 +112,15 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
   }
 
   if (empty_default_tags && !empty_tags) {
-    normalized_tags = rb_funcall(self, idNormalizeTags, 1, tags);
+    normalized_tags = normalized_tags_cached(self, tags);
   } else if (!empty_default_tags && !empty_tags) {
-    normalized_tags = rb_ary_concat(rb_funcall(self, idNormalizeTags, 1, tags), default_tags);
+    normalized_tags = rb_ary_concat(normalized_tags_cached(self, tags), default_tags);
   } else if (!empty_default_tags && empty_tags) {
     normalized_tags = default_tags;
   }
 
   if (RTEST(normalized_tags)) {
-    if (len + 2 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+    if (len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
     memcpy(datagram + len, "|#", 2);
     len += 2;
 
@@ -107,11 +128,11 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
     for (i = 0; i < tags_len; ++i) {
       tag = RARRAY_AREF(normalized_tags, i);
       chunk_len = RSTRING_LEN(tag);
-      if (len + chunk_len > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+      if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
       memcpy(datagram + len, StringValuePtr(tag), chunk_len);
       len += chunk_len;
       if (i < tags_len - 1) {
-        if (len + 1 > MAX_DATAGRAM_SIZE) goto finalize_datagram;
+        if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
         memcpy(datagram + len, ",", 1);
         len += 1;
       }
@@ -135,6 +156,7 @@ void Init_statsd()
   idNormalizeTags = rb_intern("normalize_tags");
   idDefaultTags = rb_intern("@default_tags");
   idPrefix = rb_intern("@prefix");
+  idTagsCache = rb_intern("@tags_cache");
   strNormalizeChars = rb_str_new_cstr(":|@");
   rb_global_variable(&strNormalizeChars);
   strNormalizeReplacement = rb_str_new_cstr("_");
