@@ -2,17 +2,20 @@
 #include <ruby/encoding.h>
 
 #define DATAGRAM_SIZE_MAX 4096
-#define TAGS_CACHE_ENABLED 1
-#define TAGS_CACHE_MAX 1024
+#define NORMALIZED_TAGS_CACHE_ENABLED 1
+#define NORMALIZED_TAGS_CACHE_MAX 512
+#define NORMALIZED_NAMES_CACHE_ENABLED 1
+#define NORMALIZED_NAMES_CACHE_MAX 512
 
-static ID idTr, idNormalizeTags, idDefaultTags, idPrefix, idNormalizedTagsCache;
+static ID idTr, idNormalizeTags, idDefaultTags, idPrefix, idNormalizedTagsCache, idNormalizedNamesCache;
 static VALUE strNormalizeChars, strNormalizeReplacement;
 
 static VALUE
 initialize(int argc, VALUE *argv, VALUE self)
 {
   rb_call_super(argc, argv);
-  rb_ivar_set(self, idNormalizedTagsCache, rb_hash_new());
+  rb_ivar_set(self, idNormalizedTagsCache, rb_obj_hide(rb_hash_new()));
+  rb_ivar_set(self, idNormalizedNamesCache, rb_obj_hide(rb_hash_new()));
   return self;
 }
 
@@ -40,22 +43,42 @@ normalize_name(VALUE self, VALUE name) {
 
 /* pure function not exposed to ruby with an intermediate bounded cache */
 static VALUE
-normalized_tags_cached(VALUE self, VALUE tags)
+normalized_names_cached(VALUE self, VALUE name)
 {
-#ifdef TAGS_CACHE_ENABLED
+#ifdef NORMALIZED_NAMES_CACHE_ENABLED
   VALUE cached;
-  VALUE cache = rb_ivar_get(self, idNormalizedTagsCache);
-  VALUE key = rb_hash(tags);
-  cached = rb_hash_aref(cache, key);
+  VALUE cache = rb_ivar_get(self, idNormalizedNamesCache);
+  cached = rb_hash_aref(cache, name);
   if (RTEST(cached)) {
     return cached;
-  } else if (rb_hash_size_num(cache) < TAGS_CACHE_MAX) {
+  } else if (rb_hash_size_num(cache) < NORMALIZED_NAMES_CACHE_MAX) {
+    cached = normalize_name(self, name);
+    rb_hash_aset(cache, name, cached);
+    return cached;
+  }
+  return normalize_name(self, name);
+  RB_GC_GUARD(cached);
+#else
+  return normalize_name(self, name);
+#endif
+}
+
+/* pure function not exposed to ruby with an intermediate bounded cache */
+static VALUE
+normalized_tags_cached(VALUE self, VALUE tags)
+{
+#ifdef NORMALIZED_TAGS_CACHE_ENABLED
+  VALUE cached;
+  VALUE cache = rb_ivar_get(self, idNormalizedTagsCache);
+  cached = rb_hash_aref(cache, tags);
+  if (RTEST(cached)) {
+    return cached;
+  } else if (rb_hash_size_num(cache) < NORMALIZED_TAGS_CACHE_MAX) {
     cached = rb_funcall(self, idNormalizeTags, 1, tags);
-    rb_hash_aset(cache, key, cached);
+    rb_hash_aset(cache, tags, cached);
     return cached;
   }
   return rb_funcall(self, idNormalizeTags, 1, tags);
-  RB_GC_GUARD(key);
   RB_GC_GUARD(cached);
 #else
   return rb_funcall(self, idNormalizeTags, 1, tags);
@@ -78,7 +101,7 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
     len += chunk_len;
   }
 
-  normalized_name = normalize_name(self, name);
+  normalized_name = normalized_names_cached(self, name);
   chunk_len = RSTRING_LEN(normalized_name);
   if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(datagram + len, StringValuePtr(normalized_name), chunk_len);
@@ -167,6 +190,7 @@ void Init_statsd()
   idNormalizeTags = rb_intern("normalize_tags");
   idDefaultTags = rb_intern("@default_tags");
   idPrefix = rb_intern("@prefix");
+  idNormalizedNamesCache = rb_intern("@__normalized_names_cache");
   idNormalizedTagsCache = rb_intern("@__normalized_tags_cache");
   strNormalizeChars = rb_str_new_cstr(":|@");
   rb_global_variable(&strNormalizeChars);
