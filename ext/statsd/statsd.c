@@ -1,5 +1,6 @@
 #include <ruby.h>
 #include <ruby/encoding.h>
+#include <ruby/st.h>
 
 #define DATAGRAM_SIZE_MAX 4096
 #define NORMALIZED_TAGS_CACHE_ENABLED 1
@@ -7,15 +8,117 @@
 #define NORMALIZED_NAMES_CACHE_ENABLED 1
 #define NORMALIZED_NAMES_CACHE_MAX 512
 
-static ID idTr, idNormalizeTags, idDefaultTags, idPrefix, idNormalizedTagsCache, idNormalizedNamesCache;
+static ID idTr, idNormalizeTags, idDefaultTags, idPrefix;
 static VALUE strNormalizeChars, strNormalizeReplacement;
+
+struct datagram_builder {
+#ifdef NORMALIZED_TAGS_CACHE_ENABLED
+  st_table *normalized_tags_cache;
+#endif
+#ifdef NORMALIZED_NAMES_CACHE_ENABLED
+  st_table *normalized_names_cache;
+#endif
+  // cached default tags ivar to skip a lookup
+  VALUE default_tags;
+  long prefix_len;
+  // last member to not glob up cache lines to access other struct members
+  char datagram[DATAGRAM_SIZE_MAX];
+};
+
+// GC callback to mark the wrapper struct. Conditionally symbol tables if caching is enabled (values only)
+// and the cached default tags as well.
+void
+datagram_builder_mark(void *ptr)
+{
+  const struct datagram_builder *builder = (struct datagram_builder *)ptr;
+#ifdef NORMALIZED_TAGS_CACHE_ENABLED
+  rb_mark_tbl(builder->normalized_tags_cache);
+#endif
+#ifdef NORMALIZED_NAMES_CACHE_ENABLED
+  rb_mark_tbl(builder->normalized_names_cache);
+#endif
+  rb_gc_mark(builder->default_tags);
+}
+
+// GC callback to free the wrapper struct. Conditionally symbol tables if caching is enabled
+// and the struct itself.
+void
+datagram_builder_free(void *ptr)
+{
+  struct datagram_builder *builder = (struct datagram_builder *)ptr;
+  if (!builder) return;
+#ifdef NORMALIZED_TAGS_CACHE_ENABLED
+  st_free_table(builder->normalized_tags_cache);
+#endif
+#ifdef NORMALIZED_NAMES_CACHE_ENABLED
+  st_free_table(builder->normalized_names_cache);
+#endif
+  xfree(builder);
+}
+
+// Be nice to ObjectSpace and let the size be known. We'd likely want some feedback on
+// this with various normalized cache size values.
+size_t
+datagram_builder_size(const void *ptr)
+{
+  size_t size;
+  const struct datagram_builder *builder = (struct datagram_builder *)ptr;
+  size = sizeof(struct datagram_builder);
+#ifdef NORMALIZED_TAGS_CACHE_ENABLED
+  size += st_memsize(builder->normalized_tags_cache);
+#endif
+#ifdef NORMALIZED_NAMES_CACHE_ENABLED
+  size += st_memsize(builder->normalized_names_cache);
+#endif
+  return size;
+}
+
+const rb_data_type_t datagram_builder_type = {
+  .wrap_struct_name = "datagram_builder",
+  .function = {
+    .dmark = datagram_builder_mark,
+    .dfree = datagram_builder_free,
+    .dsize = datagram_builder_size,
+  },
+  .data = NULL,
+  .flags = RUBY_TYPED_FREE_IMMEDIATELY,
+};
+
+#define get_datagram_builder_struct(self) \
+  struct datagram_builder *builder = NULL; \
+  TypedData_Get_Struct(self, struct datagram_builder, &datagram_builder_type, builder); \
+
+static VALUE
+datagram_builder_alloc(VALUE self)
+{
+  struct datagram_builder *builder = ZALLOC(struct datagram_builder);
+#ifdef NORMALIZED_TAGS_CACHE_ENABLED
+  builder->normalized_tags_cache = st_init_numtable_with_size(NORMALIZED_TAGS_CACHE_MAX);
+#endif
+#ifdef NORMALIZED_NAMES_CACHE_ENABLED
+  builder->normalized_names_cache = st_init_numtable_with_size(NORMALIZED_NAMES_CACHE_MAX);
+#endif
+  return TypedData_Wrap_Struct(self, &datagram_builder_type, builder);
+}
 
 static VALUE
 initialize(int argc, VALUE *argv, VALUE self)
 {
+  VALUE prefix;
+  long chunk_len = 0;
+  get_datagram_builder_struct(self);
   rb_call_super(argc, argv);
-  rb_ivar_set(self, idNormalizedTagsCache, rb_obj_hide(rb_hash_new()));
-  rb_ivar_set(self, idNormalizedNamesCache, rb_obj_hide(rb_hash_new()));
+
+  // pre seed the buffer with the prefix and advance the offset as it's fixed for the lifetime of
+  // the builder
+  prefix = rb_ivar_get(self, idPrefix);
+  if ((chunk_len = RSTRING_LEN(prefix)) != 0 && chunk_len < DATAGRAM_SIZE_MAX) {
+    memcpy(builder->datagram, StringValuePtr(prefix), chunk_len);
+    builder->prefix_len = chunk_len;
+  }
+
+  // Cache the defaukt tags ivar on the lookup struct
+  builder->default_tags = rb_ivar_get(self, idDefaultTags);
   return self;
 }
 
@@ -43,17 +146,20 @@ normalize_name(VALUE self, VALUE name) {
 
 /* pure function not exposed to ruby with an intermediate bounded cache */
 static VALUE
-normalized_names_cached(VALUE self, VALUE name)
+normalized_names_cached(struct datagram_builder *builder, VALUE self, VALUE name)
 {
 #ifdef NORMALIZED_NAMES_CACHE_ENABLED
+  st_index_t key;
+  st_data_t val;
   VALUE cached;
-  VALUE cache = rb_ivar_get(self, idNormalizedNamesCache);
-  cached = rb_hash_aref(cache, name);
-  if (RTEST(cached)) {
-    return cached;
-  } else if (rb_hash_size_num(cache) < NORMALIZED_NAMES_CACHE_MAX) {
+  Check_Type(name, T_STRING);
+  // Can hash on string contents directly as type has already been checked
+  key = rb_str_hash(name);
+  if (st_lookup(builder->normalized_names_cache, key, &val)){
+    return (VALUE)val;
+  } else if (builder->normalized_names_cache->num_entries < NORMALIZED_NAMES_CACHE_MAX) {
     cached = normalize_name(self, name);
-    rb_hash_aset(cache, name, cached);
+    st_insert(builder->normalized_names_cache, key, (st_data_t)cached);
     return cached;
   }
   return normalize_name(self, name);
@@ -65,17 +171,20 @@ normalized_names_cached(VALUE self, VALUE name)
 
 /* pure function not exposed to ruby with an intermediate bounded cache */
 static VALUE
-normalized_tags_cached(VALUE self, VALUE tags)
+normalized_tags_cached(struct datagram_builder *builder, VALUE self, VALUE tags)
 {
 #ifdef NORMALIZED_TAGS_CACHE_ENABLED
+  st_index_t key;
+  st_data_t val;
   VALUE cached;
-  VALUE cache = rb_ivar_get(self, idNormalizedTagsCache);
-  cached = rb_hash_aref(cache, tags);
-  if (RTEST(cached)) {
-    return cached;
-  } else if (rb_hash_size_num(cache) < NORMALIZED_TAGS_CACHE_MAX) {
+  // More involved hashing as we need to hash on the content of the container too
+  // XXX: revisit
+  key = (st_index_t)(FIX2LONG(rb_hash(tags)));
+  if (st_lookup(builder->normalized_tags_cache, key, &val)){
+    return (VALUE)val;
+  } else if (builder->normalized_tags_cache->num_entries < NORMALIZED_TAGS_CACHE_MAX) {
     cached = rb_funcall(self, idNormalizeTags, 1, tags);
-    rb_hash_aset(cache, tags, cached);
+    st_insert(builder->normalized_tags_cache, key, (st_data_t)cached);
     return cached;
   }
   return rb_funcall(self, idNormalizeTags, 1, tags);
@@ -87,74 +196,65 @@ normalized_tags_cached(VALUE self, VALUE tags)
 
 static VALUE
 generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE sample_rate, VALUE tags) {
-  VALUE prefix, normalized_name, str_value, str_sample_rate, default_tags, tag;
+  VALUE normalized_name, str_value, str_sample_rate, tag;
   VALUE normalized_tags = Qnil;
-  char datagram[DATAGRAM_SIZE_MAX];
   int empty_default_tags = 1, empty_tags = 1;
   int len = 0, tags_len = 0, i = 0;
   long chunk_len = 0;
+  get_datagram_builder_struct(self);
 
-  prefix = rb_ivar_get(self, idPrefix);
-  if ((chunk_len = RSTRING_LEN(prefix)) != 0) {
-    if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-    memcpy(datagram, StringValuePtr(prefix), chunk_len);
-    len += chunk_len;
-  }
+  len = builder->prefix_len;
 
-  normalized_name = normalized_names_cached(self, name);
+  normalized_name = normalized_names_cached(builder, self, name);
   chunk_len = RSTRING_LEN(normalized_name);
   if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(datagram + len, StringValuePtr(normalized_name), chunk_len);
+  memcpy(builder->datagram + len, StringValuePtr(normalized_name), chunk_len);
   len += chunk_len;
 
   if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(datagram + len, ":", 1);
+  memcpy(builder->datagram + len, ":", 1);
   len += 1;
   str_value = rb_obj_as_string(value);
   chunk_len = RSTRING_LEN(str_value);
   if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(datagram + len, StringValuePtr(str_value), chunk_len);
+  memcpy(builder->datagram + len, StringValuePtr(str_value), chunk_len);
   len += chunk_len;
 
   if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(datagram + len, "|", 1);
+  memcpy(builder->datagram + len, "|", 1);
   len += 1;
   chunk_len = RSTRING_LEN(type);
   if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(datagram + len, StringValuePtr(type), chunk_len);
+  memcpy(builder->datagram + len, StringValuePtr(type), chunk_len);
   len += chunk_len;
 
   if (RTEST(sample_rate) && NUM2INT(sample_rate) < 1) {
     if (len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-    memcpy(datagram + len, "|@", 2);
+    memcpy(builder->datagram + len, "|@", 2);
     len += 2;
     str_sample_rate = rb_obj_as_string(sample_rate);
     chunk_len = RSTRING_LEN(str_sample_rate);
     if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-    memcpy(datagram + len, StringValuePtr(str_sample_rate), chunk_len);
+    memcpy(builder->datagram + len, StringValuePtr(str_sample_rate), chunk_len);
     len += chunk_len;
   }
 
-  default_tags = rb_ivar_get(self, idDefaultTags);
-
-  empty_default_tags = (RTEST(default_tags) ? RARRAY_LEN(default_tags) == 0 : 0);
-  if (RB_TYPE_P(tags, T_HASH) && !RHASH_EMPTY_P(tags)) {
-    empty_tags = 0;
-  } else if (RB_TYPE_P(tags, T_ARRAY) && RARRAY_LEN(tags) != 0) {
+  empty_default_tags = (RTEST(builder->default_tags) ? RARRAY_LEN(builder->default_tags) == 0 : 0);
+  if ((RB_TYPE_P(tags, T_HASH) && !RHASH_EMPTY_P(tags)) || (RB_TYPE_P(tags, T_ARRAY) && RARRAY_LEN(tags) != 0)) {
     empty_tags = 0;
   }
 
   if (empty_default_tags && !empty_tags) {
-    normalized_tags = normalized_tags_cached(self, tags);
+    normalized_tags = normalized_tags_cached(builder, self, tags);
   } else if (!empty_default_tags && !empty_tags) {
-    normalized_tags = rb_ary_concat(normalized_tags_cached(self, tags), default_tags);
+    normalized_tags = rb_ary_concat(normalized_tags_cached(builder, self, tags), builder->default_tags);
   } else if (!empty_default_tags && empty_tags) {
-    normalized_tags = default_tags;
+    normalized_tags = builder->default_tags;
   }
 
   if (RTEST(normalized_tags)) {
     if (len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-    memcpy(datagram + len, "|#", 2);
+    memcpy(builder->datagram + len, "|#", 2);
     len += 2;
 
     tags_len = RARRAY_LEN(normalized_tags);
@@ -162,18 +262,18 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
       tag = RARRAY_AREF(normalized_tags, i);
       chunk_len = RSTRING_LEN(tag);
       if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-      memcpy(datagram + len, StringValuePtr(tag), chunk_len);
+      memcpy(builder->datagram + len, StringValuePtr(tag), chunk_len);
       len += chunk_len;
       if (i < tags_len - 1) {
         if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-        memcpy(datagram + len, ",", 1);
+        memcpy(builder->datagram + len, ",", 1);
         len += 1;
       }
     }
   }
 
 finalize_datagram:
-  return rb_str_new(datagram, len);
+  return rb_str_new(builder->datagram, len);
   RB_GC_GUARD(normalized_tags);
 }
 
@@ -184,14 +284,15 @@ void Init_statsd()
   mStatsd = rb_define_module("StatsD");
   mInstrument = rb_define_module_under(mStatsd, "Instrument");
   cDatagramBuilder = rb_define_class_under(mInstrument, "DatagramBuilder", rb_cObject);
+
+  rb_define_alloc_func(cDatagramBuilder, datagram_builder_alloc);
+
   mCDatagramBuilder = rb_define_module_under(mInstrument, "CDatagramBuilder");
 
   idTr = rb_intern("tr");
   idNormalizeTags = rb_intern("normalize_tags");
   idDefaultTags = rb_intern("@default_tags");
   idPrefix = rb_intern("@prefix");
-  idNormalizedNamesCache = rb_intern("@__normalized_names_cache");
-  idNormalizedTagsCache = rb_intern("@__normalized_tags_cache");
   strNormalizeChars = rb_str_new_cstr(":|@");
   rb_global_variable(&strNormalizeChars);
   strNormalizeReplacement = rb_str_new_cstr("_");
