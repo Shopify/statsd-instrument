@@ -122,8 +122,9 @@ initialize(int argc, VALUE *argv, VALUE self)
   return self;
 }
 
-static VALUE
-normalize_name(VALUE self, VALUE name) {
+inline static VALUE
+normalize_name_fast_path(VALUE self, VALUE name)
+{
   char *name_start = NULL;
   char *name_end = NULL;
   Check_Type(name, T_STRING);
@@ -141,6 +142,13 @@ normalize_name(VALUE self, VALUE name) {
   if (name_start == name_end) {
     return name;
   }
+  return Qnil;
+}
+
+static VALUE
+normalize_name(VALUE self, VALUE name) {
+  VALUE _name = normalize_name_fast_path(self, name);
+  if (!NIL_P(_name)) return _name;
   return rb_funcall(name, idTr, 2, strNormalizeChars, strNormalizeReplacement);
 }
 
@@ -205,7 +213,10 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
 
   len = builder->prefix_len;
 
-  normalized_name = normalized_names_cached(builder, self, name);
+  if (NIL_P(normalized_name = normalize_name_fast_path(self, name))) {
+    normalized_name = normalized_names_cached(builder, self, name);
+  }
+
   chunk_len = RSTRING_LEN(normalized_name);
   if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(builder->datagram + len, StringValuePtr(normalized_name), chunk_len);
