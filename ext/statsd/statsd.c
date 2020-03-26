@@ -211,7 +211,7 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
   long chunk_len = 0;
   get_datagram_builder_struct(self);
 
-  len = builder->prefix_len;
+  len = (int)builder->prefix_len;
 
   if (NIL_P(normalized_name = normalize_name_fast_path(self, name))) {
     normalized_name = normalized_names_cached(builder, self, name);
@@ -268,7 +268,7 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
     memcpy(builder->datagram + len, "|#", 2);
     len += 2;
 
-    tags_len = RARRAY_LEN(normalized_tags);
+    tags_len = (int)RARRAY_LEN(normalized_tags);
     for (i = 0; i < tags_len; ++i) {
       tag = RARRAY_AREF(normalized_tags, i);
       chunk_len = RSTRING_LEN(tag);
