@@ -3,6 +3,7 @@
 #include <ruby/st.h>
 
 #define DATAGRAM_SIZE_MAX 4096
+#define SAMPLE_RATE_SIZE_MAX 16
 #define NORMALIZED_TAGS_CACHE_ENABLED 1
 #define NORMALIZED_TAGS_CACHE_MAX 512
 #define NORMALIZED_NAMES_CACHE_ENABLED 1
@@ -206,6 +207,7 @@ static VALUE
 generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE sample_rate, VALUE tags) {
   VALUE normalized_name, str_value, str_sample_rate, tag;
   VALUE normalized_tags = Qnil;
+  char sr_buf[SAMPLE_RATE_SIZE_MAX];
   int empty_default_tags = 1, empty_tags = 1;
   int len = 0, tags_len = 0, i = 0;
   long chunk_len = 0;
@@ -243,18 +245,29 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
     if (len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
     memcpy(builder->datagram + len, "|@", 2);
     len += 2;
-    str_sample_rate = rb_obj_as_string(sample_rate);
-    chunk_len = RSTRING_LEN(str_sample_rate);
-    if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-    memcpy(builder->datagram + len, StringValuePtr(str_sample_rate), chunk_len);
-    len += chunk_len;
+    if (RB_FIXNUM_P(sample_rate)) {
+      chunk_len = snprintf(sr_buf, SAMPLE_RATE_SIZE_MAX, "%d", FIX2INT(sample_rate));
+      if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+      memcpy(builder->datagram + len, sr_buf, chunk_len);
+      len += chunk_len;
+    } else if (RB_FLOAT_TYPE_P(sample_rate)) {
+      chunk_len = snprintf(sr_buf, SAMPLE_RATE_SIZE_MAX, "%g", RFLOAT_VALUE(sample_rate));
+      if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+      memcpy(builder->datagram + len, sr_buf, chunk_len);
+      len += chunk_len;
+    } else {
+      str_sample_rate = rb_obj_as_string(sample_rate);
+      chunk_len = RSTRING_LEN(str_sample_rate);
+      if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+      memcpy(builder->datagram + len, StringValuePtr(str_sample_rate), chunk_len);
+      len += chunk_len;
+    }
   }
 
   empty_default_tags = (RTEST(builder->default_tags) ? RARRAY_LEN(builder->default_tags) == 0 : 0);
   if ((RB_TYPE_P(tags, T_HASH) && !RHASH_EMPTY_P(tags)) || (RB_TYPE_P(tags, T_ARRAY) && RARRAY_LEN(tags) != 0)) {
     empty_tags = 0;
   }
-
   if (empty_default_tags && !empty_tags) {
     normalized_tags = normalized_tags_cached(builder, self, tags);
   } else if (!empty_default_tags && !empty_tags) {
