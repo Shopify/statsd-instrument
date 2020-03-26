@@ -225,7 +225,7 @@ inline static int append_normalized_tags(struct datagram_builder *builder, VALUE
 }
 
 static VALUE
-generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE sample_rate, VALUE tags) {
+generate_generic_datagram(VALUE self, VALUE name, VALUE value, const char *type, VALUE sample_rate, VALUE tags) {
   VALUE normalized_name, str_value, str_sample_rate;
   VALUE normalized_tags = Qnil;
   char sr_buf[SAMPLE_RATE_SIZE_MAX];
@@ -256,9 +256,9 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
   if (builder->len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(builder->datagram + builder->len, "|", 1);
   builder->len += 1;
-  chunk_len = RSTRING_LEN(type);
+  chunk_len = strlen(type);
   if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(builder->datagram + builder->len, StringValuePtr(type), chunk_len);
+  memcpy(builder->datagram + builder->len, type, chunk_len);
   builder->len += chunk_len;
 
   if (RTEST(sample_rate) && NUM2INT(sample_rate) < 1) {
@@ -307,6 +307,41 @@ finalize_datagram:
   RB_GC_GUARD(normalized_tags);
 }
 
+static VALUE metric_c(VALUE self, VALUE name, VALUE value, VALUE sample_rate, VALUE tags)
+{
+  return generate_generic_datagram(self, name, value, "c", sample_rate, tags);
+}
+
+static VALUE metric_g(VALUE self, VALUE name, VALUE value, VALUE sample_rate, VALUE tags)
+{
+  return generate_generic_datagram(self, name, value, "g", sample_rate, tags);
+}
+
+static VALUE metric_ms(VALUE self, VALUE name, VALUE value, VALUE sample_rate, VALUE tags)
+{
+  return generate_generic_datagram(self, name, value, "ms", sample_rate, tags);
+}
+
+static VALUE metric_s(VALUE self, VALUE name, VALUE value, VALUE sample_rate, VALUE tags)
+{
+  return generate_generic_datagram(self, name, value, "s", sample_rate, tags);
+}
+
+static VALUE metric_h(VALUE self, VALUE name, VALUE value, VALUE sample_rate, VALUE tags)
+{
+  return generate_generic_datagram(self, name, value, "h", sample_rate, tags);
+}
+
+static VALUE metric_d(VALUE self, VALUE name, VALUE value, VALUE sample_rate, VALUE tags)
+{
+  return generate_generic_datagram(self, name, value, "d", sample_rate, tags);
+}
+
+static VALUE metric_kv(VALUE self, VALUE name, VALUE value, VALUE sample_rate, VALUE tags)
+{
+  return generate_generic_datagram(self, name, value, "ms", sample_rate, tags);
+}
+
 void Init_statsd()
 {
   VALUE mStatsd, mInstrument, cDatagramBuilder, mCDatagramBuilder;
@@ -329,8 +364,13 @@ void Init_statsd()
   rb_global_variable(&strNormalizeReplacement);
 
   rb_define_method(mCDatagramBuilder, "initialize", initialize, -1);
-  rb_define_protected_method(mCDatagramBuilder, "normalize_name", normalize_name, 1);
-  rb_define_protected_method(mCDatagramBuilder, "generate_generic_datagram", generate_generic_datagram, 5);
+  rb_define_method(mCDatagramBuilder, "c", metric_c, 4);
+  rb_define_method(mCDatagramBuilder, "g", metric_g, 4);
+  rb_define_method(mCDatagramBuilder, "ms", metric_ms, 4);
+  rb_define_method(mCDatagramBuilder, "s", metric_s, 4);
+  rb_define_method(mCDatagramBuilder, "h", metric_h, 4);
+  rb_define_method(mCDatagramBuilder, "d", metric_d, 4);
+  rb_define_method(mCDatagramBuilder, "kv", metric_kv, 4);
 
   rb_prepend_module(cDatagramBuilder, mCDatagramBuilder);
 }
