@@ -21,7 +21,8 @@ struct datagram_builder {
 #endif
   // cached default tags ivar to skip a lookup
   VALUE default_tags;
-  long prefix_len;
+  int prefix_len;
+  int len;
   // last member to not glob up cache lines to access other struct members
   char datagram[DATAGRAM_SIZE_MAX];
 };
@@ -115,7 +116,7 @@ initialize(int argc, VALUE *argv, VALUE self)
   prefix = rb_ivar_get(self, idPrefix);
   if ((chunk_len = RSTRING_LEN(prefix)) != 0 && chunk_len < DATAGRAM_SIZE_MAX) {
     memcpy(builder->datagram, StringValuePtr(prefix), chunk_len);
-    builder->prefix_len = chunk_len;
+    builder->prefix_len = (int)chunk_len;
   }
 
   // Cache the defaukt tags ivar on the lookup struct
@@ -203,64 +204,83 @@ normalized_tags_cached(struct datagram_builder *builder, VALUE self, VALUE tags)
 #endif
 }
 
+inline static int append_normalized_tags(struct datagram_builder *builder, VALUE normalized_tags, int trim_trailing_comma)
+{
+  VALUE tag;
+  int tags_len = 0, chunk_len = 0, i = 0;
+  tags_len = (int)RARRAY_LEN(normalized_tags);
+  for (i = 0; i < tags_len; ++i) {
+    tag = RARRAY_AREF(normalized_tags, i);
+    chunk_len = (int)RSTRING_LEN(tag);
+    if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) return 0;
+    memcpy(builder->datagram + builder->len, StringValuePtr(tag), chunk_len);
+    builder->len += chunk_len;
+    if (!trim_trailing_comma || i < tags_len - 1) {
+      if (builder->len + 1 > DATAGRAM_SIZE_MAX) return 0;
+      memcpy(builder->datagram + builder->len, ",", 1);
+      builder->len += 1;
+    }
+  }
+  return 1;
+}
+
 static VALUE
 generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE sample_rate, VALUE tags) {
-  VALUE normalized_name, str_value, str_sample_rate, tag;
+  VALUE normalized_name, str_value, str_sample_rate;
   VALUE normalized_tags = Qnil;
   char sr_buf[SAMPLE_RATE_SIZE_MAX];
   int empty_default_tags = 1, empty_tags = 1;
-  int len = 0, tags_len = 0, i = 0;
   long chunk_len = 0;
   get_datagram_builder_struct(self);
 
-  len = (int)builder->prefix_len;
+  builder->len = builder->prefix_len;
 
   if (NIL_P(normalized_name = normalize_name_fast_path(self, name))) {
     normalized_name = normalized_names_cached(builder, self, name);
   }
 
   chunk_len = RSTRING_LEN(normalized_name);
-  if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(builder->datagram + len, StringValuePtr(normalized_name), chunk_len);
-  len += chunk_len;
+  if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+  memcpy(builder->datagram + builder->len, StringValuePtr(normalized_name), chunk_len);
+  builder->len += chunk_len;
 
-  if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(builder->datagram + len, ":", 1);
-  len += 1;
+  if (builder->len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+  memcpy(builder->datagram + builder->len, ":", 1);
+  builder->len += 1;
   str_value = rb_obj_as_string(value);
   chunk_len = RSTRING_LEN(str_value);
-  if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(builder->datagram + len, StringValuePtr(str_value), chunk_len);
-  len += chunk_len;
+  if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+  memcpy(builder->datagram + builder->len, StringValuePtr(str_value), chunk_len);
+  builder->len += chunk_len;
 
-  if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(builder->datagram + len, "|", 1);
-  len += 1;
+  if (builder->len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+  memcpy(builder->datagram + builder->len, "|", 1);
+  builder->len += 1;
   chunk_len = RSTRING_LEN(type);
-  if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-  memcpy(builder->datagram + len, StringValuePtr(type), chunk_len);
-  len += chunk_len;
+  if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+  memcpy(builder->datagram + builder->len, StringValuePtr(type), chunk_len);
+  builder->len += chunk_len;
 
   if (RTEST(sample_rate) && NUM2INT(sample_rate) < 1) {
-    if (len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-    memcpy(builder->datagram + len, "|@", 2);
-    len += 2;
+    if (builder->len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+    memcpy(builder->datagram + builder->len, "|@", 2);
+    builder->len += 2;
     if (RB_FIXNUM_P(sample_rate)) {
       chunk_len = snprintf(sr_buf, SAMPLE_RATE_SIZE_MAX, "%d", FIX2INT(sample_rate));
-      if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-      memcpy(builder->datagram + len, sr_buf, chunk_len);
-      len += chunk_len;
+      if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+      memcpy(builder->datagram + builder->len, sr_buf, chunk_len);
+      builder->len += chunk_len;
     } else if (RB_FLOAT_TYPE_P(sample_rate)) {
       chunk_len = snprintf(sr_buf, SAMPLE_RATE_SIZE_MAX, "%g", RFLOAT_VALUE(sample_rate));
-      if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-      memcpy(builder->datagram + len, sr_buf, chunk_len);
-      len += chunk_len;
+      if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+      memcpy(builder->datagram + builder->len, sr_buf, chunk_len);
+      builder->len += chunk_len;
     } else {
       str_sample_rate = rb_obj_as_string(sample_rate);
       chunk_len = RSTRING_LEN(str_sample_rate);
-      if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-      memcpy(builder->datagram + len, StringValuePtr(str_sample_rate), chunk_len);
-      len += chunk_len;
+      if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+      memcpy(builder->datagram + builder->len, StringValuePtr(str_sample_rate), chunk_len);
+      builder->len += chunk_len;
     }
   }
 
@@ -268,36 +288,22 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, VALUE type, VALUE
   if ((RB_TYPE_P(tags, T_HASH) && !RHASH_EMPTY_P(tags)) || (RB_TYPE_P(tags, T_ARRAY) && RARRAY_LEN(tags) != 0)) {
     empty_tags = 0;
   }
-  if (empty_default_tags && !empty_tags) {
-    normalized_tags = normalized_tags_cached(builder, self, tags);
-  } else if (!empty_default_tags && !empty_tags) {
-    normalized_tags = rb_ary_concat(normalized_tags_cached(builder, self, tags), builder->default_tags);
-  } else if (!empty_default_tags && empty_tags) {
-    normalized_tags = builder->default_tags;
+  if (!(empty_default_tags && empty_tags)) {
+    if (builder->len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
+    memcpy(builder->datagram + builder->len, "|#", 2);
+    builder->len += 2;
   }
-
-  if (RTEST(normalized_tags)) {
-    if (len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-    memcpy(builder->datagram + len, "|#", 2);
-    len += 2;
-
-    tags_len = (int)RARRAY_LEN(normalized_tags);
-    for (i = 0; i < tags_len; ++i) {
-      tag = RARRAY_AREF(normalized_tags, i);
-      chunk_len = RSTRING_LEN(tag);
-      if (len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-      memcpy(builder->datagram + len, StringValuePtr(tag), chunk_len);
-      len += chunk_len;
-      if (i < tags_len - 1) {
-        if (len + 1 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
-        memcpy(builder->datagram + len, ",", 1);
-        len += 1;
-      }
-    }
+  if (empty_default_tags && !empty_tags) {
+    if (!append_normalized_tags(builder, normalized_tags_cached(builder, self, tags), 1)) goto finalize_datagram;
+  } else if (!empty_default_tags && !empty_tags) {
+    if (!append_normalized_tags(builder, normalized_tags_cached(builder, self, tags), 0)) goto finalize_datagram;
+    if (!append_normalized_tags(builder, builder->default_tags, 1)) goto finalize_datagram;
+  } else if (!empty_default_tags && empty_tags) {
+    if (!append_normalized_tags(builder, builder->default_tags, 1)) goto finalize_datagram;
   }
 
 finalize_datagram:
-  return rb_str_new(builder->datagram, len);
+  return rb_str_new(builder->datagram, builder->len);
   RB_GC_GUARD(normalized_tags);
 }
 
