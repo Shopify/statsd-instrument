@@ -105,7 +105,7 @@ Because you are counting unique values, the results of using a sampling value le
 Builds a histogram of numeric values.
 ``` ruby
 
-StatsD.histogram('Order.value', order.value_in_usd.to_f tags: { source: 'POS' })
+StatsD.histogram('Order.value', order.value_in_usd.to_f, tags: { source: 'POS' })
 ```
 
 Because you are counting unique values, the results of using a sampling value less than 1.0 can lead to unexpected, hard to interpret results.
