@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <ruby.h>
 #include <ruby/encoding.h>
 #include <ruby/st.h>
@@ -22,6 +23,7 @@ struct datagram_builder {
   VALUE str_normalize_replacement;
   // cached default tags ivar to skip a lookup
   VALUE default_tags;
+  bool empty_default_tags;
   int prefix_len;
   int len;
   // last member to not glob up cache lines to access other struct members
@@ -126,6 +128,7 @@ initialize(int argc, VALUE *argv, VALUE self)
 
   // Cache the defaukt tags ivar on the lookup struct
   builder->default_tags = rb_ivar_get(self, idDefaultTags);
+  builder->empty_default_tags = (RTEST(builder->default_tags) ? RARRAY_LEN(builder->default_tags) == 0 : false);
   return self;
 }
 
@@ -232,7 +235,7 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, const char *type,
   VALUE normalized_name, str_value, str_sample_rate;
   VALUE normalized_tags = Qnil;
   char sr_buf[SAMPLE_RATE_SIZE_MAX];
-  int empty_default_tags = 1, empty_tags = 1;
+  bool empty_tags = true;
   long chunk_len = 0;
   get_datagram_builder_struct(self);
 
@@ -286,21 +289,20 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, const char *type,
     }
   }
 
-  empty_default_tags = (RTEST(builder->default_tags) ? RARRAY_LEN(builder->default_tags) == 0 : 0);
   if ((RB_TYPE_P(tags, T_HASH) && !RHASH_EMPTY_P(tags)) || (RB_TYPE_P(tags, T_ARRAY) && RARRAY_LEN(tags) != 0)) {
-    empty_tags = 0;
+    empty_tags = false;
   }
-  if (!(empty_default_tags && empty_tags)) {
+  if (!(builder->empty_default_tags && empty_tags)) {
     if (builder->len + 2 > DATAGRAM_SIZE_MAX) goto finalize_datagram;
     memcpy(builder->datagram + builder->len, "|#", 2);
     builder->len += 2;
   }
-  if (empty_default_tags && !empty_tags) {
+  if (builder->empty_default_tags && !empty_tags) {
     if (!append_normalized_tags(builder, normalized_tags_cached(builder, self, tags), 1)) goto finalize_datagram;
-  } else if (!empty_default_tags && !empty_tags) {
+  } else if (!builder->empty_default_tags && !empty_tags) {
     if (!append_normalized_tags(builder, normalized_tags_cached(builder, self, tags), 0)) goto finalize_datagram;
     if (!append_normalized_tags(builder, builder->default_tags, 1)) goto finalize_datagram;
-  } else if (!empty_default_tags && empty_tags) {
+  } else if (!builder->empty_default_tags && empty_tags) {
     if (!append_normalized_tags(builder, builder->default_tags, 1)) goto finalize_datagram;
   }
 
