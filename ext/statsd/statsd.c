@@ -98,7 +98,7 @@ datagram_builder_alloc(VALUE self)
   builder->normalized_tags_cache = st_init_numtable_with_size(NORMALIZED_TAGS_CACHE_MAX);
 #endif
 #ifdef NORMALIZED_NAMES_CACHE_ENABLED
-  builder->normalized_names_cache = st_init_numtable_with_size(NORMALIZED_NAMES_CACHE_MAX);
+  builder->normalized_names_cache = st_init_strtable_with_size(NORMALIZED_NAMES_CACHE_MAX);
 #endif
   return TypedData_Wrap_Struct(self, &datagram_builder_type, builder);
 }
@@ -162,9 +162,7 @@ normalized_names_cached(struct datagram_builder *builder, VALUE self, VALUE name
   st_index_t key;
   st_data_t val;
   VALUE cached;
-  Check_Type(name, T_STRING);
-  // Can hash on string contents directly as type has already been checked
-  key = rb_str_hash(name);
+  key = (st_index_t)RSTRING_PTR(name);
   if (st_lookup(builder->normalized_names_cache, key, &val)){
     return (VALUE)val;
   } else if (builder->normalized_names_cache->num_entries < NORMALIZED_NAMES_CACHE_MAX) {
@@ -238,7 +236,6 @@ generate_generic_datagram(VALUE self, VALUE name, VALUE value, const char *type,
   if (NIL_P(normalized_name = normalize_name_fast_path(self, name))) {
     normalized_name = normalized_names_cached(builder, self, name);
   }
-
   chunk_len = RSTRING_LEN(normalized_name);
   if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) goto finalize_datagram;
   memcpy(builder->datagram + builder->len, StringValuePtr(normalized_name), chunk_len);
