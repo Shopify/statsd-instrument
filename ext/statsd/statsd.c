@@ -210,7 +210,7 @@ normalized_tags_cached(struct datagram_builder *builder, VALUE self, VALUE tags)
 #endif
 }
 
-inline static int append_normalized_tags(struct datagram_builder *builder, VALUE normalized_tags, int trim_trailing_comma)
+inline static bool append_normalized_tags(struct datagram_builder *builder, VALUE normalized_tags, int trim_trailing_comma)
 {
   VALUE tag;
   int tags_len = 0, chunk_len = 0, i = 0;
@@ -218,16 +218,16 @@ inline static int append_normalized_tags(struct datagram_builder *builder, VALUE
   for (i = 0; i < tags_len; ++i) {
     tag = RARRAY_AREF(normalized_tags, i);
     chunk_len = (int)RSTRING_LEN(tag);
-    if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) return 0;
+    if (builder->len + chunk_len > DATAGRAM_SIZE_MAX) return false;
     memcpy(builder->datagram + builder->len, StringValuePtr(tag), chunk_len);
     builder->len += chunk_len;
     if (!trim_trailing_comma || i < tags_len - 1) {
-      if (builder->len + 1 > DATAGRAM_SIZE_MAX) return 0;
+      if (builder->len + 1 > DATAGRAM_SIZE_MAX) return false;
       memcpy(builder->datagram + builder->len, ",", 1);
       builder->len += 1;
     }
   }
-  return 1;
+  return true;
 }
 
 static VALUE
