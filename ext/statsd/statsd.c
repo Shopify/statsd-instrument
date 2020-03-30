@@ -10,7 +10,6 @@
 #define NORMALIZED_NAMES_CACHE_MAX 512
 
 static ID idTr, idNormalizeTags, idDefaultTags, idPrefix;
-static VALUE strNormalizeChars, strNormalizeReplacement;
 
 struct datagram_builder {
 #ifdef NORMALIZED_TAGS_CACHE_ENABLED
@@ -19,6 +18,8 @@ struct datagram_builder {
 #ifdef NORMALIZED_NAMES_CACHE_ENABLED
   st_table *normalized_names_cache;
 #endif
+  VALUE str_normalize_chars;
+  VALUE str_normalize_replacement;
   // cached default tags ivar to skip a lookup
   VALUE default_tags;
   int prefix_len;
@@ -39,6 +40,8 @@ datagram_builder_mark(void *ptr)
 #ifdef NORMALIZED_NAMES_CACHE_ENABLED
   rb_mark_tbl(builder->normalized_names_cache);
 #endif
+  rb_gc_mark(builder->str_normalize_chars);
+  rb_gc_mark(builder->str_normalize_replacement);
   rb_gc_mark(builder->default_tags);
 }
 
@@ -100,6 +103,8 @@ datagram_builder_alloc(VALUE self)
 #ifdef NORMALIZED_NAMES_CACHE_ENABLED
   builder->normalized_names_cache = st_init_strtable_with_size(NORMALIZED_NAMES_CACHE_MAX);
 #endif
+  builder->str_normalize_chars = rb_str_new_cstr(":|@");
+  builder->str_normalize_replacement = rb_str_new_cstr("_");
   return TypedData_Wrap_Struct(self, &datagram_builder_type, builder);
 }
 
@@ -148,10 +153,10 @@ normalize_name_fast_path(VALUE self, VALUE name)
 }
 
 static VALUE
-normalize_name(VALUE self, VALUE name) {
+normalize_name(struct datagram_builder *builder, VALUE self, VALUE name) {
   VALUE _name = normalize_name_fast_path(self, name);
   if (!NIL_P(_name)) return _name;
-  return rb_funcall(name, idTr, 2, strNormalizeChars, strNormalizeReplacement);
+  return rb_funcall(name, idTr, 2, builder->str_normalize_chars, builder->str_normalize_replacement);
 }
 
 /* pure function not exposed to ruby with an intermediate bounded cache */
@@ -166,11 +171,11 @@ normalized_names_cached(struct datagram_builder *builder, VALUE self, VALUE name
   if (st_lookup(builder->normalized_names_cache, key, &val)){
     return (VALUE)val;
   } else if (builder->normalized_names_cache->num_entries < NORMALIZED_NAMES_CACHE_MAX) {
-    cached = normalize_name(self, name);
+    cached = normalize_name(builder, self, name);
     st_insert(builder->normalized_names_cache, key, (st_data_t)cached);
     return cached;
   }
-  return normalize_name(self, name);
+  return normalize_name(builder, self, name);
   RB_GC_GUARD(cached);
 #else
   return normalize_name(self, name);
@@ -355,10 +360,6 @@ void Init_statsd()
   idNormalizeTags = rb_intern("normalize_tags");
   idDefaultTags = rb_intern("@default_tags");
   idPrefix = rb_intern("@prefix");
-  strNormalizeChars = rb_str_new_cstr(":|@");
-  rb_global_variable(&strNormalizeChars);
-  strNormalizeReplacement = rb_str_new_cstr("_");
-  rb_global_variable(&strNormalizeReplacement);
 
   rb_define_method(mCDatagramBuilder, "initialize", initialize, -1);
   rb_define_method(mCDatagramBuilder, "c", metric_c, 4);
