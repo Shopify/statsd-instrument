@@ -56,11 +56,14 @@ datagram_builder_free(void *ptr)
   if (!builder) return;
 #ifdef NORMALIZED_TAGS_CACHE_ENABLED
   st_free_table(builder->normalized_tags_cache);
+  builder->normalized_tags_cache = NULL;
 #endif
 #ifdef NORMALIZED_NAMES_CACHE_ENABLED
   st_free_table(builder->normalized_names_cache);
+  builder->normalized_names_cache = NULL;
 #endif
   xfree(builder);
+  builder = NULL;
 }
 
 // Be nice to ObjectSpace and let the size be known. We'd likely want some feedback on
