@@ -3,6 +3,7 @@ doc
 *.gem
 .bundle
 Gemfile.lock
+lib/statsd/instrument/ext/*
 pkg/*
 vendor/
 tmp/*
