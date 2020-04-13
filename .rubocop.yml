@@ -16,9 +16,6 @@ Naming/FileName:
   Exclude:
     - lib/statsd-instrument.rb
 
-Style/ClassAndModuleChildren:
-  Enabled: false # TODO: enable later
-
 # Enable our own cops on our own repo
 
 StatsD/MetricReturnValue:
