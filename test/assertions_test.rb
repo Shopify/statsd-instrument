@@ -31,7 +31,7 @@ class AssertionsTest < Minitest::Test
         StatsD.increment('counter')
       end
     end
-    assert_equal assertion.message, "No StatsD calls for metric counter expected."
+    assert_equal(assertion.message, "No StatsD calls for metric counter expected.")
 
     @test_case.assert_no_statsd_calls('counter1', 'counter2') do
       # noop
@@ -49,21 +49,21 @@ class AssertionsTest < Minitest::Test
         StatsD.increment('counter3')
       end
     end
-    assert_equal assertion.message, "No StatsD calls for metric counter1, counter2 expected."
+    assert_equal(assertion.message, "No StatsD calls for metric counter1, counter2 expected.")
 
     assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_no_statsd_calls('counter0', 'counter1', 'counter2') do
         StatsD.increment('counter1')
       end
     end
-    assert_equal assertion.message, "No StatsD calls for metric counter1 expected."
+    assert_equal(assertion.message, "No StatsD calls for metric counter1 expected.")
 
     assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_no_statsd_calls do
         StatsD.increment('other')
       end
     end
-    assert_equal assertion.message, "No StatsD calls for metric other expected."
+    assert_equal(assertion.message, "No StatsD calls for metric other expected.")
 
     assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_no_statsd_calls do
@@ -71,7 +71,7 @@ class AssertionsTest < Minitest::Test
         StatsD.increment('another')
       end
     end
-    assert_equal assertion.message, "No StatsD calls for metric other, another expected."
+    assert_equal(assertion.message, "No StatsD calls for metric other, another expected.")
   end
 
   def test_assert_statsd
@@ -202,8 +202,8 @@ class AssertionsTest < Minitest::Test
       end
     end
 
-    assert_includes assertion.message, "Captured metrics with the same key"
-    assert_includes assertion.message, "MyJob"
+    assert_includes(assertion.message, "Captured metrics with the same key")
+    assert_includes(assertion.message, "MyJob")
   end
 
   def test_capture_and_assert
@@ -367,7 +367,7 @@ class AssertionsTest < Minitest::Test
         end
       end
     end
-    assert_includes assertion.message, "No StatsD calls for metric counter of type c were made"
+    assert_includes(assertion.message, "No StatsD calls for metric counter of type c were made")
   end
 
   def test_assertion_block_with_unexpected_exceptions
@@ -377,7 +377,7 @@ class AssertionsTest < Minitest::Test
         raise "unexpected"
       end
     end
-    assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
+    assert_includes(assertion.message, "An exception occurred in the block provided to the StatsD assertion")
 
     assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_raises(RuntimeError) do
@@ -387,7 +387,7 @@ class AssertionsTest < Minitest::Test
         end
       end
     end
-    assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
+    assert_includes(assertion.message, "An exception occurred in the block provided to the StatsD assertion")
 
     assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_raises(RuntimeError) do
@@ -396,7 +396,7 @@ class AssertionsTest < Minitest::Test
         end
       end
     end
-    assert_includes assertion.message, "An exception occurred in the block provided to the StatsD assertion"
+    assert_includes(assertion.message, "An exception occurred in the block provided to the StatsD assertion")
   end
 
   def test_assertion_block_with_other_assertion_failures
@@ -406,6 +406,6 @@ class AssertionsTest < Minitest::Test
         @test_case.flunk('other assertion failure')
       end
     end
-    assert_equal "other assertion failure", assertion.message
+    assert_equal("other assertion failure", assertion.message)
   end
 end

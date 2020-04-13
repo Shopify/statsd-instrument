@@ -9,10 +9,12 @@ require 'statsd-instrument'
 
 require_relative 'helpers/rubocop_helper'
 
-module StatsD::Instrument
-  def self.strict_mode_enabled?
-    StatsD::Instrument.const_defined?(:Strict) &&
-      StatsD.singleton_class.ancestors.include?(StatsD::Instrument::Strict)
+module StatsD
+  module Instrument
+    def self.strict_mode_enabled?
+      StatsD::Instrument.const_defined?(:Strict) &&
+        StatsD.singleton_class.ancestors.include?(StatsD::Instrument::Strict)
+    end
   end
 end
 

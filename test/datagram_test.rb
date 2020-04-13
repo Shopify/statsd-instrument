@@ -9,6 +9,6 @@ class DatagramTest < Minitest::Test
       'multi_currency:false,fulfillment_orders_beta_enabled:false'
 
     parsed = StatsD::Instrument::Datagram.new(datagram)
-    assert_includes parsed.tags, 'code_source:NilController#NilAction'
+    assert_includes(parsed.tags, 'code_source:NilController#NilAction')
   end
 end

@@ -24,6 +24,6 @@ class IntegrationTest < Minitest::Test
 
   def test_live_local_udp_socket
     StatsD.increment('counter')
-    assert_equal "counter:1|c", @server.recvfrom(100).first
+    assert_equal("counter:1|c", @server.recvfrom(100).first)
   end
 end

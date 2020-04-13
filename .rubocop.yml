@@ -1,5 +1,5 @@
-inherit_from:
-  - https://shopify.github.io/ruby-style-guide/rubocop.yml
+inherit_gem:
+  rubocop-shopify: rubocop.yml
 
 require:
   - ./lib/statsd/instrument/rubocop.rb
@@ -15,16 +15,6 @@ Naming/FileName:
   Enabled: true
   Exclude:
     - lib/statsd-instrument.rb
-
-Style/ClassAndModuleChildren:
-  Enabled: false # TODO: enable later
-
-
-Style/MethodCallWithArgsParentheses:
-  Enabled: false # TODO: enable later
-
-Lint/UnusedMethodArgument:
-  AllowUnusedKeywordArguments: true
 
 # Enable our own cops on our own repo
 

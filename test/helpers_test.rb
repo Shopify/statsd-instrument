@@ -17,10 +17,10 @@ class HelpersTest < Minitest::Test
     end
     StatsD.gauge('gauge', 15)
 
-    assert_equal 2, metrics.length
-    assert_equal 'counter', metrics[0].name
-    assert_equal 'gauge', metrics[1].name
-    assert_equal 12, metrics[1].value
+    assert_equal(2, metrics.length)
+    assert_equal('counter', metrics[0].name)
+    assert_equal('gauge', metrics[1].name)
+    assert_equal(12, metrics[1].value)
   end
 
   def test_capture_metrics_with_new_client
@@ -34,7 +34,7 @@ class HelpersTest < Minitest::Test
     end
     StatsD.gauge('gauge', 15)
 
-    assert_equal 2, metrics.length
+    assert_equal(2, metrics.length)
 
   ensure
     StatsD.singleton_client = @old_client
