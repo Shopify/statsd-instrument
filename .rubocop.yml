@@ -1,5 +1,5 @@
-inherit_from:
-  - https://shopify.github.io/ruby-style-guide/rubocop.yml
+inherit_gem:
+  rubocop-shopify: rubocop.yml
 
 require:
   - ./lib/statsd/instrument/rubocop.rb
