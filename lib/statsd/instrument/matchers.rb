@@ -6,15 +6,6 @@ require 'rspec/core/version'
 module StatsD
   module Instrument
     module Matchers
-      CUSTOM_MATCHERS = {
-        increment: :c,
-        measure: :ms,
-        gauge: :g,
-        histogram: :h,
-        distribution: :d,
-        set: :s,
-      }
-
       class Matcher
         include(RSpec::Matchers::Composable) if RSpec::Core::Version::STRING.start_with?('3')
         include StatsD::Instrument::Helpers
@@ -89,14 +80,35 @@ module StatsD
         end
       end
 
-      CUSTOM_MATCHERS.each do |method_name, metric_type|
-        klass = Class.new(Matcher)
+      Increment = Class.new(Matcher)
+      Measure = Class.new(Matcher)
+      Gauge = Class.new(Matcher)
+      Set = Class.new(Matcher)
+      Histogram = Class.new(Matcher)
+      Distribution = Class.new(Matcher)
 
-        define_method "trigger_statsd_#{method_name}" do |metric_name, options = {}|
-          klass.new(metric_type, metric_name, options)
-        end
+      def trigger_statsd_increment(metric_name, options = {})
+        Increment.new(:c, metric_name, options)
+      end
 
-        StatsD::Instrument::Matchers.const_set(method_name.capitalize, klass)
+      def trigger_statsd_measure(metric_name, options = {})
+        Measure.new(:ms, metric_name, options)
+      end
+
+      def trigger_statsd_gauge(metric_name, options = {})
+        Gauge.new(:g, metric_name, options)
+      end
+
+      def trigger_statsd_set(metric_name, options = {})
+        Set.new(:s, metric_name, options)
+      end
+
+      def trigger_statsd_histogram(metric_name, options = {})
+        Histogram.new(:h, metric_name, options)
+      end
+
+      def trigger_statsd_distribution(metric_name, options = {})
+        Distribution.new(:d, metric_name, options)
       end
     end
   end
