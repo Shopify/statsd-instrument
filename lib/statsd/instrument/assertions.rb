@@ -212,7 +212,7 @@ module StatsD
           An exception occurred in the block provided to the StatsD assertion.
 
           #{exception.class.name}: #{exception.message}
-          \t#{exception.backtrace.join("\n\t")}
+          \t#{(exception.backtrace || []).join("\n\t")}
 
           If this exception is expected, make sure to handle it using `assert_raises`
           inside the block provided to the StatsD assertion.

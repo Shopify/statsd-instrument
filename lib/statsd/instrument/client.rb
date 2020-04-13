@@ -58,7 +58,7 @@ module StatsD
           when 'datadog', 'dogstatsd'
             StatsD::Instrument::DogStatsDDatagramBuilder
           else
-            raise NotImplementedError, "No implementation for #{statsd_implementation}"
+            raise NotImplementedError, "Implementation named #{implementation} could not be found"
           end
         end
       end
