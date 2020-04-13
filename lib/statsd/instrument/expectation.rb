@@ -86,7 +86,7 @@ class StatsD::Instrument::Expectation
       end
     end
 
-    using RubyBackports
+    using(RubyBackports)
   end
 
   # @private

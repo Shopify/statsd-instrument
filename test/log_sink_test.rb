@@ -12,7 +12,7 @@ class LogSinkTest < Minitest::Test
     log_sink = StatsD::Instrument::LogSink.new(logger)
     log_sink << 'foo:1|c' << 'bar:1|c'
 
-    assert_equal <<~LOG, log.string
+    assert_equal(<<~LOG, log.string)
       DEBUG: [StatsD] foo:1|c
       DEBUG: [StatsD] bar:1|c
     LOG
@@ -27,7 +27,7 @@ class LogSinkTest < Minitest::Test
     log_sink = StatsD::Instrument::LogSink.new(logger)
     log_sink << "foo:1|c\n" << "bar:1|c\n"
 
-    assert_equal <<~LOG, log.string
+    assert_equal(<<~LOG, log.string)
       DEBUG: [StatsD] foo:1|c
       DEBUG: [StatsD] bar:1|c
     LOG

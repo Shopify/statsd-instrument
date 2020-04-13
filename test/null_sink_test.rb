@@ -11,7 +11,7 @@ class NullSinkTest < Minitest::Test
 
   def test_null_sink_sample
     null_sink = StatsD::Instrument::NullSink.new
-    assert null_sink.sample?(0), "The null sink should always sample"
-    assert null_sink.sample?(1), "The null sink should always sample"
+    assert(null_sink.sample?(0), "The null sink should always sample")
+    assert(null_sink.sample?(1), "The null sink should always sample")
   end
 end

@@ -73,18 +73,18 @@ class StatsDInstrumentationTest < Minitest::Test
   include StatsD::Instrument::Assertions
 
   def test_statsd_count_if
-    ActiveMerchant::Gateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
+    ActiveMerchant::Gateway.statsd_count_if(:ssl_post, 'ActiveMerchant.Gateway.if')
 
     assert_statsd_increment('ActiveMerchant.Gateway.if') do
       ActiveMerchant::Gateway.new.purchase(true)
       ActiveMerchant::Gateway.new.purchase(false)
     end
   ensure
-    ActiveMerchant::Gateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.if'
+    ActiveMerchant::Gateway.statsd_remove_count_if(:ssl_post, 'ActiveMerchant.Gateway.if')
   end
 
   def test_statsd_count_if_with_method_receiving_block
-    ActiveMerchant::Base.statsd_count_if :post_with_block, 'ActiveMerchant.Base.post_with_block' do |result|
+    ActiveMerchant::Base.statsd_count_if(:post_with_block, 'ActiveMerchant.Base.post_with_block') do |result|
       result == 'true'
     end
 
@@ -93,11 +93,11 @@ class StatsDInstrumentationTest < Minitest::Test
       assert_equal 'false', ActiveMerchant::Base.new.post_with_block { 'false' }
     end
   ensure
-    ActiveMerchant::Base.statsd_remove_count_if :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    ActiveMerchant::Base.statsd_remove_count_if(:post_with_block, 'ActiveMerchant.Base.post_with_block')
   end
 
   def test_statsd_count_if_with_block
-    ActiveMerchant::UniqueGateway.statsd_count_if :ssl_post, 'ActiveMerchant.Gateway.block' do |result|
+    ActiveMerchant::UniqueGateway.statsd_count_if(:ssl_post, 'ActiveMerchant.Gateway.block') do |result|
       result[:success]
     end
 
@@ -106,11 +106,11 @@ class StatsDInstrumentationTest < Minitest::Test
       ActiveMerchant::UniqueGateway.new.purchase(false)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_count_if :ssl_post, 'ActiveMerchant.Gateway.block'
+    ActiveMerchant::UniqueGateway.statsd_remove_count_if(:ssl_post, 'ActiveMerchant.Gateway.block')
   end
 
   def test_statsd_count_success
-    ActiveMerchant::Gateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway', sample_rate: 0.5
+    ActiveMerchant::Gateway.statsd_count_success(:ssl_post, 'ActiveMerchant.Gateway', sample_rate: 0.5)
 
     assert_statsd_increment('ActiveMerchant.Gateway.success', sample_rate: 0.5, times: 1) do
       ActiveMerchant::Gateway.new.purchase(true)
@@ -122,11 +122,11 @@ class StatsDInstrumentationTest < Minitest::Test
       ActiveMerchant::Gateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::Gateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
+    ActiveMerchant::Gateway.statsd_remove_count_success(:ssl_post, 'ActiveMerchant.Gateway')
   end
 
   def test_statsd_count_success_with_method_receiving_block
-    ActiveMerchant::Base.statsd_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block' do |result|
+    ActiveMerchant::Base.statsd_count_success(:post_with_block, 'ActiveMerchant.Base.post_with_block') do |result|
       result == 'successful'
     end
 
@@ -140,11 +140,11 @@ class StatsDInstrumentationTest < Minitest::Test
       assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
     end
   ensure
-    ActiveMerchant::Base.statsd_remove_count_success :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    ActiveMerchant::Base.statsd_remove_count_success(:post_with_block, 'ActiveMerchant.Base.post_with_block')
   end
 
   def test_statsd_count_success_with_block
-    ActiveMerchant::UniqueGateway.statsd_count_success :ssl_post, 'ActiveMerchant.Gateway' do |result|
+    ActiveMerchant::UniqueGateway.statsd_count_success(:ssl_post, 'ActiveMerchant.Gateway') do |result|
       result[:success]
     end
 
@@ -156,17 +156,17 @@ class StatsDInstrumentationTest < Minitest::Test
       ActiveMerchant::UniqueGateway.new.purchase(false)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_count_success :ssl_post, 'ActiveMerchant.Gateway'
+    ActiveMerchant::UniqueGateway.statsd_remove_count_success(:ssl_post, 'ActiveMerchant.Gateway')
   end
 
   def test_statsd_count
-    ActiveMerchant::Gateway.statsd_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
 
     assert_statsd_increment('ActiveMerchant.Gateway.ssl_post') do
       ActiveMerchant::Gateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
   end
 
   def test_statsd_count_with_name_as_lambda
@@ -192,33 +192,33 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_count_with_method_receiving_block
-    ActiveMerchant::Base.statsd_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    ActiveMerchant::Base.statsd_count(:post_with_block, 'ActiveMerchant.Base.post_with_block')
 
     assert_statsd_increment('ActiveMerchant.Base.post_with_block') do
       assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
     end
   ensure
-    ActiveMerchant::Base.statsd_remove_count :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    ActiveMerchant::Base.statsd_remove_count(:post_with_block, 'ActiveMerchant.Base.post_with_block')
   end
 
   def test_statsd_measure
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3
+    ActiveMerchant::UniqueGateway.statsd_measure(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3)
 
     assert_statsd_measure('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_remove_measure(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
   end
 
   def test_statsd_measure_uses_normalized_metric_name
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_measure(:ssl_post, 'ActiveMerchant::Gateway.ssl_post')
 
     assert_statsd_measure('ActiveMerchant.Gateway.ssl_post') do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_remove_measure(:ssl_post, 'ActiveMerchant::Gateway.ssl_post')
   end
 
   def test_statsd_measure_raises_without_a_provided_block
@@ -228,43 +228,43 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_measure_with_method_receiving_block
-    ActiveMerchant::Base.statsd_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    ActiveMerchant::Base.statsd_measure(:post_with_block, 'ActiveMerchant.Base.post_with_block')
 
     assert_statsd_measure('ActiveMerchant.Base.post_with_block') do
       assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
     end
   ensure
-    ActiveMerchant::Base.statsd_remove_measure :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    ActiveMerchant::Base.statsd_remove_measure(:post_with_block, 'ActiveMerchant.Base.post_with_block')
   end
 
   def test_statsd_measure_with_sample_rate
-    ActiveMerchant::UniqueGateway.statsd_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1
+    ActiveMerchant::UniqueGateway.statsd_measure(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1)
 
     assert_statsd_measure('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_measure :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_remove_measure(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
   end
 
   def test_statsd_distribution
-    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3
+    ActiveMerchant::UniqueGateway.statsd_distribution(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3)
 
     assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
   end
 
   def test_statsd_distribution_uses_normalized_metric_name
-    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_distribution(:ssl_post, 'ActiveMerchant::Gateway.ssl_post')
 
     assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post') do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant::Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution(:ssl_post, 'ActiveMerchant::Gateway.ssl_post')
   end
 
   def test_statsd_distribution_raises_without_a_provided_block
@@ -274,71 +274,71 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_distribution_with_method_receiving_block
-    ActiveMerchant::Base.statsd_distribution :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    ActiveMerchant::Base.statsd_distribution(:post_with_block, 'ActiveMerchant.Base.post_with_block')
 
     assert_statsd_distribution('ActiveMerchant.Base.post_with_block') do
       assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
     end
   ensure
-    ActiveMerchant::Base.statsd_remove_distribution :post_with_block, 'ActiveMerchant.Base.post_with_block'
+    ActiveMerchant::Base.statsd_remove_distribution(:post_with_block, 'ActiveMerchant.Base.post_with_block')
   end
 
   def test_statsd_distribution_with_tags
-    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', tags: ['foo']
+    ActiveMerchant::UniqueGateway.statsd_distribution(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', tags: ['foo'])
 
     assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', tags: ['foo']) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
   end
 
   def test_statsd_distribution_with_sample_rate
-    ActiveMerchant::UniqueGateway.statsd_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1
+    ActiveMerchant::UniqueGateway.statsd_distribution(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1)
 
     assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.1) do
       ActiveMerchant::UniqueGateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::UniqueGateway.statsd_remove_distribution :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
   end
 
   def test_instrumenting_class_method
-    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
-    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
+    ActiveMerchant::Gateway.singleton_class.extend(StatsD::Instrument)
+    ActiveMerchant::Gateway.singleton_class.statsd_count(:sync, 'ActiveMerchant.Gateway.sync')
 
     assert_statsd_increment('ActiveMerchant.Gateway.sync') do
       ActiveMerchant::Gateway.sync
     end
   ensure
-    ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count(:sync, 'ActiveMerchant.Gateway.sync')
   end
 
   def test_statsd_count_with_tags
-    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
-    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync', tags: { key: 'value' }
+    ActiveMerchant::Gateway.singleton_class.extend(StatsD::Instrument)
+    ActiveMerchant::Gateway.singleton_class.statsd_count(:sync, 'ActiveMerchant.Gateway.sync', tags: { key: 'value' })
 
     assert_statsd_increment('ActiveMerchant.Gateway.sync', tags: ['key:value']) do
       ActiveMerchant::Gateway.sync
     end
   ensure
-    ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count(:sync, 'ActiveMerchant.Gateway.sync')
   end
 
   def test_statsd_respects_global_prefix_changes
     old_client = StatsD.singleton_client
 
     StatsD.singleton_client = StatsD::Instrument::Client.new(prefix: 'Foo')
-    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
-    ActiveMerchant::Gateway.singleton_class.statsd_count :sync, 'ActiveMerchant.Gateway.sync'
+    ActiveMerchant::Gateway.singleton_class.extend(StatsD::Instrument)
+    ActiveMerchant::Gateway.singleton_class.statsd_count(:sync, 'ActiveMerchant.Gateway.sync')
     StatsD.singleton_client = StatsD::Instrument::Client.new(prefix: 'Quc')
 
     datagrams = capture_statsd_calls { ActiveMerchant::Gateway.sync }
-    assert_equal 1, datagrams.length
-    assert_equal "Quc.ActiveMerchant.Gateway.sync", datagrams.first.name
+    assert_equal(1, datagrams.length)
+    assert_equal("Quc.ActiveMerchant.Gateway.sync", datagrams.first.name)
   ensure
     StatsD.singleton_client = old_client
-    ActiveMerchant::Gateway.singleton_class.statsd_remove_count :sync, 'ActiveMerchant.Gateway.sync'
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count(:sync, 'ActiveMerchant.Gateway.sync')
   end
 
   def test_statsd_count_with_injected_client
@@ -349,24 +349,24 @@ class StatsDInstrumentationTest < Minitest::Test
       ActiveMerchant::Gateway.new.purchase(true)
     end
   ensure
-    ActiveMerchant::Gateway.statsd_remove_count :ssl_post, 'ActiveMerchant.Gateway.ssl_post'
+    ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
   end
 
   def test_statsd_macro_can_disable_prefix
     client = StatsD::Instrument::Client.new(prefix: 'foo')
-    ActiveMerchant::Gateway.singleton_class.extend StatsD::Instrument
+    ActiveMerchant::Gateway.singleton_class.extend(StatsD::Instrument)
     ActiveMerchant::Gateway.singleton_class.statsd_count_success(:sync,
       'ActiveMerchant.Gateway.sync', no_prefix: true, client: client)
 
     datagrams = client.capture { ActiveMerchant::Gateway.sync }
-    assert_equal 1, datagrams.length
-    assert_equal "ActiveMerchant.Gateway.sync.success", datagrams.first.name
+    assert_equal(1, datagrams.length)
+    assert_equal("ActiveMerchant.Gateway.sync.success", datagrams.first.name)
   ensure
-    ActiveMerchant::Gateway.singleton_class.statsd_remove_count_success :sync, 'ActiveMerchant.Gateway.sync'
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count_success(:sync, 'ActiveMerchant.Gateway.sync')
   end
 
   def test_statsd_doesnt_change_method_scope_of_public_method
-    assert_scope InstrumentedClass, :public_and_instrumented, :public
+    assert_scope(InstrumentedClass, :public_and_instrumented, :public)
 
     assert_statsd_increment('InstrumentedClass.public_and_instrumented') do
       InstrumentedClass.new.send(:public_and_instrumented)
@@ -374,7 +374,7 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_doesnt_change_method_scope_of_protected_method
-    assert_scope InstrumentedClass, :protected_and_instrumented, :protected
+    assert_scope(InstrumentedClass, :protected_and_instrumented, :protected)
 
     assert_statsd_increment('InstrumentedClass.protected_and_instrumented') do
       InstrumentedClass.new.send(:protected_and_instrumented)
@@ -382,7 +382,7 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_doesnt_change_method_scope_of_private_method
-    assert_scope InstrumentedClass, :private_and_instrumented, :private
+    assert_scope(InstrumentedClass, :private_and_instrumented, :private)
 
     assert_statsd_increment('InstrumentedClass.private_and_instrumented') do
       InstrumentedClass.new.send(:private_and_instrumented)
@@ -390,27 +390,27 @@ class StatsDInstrumentationTest < Minitest::Test
   end
 
   def test_statsd_doesnt_change_method_scope_on_removal_of_public_method
-    assert_scope InstrumentedClass, :public_and_instrumented, :public
-    InstrumentedClass.statsd_remove_count :public_and_instrumented, 'InstrumentedClass.public_and_instrumented'
-    assert_scope InstrumentedClass, :public_and_instrumented, :public
+    assert_scope(InstrumentedClass, :public_and_instrumented, :public)
+    InstrumentedClass.statsd_remove_count(:public_and_instrumented, 'InstrumentedClass.public_and_instrumented')
+    assert_scope(InstrumentedClass, :public_and_instrumented, :public)
 
-    InstrumentedClass.statsd_count :public_and_instrumented, 'InstrumentedClass.public_and_instrumented'
+    InstrumentedClass.statsd_count(:public_and_instrumented, 'InstrumentedClass.public_and_instrumented')
   end
 
   def test_statsd_doesnt_change_method_scope_on_removal_of_protected_method
-    assert_scope InstrumentedClass, :protected_and_instrumented, :protected
-    InstrumentedClass.statsd_remove_count :protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented'
-    assert_scope InstrumentedClass, :protected_and_instrumented, :protected
+    assert_scope(InstrumentedClass, :protected_and_instrumented, :protected)
+    InstrumentedClass.statsd_remove_count(:protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented')
+    assert_scope(InstrumentedClass, :protected_and_instrumented, :protected)
 
-    InstrumentedClass.statsd_count :protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented'
+    InstrumentedClass.statsd_count(:protected_and_instrumented, 'InstrumentedClass.protected_and_instrumented')
   end
 
   def test_statsd_doesnt_change_method_scope_on_removal_of_private_method
-    assert_scope InstrumentedClass, :private_and_instrumented, :private
-    InstrumentedClass.statsd_remove_count :private_and_instrumented, 'InstrumentedClass.private_and_instrumented'
-    assert_scope InstrumentedClass, :private_and_instrumented, :private
+    assert_scope(InstrumentedClass, :private_and_instrumented, :private)
+    InstrumentedClass.statsd_remove_count(:private_and_instrumented, 'InstrumentedClass.private_and_instrumented')
+    assert_scope(InstrumentedClass, :private_and_instrumented, :private)
 
-    InstrumentedClass.statsd_count :private_and_instrumented, 'InstrumentedClass.private_and_instrumented'
+    InstrumentedClass.statsd_count(:private_and_instrumented, 'InstrumentedClass.private_and_instrumented')
   end
 
   def test_statsd_works_with_prepended_modules
@@ -440,6 +440,6 @@ class StatsDInstrumentationTest < Minitest::Test
       :public
     end
 
-    assert_equal method_scope, expected_scope, "Expected method to be #{expected_scope}"
+    assert_equal(method_scope, expected_scope, "Expected method to be #{expected_scope}")
   end
 end

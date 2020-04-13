@@ -12,7 +12,7 @@ class StatsD::Instrument::DatagramBuilder
       end
     end
 
-    using RubyBackports
+    using(RubyBackports)
   end
 
   def self.unsupported_datagram_types(*types)

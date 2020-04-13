@@ -26,4 +26,4 @@ end
 require "rubygems"
 require "bundler/setup"
 
-load Gem.bin_path("rubocop", "rubocop")
+load(Gem.bin_path("rubocop", "rubocop"))

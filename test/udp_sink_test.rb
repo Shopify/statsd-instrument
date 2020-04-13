@@ -19,19 +19,19 @@ class UDPSinkTest < Minitest::Test
     udp_sink << 'foo:1|c'
 
     datagram, _source = @receiver.recvfrom(100)
-    assert_equal 'foo:1|c', datagram
+    assert_equal('foo:1|c', datagram)
   end
 
   def test_sample?
     udp_sink = StatsD::Instrument::UDPSink.new(@host, @port)
-    assert udp_sink.sample?(1)
-    refute udp_sink.sample?(0)
+    assert(udp_sink.sample?(1))
+    refute(udp_sink.sample?(0))
 
     udp_sink.stubs(:rand).returns(0.3)
-    assert udp_sink.sample?(0.5)
+    assert(udp_sink.sample?(0.5))
 
     udp_sink.stubs(:rand).returns(0.7)
-    refute udp_sink.sample?(0.5)
+    refute(udp_sink.sample?(0.5))
   end
 
   def test_parallelism
@@ -43,7 +43,7 @@ class UDPSinkTest < Minitest::Test
       datagrams << datagram
     end
 
-    assert_equal 100, datagrams.size
+    assert_equal(100, datagrams.size)
   end
 
   def test_socket_error_should_invalidate_socket
@@ -74,8 +74,8 @@ class UDPSinkTest < Minitest::Test
     Process.kill('TERM', pid)
     _, exit_status = Process.waitpid2(pid)
 
-    assert_equal 0, exit_status, "The forked process did not exit cleanly"
-    assert_equal "exiting:1|c", @receiver.recvfrom_nonblock(100).first
+    assert_equal(0, exit_status, "The forked process did not exit cleanly")
+    assert_equal("exiting:1|c", @receiver.recvfrom_nonblock(100).first)
 
   rescue NotImplementedError
     pass("Fork is not implemented on #{RUBY_PLATFORM}")

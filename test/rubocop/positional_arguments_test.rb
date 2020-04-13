@@ -51,47 +51,47 @@ module Rubocop
 
     def test_autocorrect_only_sample_rate
       corrected = autocorrect_source("StatsD.increment('foo', 2, 0.5)")
-      assert_equal "StatsD.increment('foo', 2, sample_rate: 0.5)", corrected
+      assert_equal("StatsD.increment('foo', 2, sample_rate: 0.5)", corrected)
     end
 
     def test_autocorrect_only_sample_rate_as_int
       corrected = autocorrect_source("StatsD.increment('foo', 2, 1)")
-      assert_equal "StatsD.increment('foo', 2, sample_rate: 1)", corrected
+      assert_equal("StatsD.increment('foo', 2, sample_rate: 1)", corrected)
     end
 
     def test_autocorrect_only_tags
       corrected = autocorrect_source("StatsD.increment('foo', 2, nil, ['foo', 'bar'])")
-      assert_equal "StatsD.increment('foo', 2, tags: ['foo', 'bar'])", corrected
+      assert_equal("StatsD.increment('foo', 2, tags: ['foo', 'bar'])", corrected)
     end
 
     def test_autocorrect_sample_rate_and_tags_as_array
       corrected = autocorrect_source("StatsD.increment('foo', 2, 0.5, ['foo', 'bar'])")
-      assert_equal "StatsD.increment('foo', 2, sample_rate: 0.5, tags: ['foo', 'bar'])", corrected
+      assert_equal("StatsD.increment('foo', 2, sample_rate: 0.5, tags: ['foo', 'bar'])", corrected)
     end
 
     def test_autocorrect_sample_rate_and_tags_as_hash_with_curly_braces
       corrected = autocorrect_source("StatsD.increment('foo', 2, 0.5, { foo: 'bar' })")
-      assert_equal "StatsD.increment('foo', 2, sample_rate: 0.5, tags: { foo: 'bar' })", corrected
+      assert_equal("StatsD.increment('foo', 2, sample_rate: 0.5, tags: { foo: 'bar' })", corrected)
     end
 
     def test_autocorrect_sample_rate_and_tags_as_hash_without_curly_braces
       corrected = autocorrect_source("StatsD.increment('foo', 2, 0.5, foo: 'bar')")
-      assert_equal "StatsD.increment('foo', 2, sample_rate: 0.5, tags: { foo: 'bar' })", corrected
+      assert_equal("StatsD.increment('foo', 2, sample_rate: 0.5, tags: { foo: 'bar' })", corrected)
     end
 
     def test_autocorrect_sample_rate_and_block_pass
       corrected = autocorrect_source("StatsD.distribution('foo', 2, 0.5, &block)")
-      assert_equal "StatsD.distribution('foo', 2, sample_rate: 0.5, &block)", corrected
+      assert_equal("StatsD.distribution('foo', 2, sample_rate: 0.5, &block)", corrected)
     end
 
     def test_autocorrect_sample_rate_tags_and_block_pass
       corrected = autocorrect_source("StatsD.measure('foo', 2, nil, foo: 'bar', &block)")
-      assert_equal "StatsD.measure('foo', 2, tags: { foo: 'bar' }, &block)", corrected
+      assert_equal("StatsD.measure('foo', 2, tags: { foo: 'bar' }, &block)", corrected)
     end
 
     def test_autocorrect_sample_rate_and_curly_braces_block
       corrected = autocorrect_source("StatsD.measure('foo', 2, 0.5) { foo }")
-      assert_equal "StatsD.measure('foo', 2, sample_rate: 0.5) { foo }", corrected
+      assert_equal("StatsD.measure('foo', 2, sample_rate: 0.5) { foo }", corrected)
     end
 
     def test_autocorrect_sample_rate_and_do_end_block
@@ -100,7 +100,7 @@ module Rubocop
           foo
         end
       RUBY
-      assert_equal <<~RUBY, corrected
+      assert_equal(<<~RUBY, corrected)
         StatsD.distribution 'foo', 124, sample_rate: 0.6, tags: ['bar'] do
           foo
         end

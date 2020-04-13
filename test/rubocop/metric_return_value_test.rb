@@ -21,14 +21,14 @@ module Rubocop
     end
 
     def test_ok_as_multiple_statement
-      assert_no_offenses <<~RUBY
+      assert_no_offenses(<<~RUBY)
         StatsD.increment 'foo'
         StatsD.increment 'bar'
       RUBY
     end
 
     def test_ok_inside_block
-      assert_no_offenses <<~RUBY
+      assert_no_offenses(<<~RUBY)
         block do
           StatsD.measure
         end
@@ -44,7 +44,7 @@ module Rubocop
     end
 
     def test_ok_when_passing_do_end_block
-      assert_no_offenses <<~RUBY
+      assert_no_offenses(<<~RUBY)
         block_result = StatsD.measure('foo') do
           return_something_useful
         end
