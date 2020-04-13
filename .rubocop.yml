@@ -19,12 +19,8 @@ Naming/FileName:
 Style/ClassAndModuleChildren:
   Enabled: false # TODO: enable later
 
-
 Style/MethodCallWithArgsParentheses:
   Enabled: false # TODO: enable later
-
-Lint/UnusedMethodArgument:
-  AllowUnusedKeywordArguments: true
 
 # Enable our own cops on our own repo
 

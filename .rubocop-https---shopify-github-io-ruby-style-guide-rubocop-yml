@@ -76,13 +76,6 @@ Style/BlockDelimiters:
   - proc
   - it
 
-Style/BracesAroundHashParameters:
-  EnforcedStyle: no_braces
-  SupportedStyles:
-  - braces
-  - no_braces
-  - context_dependent
-
 Layout/CaseIndentation:
   EnforcedStyle: end
   SupportedStyles:
@@ -509,7 +502,7 @@ Style/WhileUntilModifier:
 Metrics/BlockNesting:
   Max: 3
 
-Metrics/LineLength:
+Layout/LineLength:
   Max: 120
   AllowHeredoc: true
   AllowURI: true
@@ -877,9 +870,6 @@ Lint/EmptyEnsure:
   Enabled: true
 
 Lint/EmptyInterpolation:
-  Enabled: true
-
-Lint/EndInMethod:
   Enabled: true
 
 Lint/EnsureReturn:
