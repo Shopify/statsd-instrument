@@ -107,7 +107,7 @@ module StatsD
       #
       # @return [String, nil]
       #
-      # @note The `prefix` can be overriden by any metric call by setting the
+      # @note The `prefix` can be overridden by any metric call by setting the
       #   `no_prefix` keyword argument to `true`. We recommend against doing this,
       #   but this behavior is retained for backwards compatibility.
       #   Rather, when you feel the need to do this, we recommend instantiating
