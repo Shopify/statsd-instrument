@@ -43,7 +43,7 @@ jobs:
       run: gem install bundler && bundle install --jobs 4 --retry 3
 
     - name: Run test suite
-      run: bundle exec rake
+      run: bin/rake test
 
     - name: Run Rubocop
-      run: bundle exec rubocop
+      run: bin/rubocop

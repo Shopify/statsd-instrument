@@ -7,13 +7,16 @@ module RubocopHelper
 
   private
 
+  RUBY_VERSION = 2.5
+  private_constant :RUBY_VERSION
+
   def assert_no_offenses(source)
-    investigate(RuboCop::ProcessedSource.new(source, 2.3, nil))
+    investigate(RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil))
     assert_predicate(cop.offenses, :empty?, "Did not expect Rubocop to find offenses")
   end
 
   def assert_offense(source)
-    investigate(RuboCop::ProcessedSource.new(source, 2.3, nil))
+    investigate(RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil))
     refute_predicate(cop.offenses, :empty?, "Expected Rubocop to find offenses")
   end
 
@@ -27,7 +30,7 @@ module RubocopHelper
     RuboCop::Formatter::DisabledConfigFormatter.detected_styles = {}
     cop.instance_variable_get(:@options)[:auto_correct] = true
 
-    processed_source = RuboCop::ProcessedSource.new(source, 2.3, nil)
+    processed_source = RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil)
     investigate(processed_source)
 
     corrector = RuboCop::Cop::Corrector.new(processed_source.buffer, cop.corrections)
