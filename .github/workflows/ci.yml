@@ -11,7 +11,7 @@ jobs:
       matrix:
         # Windows on macOS builds started failing, so they are disabled for noew
 
-        ruby: [2.4, 2.5, 2.6]
+        ruby: [2.4, 2.5, 2.6, 2.7]
         # platform: [windows-2019, macOS-10.14, ubuntu-18.04]
 
         # exclude:
@@ -43,7 +43,7 @@ jobs:
       run: gem install bundler && bundle install --jobs 4 --retry 3
 
     - name: Run test suite
-      run: bin/rake test
+      run: rake test
 
     - name: Run Rubocop
       run: bin/rubocop
