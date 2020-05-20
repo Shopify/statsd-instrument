@@ -275,6 +275,9 @@ module StatsD
 
       instrumentation_module.module_eval(&block)
       instrumentation_module.send(method_scope, method)
+      if instrumentation_module.respond_to?(:ruby2_keywords, true)
+        instrumentation_module.send(:ruby2_keywords, method)
+      end
       prepend(instrumentation_module) unless self < instrumentation_module
     end
 
