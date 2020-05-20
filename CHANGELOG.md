@@ -8,6 +8,12 @@ section below.
 
 _Nothing yet_
 
+## Version 3.0.1
+
+- Fix metaprograming methods to not print keyword argument warnings on
+  Ruby 2.7.
+- Fix the gemspec to no longer register `rake` and `rubocop` as executables.
+
 ## Version 3.0.0
 
 This version makes the new client that was added in version 2.6+ the default
