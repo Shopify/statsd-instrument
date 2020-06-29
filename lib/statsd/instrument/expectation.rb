@@ -36,7 +36,7 @@ module StatsD
         sample_rate: nil, tags: nil, no_prefix: false, times: 1)
 
         @type = type
-        @name = client.prefix ? "#{client.prefix}.#{name}" : name unless no_prefix
+        @name = client.prefix && !no_prefix ? "#{client.prefix}.#{name}" : name
         @value = normalized_value_for_type(type, value) if value
         @sample_rate = sample_rate
         @tags = normalize_tags(tags)
