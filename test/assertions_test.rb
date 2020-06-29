@@ -408,4 +408,38 @@ class AssertionsTest < Minitest::Test
     end
     assert_equal("other assertion failure", assertion.message)
   end
+
+  def test_assert_when_using_no_prefix
+    env = StatsD::Instrument::Environment.new('STATSD_PREFIX' => nil)
+    StatsD.singleton_client = StatsD::Instrument::Client.from_env(env)
+
+    @test_case.assert_statsd_increment('incr', no_prefix: false) do
+      StatsD.increment('incr')
+    end
+
+    @test_case.assert_statsd_increment('incr', no_prefix: true) do
+      StatsD.increment('incr')
+    end
+
+    env = StatsD::Instrument::Environment.new('STATSD_PREFIX' => 'prefix')
+    StatsD.singleton_client = StatsD::Instrument::Client.from_env(env)
+
+    @test_case.assert_statsd_increment('incr', no_prefix: false) do
+      StatsD.increment('incr')
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_increment('incr', no_prefix: true) do
+        StatsD.increment('incr')
+      end
+    end
+
+    @test_case.assert_statsd_increment('prefix.incr', no_prefix: true) do
+      StatsD.increment('incr')
+    end
+
+    @test_case.assert_statsd_increment('incr', no_prefix: true) do
+      StatsD.increment('incr', no_prefix: true)
+    end
+  end
 end
