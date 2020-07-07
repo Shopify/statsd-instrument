@@ -344,6 +344,44 @@ module StatsD
 
     def_delegators :singleton_client, :increment, :gauge, :set, :measure,
       :histogram, :distribution, :event, :service_check
+
+    def instrument(klass)
+      builder = InstrumentBuilder.new(klass)
+      yield builder
+    end
+
+    class InstrumentBuilder
+      def initialize(klass)
+        klass.extend(Instrument)
+        klass.singleton_class.extend(Instrument)
+        @klass = klass
+      end
+
+      def count(method, name, singleton: false, **args)
+        klass = singleton ? @klass.singleton_class : @klass
+        klass.statsd_count(method, name, **args)
+      end
+
+      def count_if(method, name, singleton: false, **args)
+        klass = singleton ? @klass.singleton_class : @klass
+        klass.statsd_count_if(method, name, **args)
+      end
+
+      def count_success(method, name, singleton: false, **args)
+        klass = singleton ? @klass.singleton_class : @klass
+        klass.statsd_count_success(method, name, **args)
+      end
+
+      def measure(method, name, singleton: false, **args)
+        klass = singleton ? @klass.singleton_class : @klass
+        klass.statsd_measure(method, name, **args)
+      end
+
+      def distribution(method, name, singleton: false, **args)
+        klass = singleton ? @klass.singleton_class : @klass
+        klass.statsd_distribution(method, name, **args)
+      end
+    end
   end
 end
 
