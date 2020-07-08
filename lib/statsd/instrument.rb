@@ -465,6 +465,7 @@ module StatsD
 
     private
 
+    # @private
     def singleton_class?
       @singleton
     end
