@@ -6,7 +6,8 @@ section below.
 
 ### Unreleased changes
 
-_Nothing yet_
+- Add `StatsD.instrument` method and `StatsD::InstrumentBuilder` for
+  instrumenting via existing metaprogramming methods and a builder pattern
 
 ## Version 3.0.1
 
