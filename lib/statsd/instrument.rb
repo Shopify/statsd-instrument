@@ -386,7 +386,7 @@ module StatsD
     #
     # @param method [Symbol] The name of the method to instrument.
     # @param name [String, #call] The name of the metric to use. You can also pass in a
-    #    callable to dynamically generate a metric name
+    #    callable to dynamically generate a metric name.
     # @param class_method [Boolean] Use singleton class (for class methods).
     # @param metric_options (see StatsD#measure)
     # @return [void]
@@ -399,7 +399,7 @@ module StatsD
     #
     # @param method [Symbol] The name of the method to instrument.
     # @param name [String, #call] The name of the metric to use. You can also pass in a
-    #    callable to dynamically generate a metric name
+    #    callable to dynamically generate a metric name.
     # @param class_method [Boolean] Use singleton class (for class methods).
     # @param metric_options (see StatsD#measure)
     # @return [void]
