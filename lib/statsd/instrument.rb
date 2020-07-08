@@ -351,8 +351,8 @@ module StatsD
     # accepts all metaprogramming methods available on `StatsD::Instrument`.
     #
     # @param klass [Class] The class to instrument.
-    # @param singleton [Boolean] Default to using singleton class for method
-    #   instrumentation (for static methods).
+    # @param singleton [Boolean] Default to using class method for method
+    #   instrumentation.
     # @yield This method expects a block containing all your StatsD
     #   instrumentation (see StatsD::InstrumentBuilder).
     # @yieldparam klass [StatsD::InstrumentBuilder] A StatsD::InstrumentBuilder
@@ -372,9 +372,9 @@ module StatsD
   # instrumenting classes via metaprogramming.
   class InstrumentBuilder
     # Instantiates a new instrument builder.
-    # @param [Class] klass The class to instrument.
-    # @param [Boolean] singleton Default to using singleton class for method
-    #   instrumentation (for static methods).
+    # @param klass [Class] The class to instrument.
+    # @param singleton [Boolean] Default to using class method for method
+    #   instrumentation.
     def initialize(klass, singleton: false)
       klass.extend(Instrument)
       klass.singleton_class.extend(Instrument)
@@ -387,11 +387,11 @@ module StatsD
     # @param method [Symbol] The name of the method to instrument.
     # @param name [String, #call] The name of the metric to use. You can also pass in a
     #    callable to dynamically generate a metric name
-    # @param [Boolean] singleton Use singleton class (for static methods).
+    # @param class_method [Boolean] Use singleton class (for class methods).
     # @param metric_options (see StatsD#measure)
     # @return [void]
-    def measure(method, name, singleton: singleton_class?, **args)
-      klass = singleton ? @klass.singleton_class : @klass
+    def measure(method, name, class_method: singleton_class?, **args)
+      klass = class_method ? @klass.singleton_class : @klass
       klass.statsd_measure(method, name, **args)
     end
 
@@ -400,12 +400,12 @@ module StatsD
     # @param method [Symbol] The name of the method to instrument.
     # @param name [String, #call] The name of the metric to use. You can also pass in a
     #    callable to dynamically generate a metric name
-    # @param [Boolean] singleton Use singleton class (for static methods).
+    # @param class_method [Boolean] Use singleton class (for class methods).
     # @param metric_options (see StatsD#measure)
     # @return [void]
     # @note Supported by the datadog implementation only (in beta)
-    def distribution(method, name, singleton: singleton_class?, **args)
-      klass = singleton ? @klass.singleton_class : @klass
+    def distribution(method, name, class_method: singleton_class?, **args)
+      klass = class_method ? @klass.singleton_class : @klass
       klass.statsd_distribution(method, name, **args)
     end
 
@@ -417,7 +417,7 @@ module StatsD
     #
     # @param method (see #statsd_measure)
     # @param name (see #statsd_measure)
-    # @param [Boolean] singleton Use singleton class (for static methods).
+    # @param class_method [Boolean] Use singleton class (for class methods).
     # @param metric_options (see #statsd_measure)
     # @yield You can pass a block to this method if you want to define yourself what is a successful call
     #   based on the return value of the method.
@@ -425,8 +425,8 @@ module StatsD
     # @yieldreturn [Boolean] Return true iff the return value is considered a success, false otherwise.
     # @return [void]
     # @see #statsd_count_if
-    def count_success(method, name, singleton: singleton_class?, **args)
-      klass = singleton ? @klass.singleton_class : @klass
+    def count_success(method, name, class_method: singleton_class?, **args)
+      klass = class_method ? @klass.singleton_class : @klass
       klass.statsd_count_success(method, name, **args)
     end
 
@@ -437,14 +437,14 @@ module StatsD
     #
     # @param method (see #statsd_measure)
     # @param name (see #statsd_measure)
-    # @param [Boolean] singleton Use singleton class (for static methods).
+    # @param class_method [Boolean] Use singleton class (for class methods).
     # @yield (see #statsd_count_success)
     # @yieldparam result (see #statsd_count_success)
     # @yieldreturn (see #statsd_count_success)
     # @return [void]
     # @see #statsd_count_success
-    def count_if(method, name, singleton: singleton_class?, **args)
-      klass = singleton ? @klass.singleton_class : @klass
+    def count_if(method, name, class_method: singleton_class?, **args)
+      klass = class_method ? @klass.singleton_class : @klass
       klass.statsd_count_if(method, name, **args)
     end
 
@@ -455,11 +455,11 @@ module StatsD
     #
     # @param method (see #statsd_measure)
     # @param name (see #statsd_measure)
-    # @param [Boolean] singleton Use singleton class (for static methods).
+    # @param class_method [Boolean] Use singleton class (for class methods).
     # @param metric_options (see #statsd_measure)
     # @return [void]
-    def count(method, name, singleton: singleton_class?, **args)
-      klass = singleton ? @klass.singleton_class : @klass
+    def count(method, name, class_method: singleton_class?, **args)
+      klass = class_method ? @klass.singleton_class : @klass
       klass.statsd_count(method, name, **args)
     end
 

@@ -119,7 +119,7 @@ class StatsDInstrumentBuilderTest < Minitest::Test
 
   def test_instrumenting_class_method
     StatsD.instrument(ActiveMerchant::Gateway) do |klass|
-      klass.count(:sync, 'ActiveMerchant.Gateway.sync', singleton: true)
+      klass.count(:sync, 'ActiveMerchant.Gateway.sync', class_method: true)
     end
 
     assert_statsd_increment('ActiveMerchant.Gateway.sync') do
