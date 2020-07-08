@@ -63,6 +63,21 @@ class StatsDInstrumentBuilderTest < Minitest::Test
     ActiveMerchant::Gateway.statsd_remove_count_if(:ssl_post, 'ActiveMerchant.Gateway.if')
   end
 
+  def test_statsd_count_if_with_block
+    StatsD.instrument(ActiveMerchant::Gateway) do |klass|
+      klass.count_if(:ssl_post, 'ActiveMerchant.Gateway.if') do |response|
+        response
+      end
+    end
+
+    assert_statsd_increment('ActiveMerchant.Gateway.if') do
+      ActiveMerchant::Gateway.new.purchase(true)
+      ActiveMerchant::Gateway.new.purchase(false)
+    end
+  ensure
+    ActiveMerchant::Gateway.statsd_remove_count_if(:ssl_post, 'ActiveMerchant.Gateway.if')
+  end
+
   def test_statsd_count_success
     StatsD.instrument(ActiveMerchant::Gateway) do |klass|
       klass.count_success(:ssl_post, 'ActiveMerchant.Gateway', sample_rate: 0.5)
