@@ -144,6 +144,30 @@ class StatsDInstrumentBuilderTest < Minitest::Test
     ActiveMerchant::Gateway.singleton_class.statsd_remove_count(:sync, 'ActiveMerchant.Gateway.sync')
   end
 
+  def test_instrumenting_class_method_with_singleton_true
+    StatsD.instrument(ActiveMerchant::Gateway, singleton: true) do |klass|
+      klass.count(:sync, 'ActiveMerchant.Gateway.sync')
+    end
+
+    assert_statsd_increment('ActiveMerchant.Gateway.sync') do
+      ActiveMerchant::Gateway.sync
+    end
+  ensure
+    ActiveMerchant::Gateway.singleton_class.statsd_remove_count(:sync, 'ActiveMerchant.Gateway.sync')
+  end
+
+  def test_instrumenting_instance_method_with_singleton_true
+    StatsD.instrument(ActiveMerchant::UniqueGateway, singleton: true) do |klass|
+      klass.distribution(:ssl_post, 'ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3, class_method: false)
+    end
+
+    assert_statsd_distribution('ActiveMerchant.Gateway.ssl_post', sample_rate: 0.3) do
+      ActiveMerchant::UniqueGateway.new.purchase(true)
+    end
+  ensure
+    ActiveMerchant::UniqueGateway.statsd_remove_distribution(:ssl_post, 'ActiveMerchant.Gateway.ssl_post')
+  end
+
   private
 
   def assert_scope(klass, method, expected_scope)
