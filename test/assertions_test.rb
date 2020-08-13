@@ -184,7 +184,59 @@ class AssertionsTest < Minitest::Test
   end
 
   def test_assert_statsd_service_check
-    flunk 'Not implemented'
+    { ok: 0, warning: 1, critical: 2, unknown: 3 }.each do |symbol, integer|
+      # symbol assertion works with symbol call
+      @test_case.assert_statsd_service_check('my_service', symbol) do
+        StatsD.service_check('my_service', symbol)
+      end
+
+      # integer assertion works with integer call
+      @test_case.assert_statsd_service_check('my_service', integer) do
+        StatsD.service_check('my_service', integer)
+      end
+
+      # symbol assertion works with integer call
+      @test_case.assert_statsd_service_check('my_service', symbol) do
+        StatsD.service_check('my_service', integer)
+      end
+
+      # integer assertion works with symbol call
+      @test_case.assert_statsd_service_check('my_service', integer) do
+        StatsD.service_check('my_service', symbol)
+      end
+    end
+
+    { :critical => :ok, 2 => 0, :unknown => 0, 0 => :unknown }.each do |expected, actual|
+      # differing statuses are detected
+      assert_raises(Minitest::Assertion) do
+        @test_case.assert_statsd_service_check('my_service', expected) do
+          StatsD.service_check('my_service', actual)
+        end
+      end
+    end
+
+    [-1, 5, :invalid, 'OK'].each do |status|
+      # asserting invalid statuses raises an error
+      assert_raises(KeyError) do
+        @test_case.assert_statsd_service_check('my_service', status)
+      end
+    end
+
+    # message is asserted if provided in assertion
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_service_check('my_service', :ok, message: 'expected') do
+        StatsD.service_check('my_service', :ok)
+      end
+
+      @test_case.assert_statsd_service_check('my_service', :ok, message: 'expected') do
+        StatsD.service_check('my_service', :ok, message: 'actual')
+      end
+    end
+
+    # message is ignored if not provided in assertion
+    @test_case.assert_statsd_service_check('my_service', :ok) do
+      StatsD.service_check('my_service', :ok, message: 'actual')
+    end
   end
 
   def test_tags_will_match_subsets
