@@ -183,6 +183,10 @@ class AssertionsTest < Minitest::Test
     end
   end
 
+  def test_assert_statsd_service_check
+    flunk 'Not implemented'
+  end
+
   def test_tags_will_match_subsets
     @test_case.assert_statsd_increment('counter', sample_rate: 0.5, tags: { a: 1 }) do
       StatsD.increment('counter', sample_rate: 0.5, tags: { a: 1, b: 2 })

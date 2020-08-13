@@ -138,6 +138,20 @@ module StatsD
         assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
       end
 
+      # Asserts that a given service_check metric occurred inside the provided block.
+      #
+      # @param [String] metric_name The name of the metric that should occur.
+      # @param [Hash] options (see StatsD::Instrument::MetricExpectation.new)
+      # @yield A block in which the specified metric should occur. This block
+      #   should not raise any exceptions.
+      # @return [void]
+      # @raise [Minitest::Assertion] If an exception occurs, or if the metric did
+      #   not occur as specified during the execution the block.
+      def assert_statsd_service_check(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
+        expectation = StatsD::Instrument::Expectation.service_check(metric_name, value, **options)
+        assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
+      end
+
       # Asserts that the set of provided metric expectations came true.
       #
       # Generally, it's recommended to  use more specific assertion methods, like
