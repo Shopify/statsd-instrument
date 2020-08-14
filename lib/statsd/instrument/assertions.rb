@@ -138,7 +138,18 @@ module StatsD
         assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
       end
 
-      # TODO: Consider assert_statsd_event
+      # Asserts that a given event metric occurred inside the provided block.
+      #
+      # TODO: Fill out params
+      # @yield A block in which the specified metric should occur. This block
+      #   should not raise any exceptions.
+      # @return [void]
+      # @raise [Minitest::Assertion] If an exception occurs, or if the metric did
+      #   not occur as specified during the execution the block.
+      def assert_statsd_event(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
+        expectation = StatsD::Instrument::DogStatsDExpectation.event(metric_name, value, **options)
+        assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
+      end
 
       # Asserts that a given service_check metric occurred inside the provided block.
       #

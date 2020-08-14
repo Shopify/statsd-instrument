@@ -56,9 +56,8 @@ module StatsD
 
       def normalized_value_for_type(type, value)
         return super unless type == :_e
-        return value unless value.present?
 
-        value.gsub("\n", '\n')
+        value&.gsub("\n", '\n')
       end
 
       def matches(actual_metric)

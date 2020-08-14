@@ -253,11 +253,15 @@ class AssertionsTest < Minitest::Test
       StatsD.service_check('my_service', :ok, message: 'actual')
     end
 
-  # TODO: Add tests for hostname & timestamp
+    # TODO: Add tests for hostname & timestamp
   end
 
   def test_assert_statsd_event
-    # TODO: Add tests for assert_statsd_event
+    @test_case.assert_statsd_event('title', 'text') do
+      StatsD.event('title', 'text')
+    end
+
+    # TODO: Add more tests for assert_statsd_event
   end
 
   def test_tags_will_match_subsets
