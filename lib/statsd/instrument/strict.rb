@@ -56,6 +56,8 @@ module StatsD
       end
 
       def service_check(name, status, tags: nil, no_prefix: false, hostname: nil, timestamp: nil, message: nil)
+        # TODO: This should probably validate the status is %i(ok warning critical unknown) or 0..3
+
         super
       end
 

@@ -73,7 +73,7 @@ module StatsD
       end
 
       SERVICE_CHECK_STATUS_VALUES = { ok: 0, warning: 1, critical: 2, unknown: 3 }.freeze
-      private_constant :SERVICE_CHECK_STATUS_VALUES
+      private_constant :SERVICE_CHECK_STATUS_VALUES # TODO: Should this be public?
     end
   end
 end
