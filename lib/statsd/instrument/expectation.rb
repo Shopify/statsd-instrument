@@ -73,7 +73,7 @@ module StatsD
       end
 
       def inspect
-        "#<StatsD::Instrument::Expectation:\"#{self}\">"
+        "#<#{self.class.name}:\"#{self}\">"
       end
 
       private
