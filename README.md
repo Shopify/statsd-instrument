@@ -1,6 +1,6 @@
 # StatsD client for Ruby apps
 
-This is a ruby client for statsd (http://github.com/etsy/statsd). It provides
+This is a ruby client for statsd (https://github.com/statsd/statsd). It provides
 a lightweight way to track and measure metrics in your application.
 
 We call out to statsd by sending data over a UDP socket. UDP sockets are fast,
@@ -10,8 +10,8 @@ because it means your code doesn't get bogged down trying to log statistics.
 We send data to statsd several times per request and haven't noticed a
 performance hit.
 
-For more information about StatsD, see the [README of the Etsy
-project](http://github.com/etsy/statsd).
+For more information about StatsD, see the [README of the StatsD
+project](https://github.com/statsd/statsd).
 
 ## Configuration
 
