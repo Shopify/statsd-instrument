@@ -8,6 +8,10 @@ section below.
 
 _Nothing yet_
 
+## Version 3.0.2
+
+- Properly handle no_prefix when using StatsD assertions.
+
 ## Version 3.0.1
 
 - Fix metaprograming methods to not print keyword argument warnings on
