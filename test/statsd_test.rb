@@ -114,7 +114,7 @@ class StatsDTest < Minitest::Test
     Process.stubs(:clock_gettime).returns(5.0, 5.0 + 1.12)
     metric = capture_statsd_call do
       result = StatsD.distribution('values.foobar') { 'foo' }
-      assert_equal 'foo', result
+      assert_equal('foo', result)
     end
     assert_equal(:d, metric.type)
     assert_equal(1120.0, metric.value)

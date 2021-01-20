@@ -8,7 +8,7 @@ gem 'minitest'
 gem 'rspec'
 gem 'mocha'
 gem 'yard'
-gem 'rubocop'
+gem 'rubocop', '>= 1.0'
 gem 'rubocop-shopify', require: false
 
 # benchmark-ips save! method is not part of a released version yet.

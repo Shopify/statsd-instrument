@@ -89,8 +89,8 @@ class StatsDInstrumentationTest < Minitest::Test
     end
 
     assert_statsd_increment('ActiveMerchant.Base.post_with_block') do
-      assert_equal 'true', ActiveMerchant::Base.new.post_with_block { 'true' }
-      assert_equal 'false', ActiveMerchant::Base.new.post_with_block { 'false' }
+      assert_equal('true', ActiveMerchant::Base.new.post_with_block { 'true' })
+      assert_equal('false', ActiveMerchant::Base.new.post_with_block { 'false' })
     end
   ensure
     ActiveMerchant::Base.statsd_remove_count_if(:post_with_block, 'ActiveMerchant.Base.post_with_block')
@@ -131,13 +131,13 @@ class StatsDInstrumentationTest < Minitest::Test
     end
 
     assert_statsd_increment('ActiveMerchant.Base.post_with_block.success', times: 1) do
-      assert_equal 'successful', ActiveMerchant::Base.new.post_with_block { 'successful' }
-      assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
+      assert_equal('successful', ActiveMerchant::Base.new.post_with_block { 'successful' })
+      assert_equal('not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' })
     end
 
     assert_statsd_increment('ActiveMerchant.Base.post_with_block.failure', times: 1) do
-      assert_equal 'successful', ActiveMerchant::Base.new.post_with_block { 'successful' }
-      assert_equal 'not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' }
+      assert_equal('successful', ActiveMerchant::Base.new.post_with_block { 'successful' })
+      assert_equal('not so successful', ActiveMerchant::Base.new.post_with_block { 'not so successful' })
     end
   ensure
     ActiveMerchant::Base.statsd_remove_count_success(:post_with_block, 'ActiveMerchant.Base.post_with_block')
@@ -195,7 +195,7 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Base.statsd_count(:post_with_block, 'ActiveMerchant.Base.post_with_block')
 
     assert_statsd_increment('ActiveMerchant.Base.post_with_block') do
-      assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
+      assert_equal('block called', ActiveMerchant::Base.new.post_with_block { 'block called' })
     end
   ensure
     ActiveMerchant::Base.statsd_remove_count(:post_with_block, 'ActiveMerchant.Base.post_with_block')
@@ -231,7 +231,7 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Base.statsd_measure(:post_with_block, 'ActiveMerchant.Base.post_with_block')
 
     assert_statsd_measure('ActiveMerchant.Base.post_with_block') do
-      assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
+      assert_equal('block called', ActiveMerchant::Base.new.post_with_block { 'block called' })
     end
   ensure
     ActiveMerchant::Base.statsd_remove_measure(:post_with_block, 'ActiveMerchant.Base.post_with_block')
@@ -277,7 +277,7 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Base.statsd_distribution(:post_with_block, 'ActiveMerchant.Base.post_with_block')
 
     assert_statsd_distribution('ActiveMerchant.Base.post_with_block') do
-      assert_equal 'block called', ActiveMerchant::Base.new.post_with_block { 'block called' }
+      assert_equal('block called', ActiveMerchant::Base.new.post_with_block { 'block called' })
     end
   ensure
     ActiveMerchant::Base.statsd_remove_distribution(:post_with_block, 'ActiveMerchant.Base.post_with_block')
