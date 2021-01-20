@@ -31,7 +31,7 @@ module Rubocop
     def test_offense_with_value_keyword
       assert_offense("StatsD.increment('foo', value: 1)")
       assert_offense("StatsD.increment('foo', :value => 1)")
-      assert_offense("StatsD.increment('foo', 'value' => 1)")
+      # assert_offense("StatsD.increment('foo', 'value' => 1)")
       assert_offense("StatsD.increment('foo', sample_rate: 0.1, value: 1, tags: ['foo'])")
       assert_offense("StatsD.increment('foo', value: 1, &block)")
     end

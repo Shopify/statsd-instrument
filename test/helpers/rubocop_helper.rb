@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rubocop'
+require 'rubocop/cop/legacy/corrector'
 
 module RubocopHelper
   attr_accessor :cop
@@ -33,13 +34,12 @@ module RubocopHelper
     processed_source = RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil)
     investigate(processed_source)
 
-    corrector = RuboCop::Cop::Corrector.new(processed_source.buffer, cop.corrections)
+    corrector = RuboCop::Cop::Legacy::Corrector.new(processed_source.buffer, cop.corrections)
     corrector.rewrite
   end
 
   def investigate(processed_source)
     forces = RuboCop::Cop::Force.all.each_with_object([]) do |klass, instances|
-      next unless cop.join_force?(klass)
       instances << klass.new([cop])
     end
 
