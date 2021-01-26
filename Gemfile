@@ -10,6 +10,4 @@ gem 'mocha'
 gem 'yard'
 gem 'rubocop', '>= 1.0'
 gem 'rubocop-shopify', require: false
-
-# benchmark-ips save! method is not part of a released version yet.
-gem 'benchmark-ips', git: 'https://github.com/evanphx/benchmark-ips', branch: 'master'
+gem 'benchmark-ips'
