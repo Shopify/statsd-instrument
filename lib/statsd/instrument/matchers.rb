@@ -34,6 +34,10 @@ module StatsD
         def supports_block_expectations?
           true
         end
+        
+        def description
+          "trigger a statsd call for metric #{@metric_name}"
+        end
 
         private
 
