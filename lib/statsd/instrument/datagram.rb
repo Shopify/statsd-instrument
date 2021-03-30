@@ -40,7 +40,7 @@ module StatsD
       end
 
       def tags
-        @tags ||= parsed_datagram[:tags] ? parsed_datagram[:tags].split(',') : nil
+        @tags ||= parsed_datagram[:tags] ? parsed_datagram[:tags].split(",") : nil
       end
 
       def inspect

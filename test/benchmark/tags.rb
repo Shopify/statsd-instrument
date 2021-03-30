@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'statsd-instrument'
-require 'benchmark/ips'
+require "statsd-instrument"
+require "benchmark/ips"
 
 Benchmark.ips do |bench|
   bench.report("normalized tags with simple hash") do
-    StatsD::Instrument::Metric.normalize_tags(tag: 'value')
+    StatsD::Instrument::Metric.normalize_tags(tag: "value")
   end
 
   bench.report("normalized tags with simple array") do
-    StatsD::Instrument::Metric.normalize_tags(['test:test'])
+    StatsD::Instrument::Metric.normalize_tags(["test:test"])
   end
 
   bench.report("normalized tags with large hash") do

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'benchmark/ips'
+require "benchmark/ips"
 
 Benchmark.ips do |bench|
   bench.report("Process.clock_gettime in milliseconds (int)") do

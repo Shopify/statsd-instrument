@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'test_helper'
+require "test_helper"
 
 class LogSinkTest < Minitest::Test
   def test_log_sink
@@ -10,7 +10,7 @@ class LogSinkTest < Minitest::Test
     end
 
     log_sink = StatsD::Instrument::LogSink.new(logger)
-    log_sink << 'foo:1|c' << 'bar:1|c'
+    log_sink << "foo:1|c" << "bar:1|c"
 
     assert_equal(<<~LOG, log.string)
       DEBUG: [StatsD] foo:1|c

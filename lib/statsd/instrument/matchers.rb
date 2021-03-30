@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rspec/expectations'
-require 'rspec/core/version'
+require "rspec/expectations"
+require "rspec/core/version"
 
 module StatsD
   module Instrument
     module Matchers
       class Matcher
-        include(RSpec::Matchers::Composable) if RSpec::Core::Version::STRING.start_with?('3')
+        include(RSpec::Matchers::Composable) if RSpec::Core::Version::STRING.start_with?("3")
         include StatsD::Instrument::Helpers
 
         def initialize(metric_type, metric_name, options = {})
@@ -34,7 +34,7 @@ module StatsD
         def supports_block_expectations?
           true
         end
-        
+
         def description
           "trigger a statsd call for metric #{@metric_name}"
         end
@@ -78,7 +78,7 @@ module StatsD
           message += options[:times] ? "exactly #{options[:times]} times" : "at least once"
           message += " with: #{options[expectation]}"
 
-          message += "\n  captured metric values: #{metrics.map(&expectation).join(', ')}"
+          message += "\n  captured metric values: #{metrics.map(&expectation).join(", ")}"
 
           message
         end

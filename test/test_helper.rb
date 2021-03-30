@@ -4,14 +4,14 @@ if Warning.respond_to?(:[]=)
   Warning[:deprecated] = true
 end
 
-ENV['ENV'] = 'test'
+ENV["ENV"] = "test"
 
-require 'minitest/autorun'
-require 'minitest/pride'
-require 'mocha/minitest'
-require 'statsd-instrument'
+require "minitest/autorun"
+require "minitest/pride"
+require "mocha/minitest"
+require "statsd-instrument"
 
-require_relative 'helpers/rubocop_helper'
+require_relative "helpers/rubocop_helper"
 
 module StatsD
   module Instrument

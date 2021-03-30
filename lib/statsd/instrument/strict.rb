@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'statsd-instrument' unless Object.const_defined?(:StatsD)
+require "statsd-instrument" unless Object.const_defined?(:StatsD)
 
 module StatsD
   module Instrument

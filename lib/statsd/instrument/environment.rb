@@ -49,33 +49,33 @@ module StatsD
       #
       # @return [String] The detected environment.
       def environment
-        if env['STATSD_ENV']
-          env['STATSD_ENV']
+        if env["STATSD_ENV"]
+          env["STATSD_ENV"]
         elsif defined?(Rails) && Rails.respond_to?(:env)
           Rails.env.to_s
         else
-          env['RAILS_ENV'] || env['RACK_ENV'] || env['ENV'] || 'development'
+          env["RAILS_ENV"] || env["RACK_ENV"] || env["ENV"] || "development"
         end
       end
 
       def statsd_implementation
-        env.fetch('STATSD_IMPLEMENTATION', 'datadog')
+        env.fetch("STATSD_IMPLEMENTATION", "datadog")
       end
 
       def statsd_sample_rate
-        env.fetch('STATSD_SAMPLE_RATE', 1.0).to_f
+        env.fetch("STATSD_SAMPLE_RATE", 1.0).to_f
       end
 
       def statsd_prefix
-        env.fetch('STATSD_PREFIX', nil)
+        env.fetch("STATSD_PREFIX", nil)
       end
 
       def statsd_addr
-        env.fetch('STATSD_ADDR', 'localhost:8125')
+        env.fetch("STATSD_ADDR", "localhost:8125")
       end
 
       def statsd_default_tags
-        env.key?('STATSD_DEFAULT_TAGS') ? env.fetch('STATSD_DEFAULT_TAGS').split(',') : nil
+        env.key?("STATSD_DEFAULT_TAGS") ? env.fetch("STATSD_DEFAULT_TAGS").split(",") : nil
       end
 
       def client
@@ -84,9 +84,9 @@ module StatsD
 
       def default_sink_for_environment
         case environment
-        when 'production', 'staging'
+        when "production", "staging"
           StatsD::Instrument::UDPSink.for_addr(statsd_addr)
-        when 'test'
+        when "test"
           StatsD::Instrument::NullSink.new
         else
           StatsD::Instrument::LogSink.new(StatsD.logger)

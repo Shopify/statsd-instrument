@@ -1,31 +1,31 @@
 # frozen_string_literal: true
 
-require 'test_helper'
+require "test_helper"
 
 class ClientTest < Minitest::Test
   def setup
     @client = StatsD::Instrument::Client.new(datagram_builder_class: StatsD::Instrument::StatsDDatagramBuilder)
-    @dogstatsd_client = StatsD::Instrument::Client.new(implementation: 'datadog')
+    @dogstatsd_client = StatsD::Instrument::Client.new(implementation: "datadog")
   end
 
   def test_client_from_env
     env = StatsD::Instrument::Environment.new(
-      'STATSD_ENV' => 'production',
-      'STATSD_SAMPLE_RATE' => '0.1',
-      'STATSD_PREFIX' => 'foo',
-      'STATSD_DEFAULT_TAGS' => 'shard:1,env:production',
-      'STATSD_IMPLEMENTATION' => 'statsd',
-      'STATSD_ADDR' => '1.2.3.4:8125',
+      "STATSD_ENV" => "production",
+      "STATSD_SAMPLE_RATE" => "0.1",
+      "STATSD_PREFIX" => "foo",
+      "STATSD_DEFAULT_TAGS" => "shard:1,env:production",
+      "STATSD_IMPLEMENTATION" => "statsd",
+      "STATSD_ADDR" => "1.2.3.4:8125",
     )
     client = StatsD::Instrument::Client.from_env(env)
 
     assert_equal(0.1, client.default_sample_rate)
-    assert_equal('foo', client.prefix)
-    assert_equal(['shard:1', 'env:production'], client.default_tags)
+    assert_equal("foo", client.prefix)
+    assert_equal(["shard:1", "env:production"], client.default_tags)
     assert_equal(StatsD::Instrument::StatsDDatagramBuilder, client.datagram_builder_class)
 
     assert_kind_of(StatsD::Instrument::UDPSink, client.sink)
-    assert_equal('1.2.3.4', client.sink.host)
+    assert_equal("1.2.3.4", client.sink.host)
     assert_equal(8125, client.sink.port)
   end
 
@@ -42,18 +42,18 @@ class ClientTest < Minitest::Test
 
   def test_client_from_env_with_overrides
     env = StatsD::Instrument::Environment.new(
-      'STATSD_SAMPLE_RATE' => '0.1',
-      'STATSD_PREFIX' => 'foo',
-      'STATSD_DEFAULT_TAGS' => 'shard:1,env:production',
-      'STATSD_IMPLEMENTATION' => 'statsd',
-      'STATSD_ADDR' => '1.2.3.4:8125',
+      "STATSD_SAMPLE_RATE" => "0.1",
+      "STATSD_PREFIX" => "foo",
+      "STATSD_DEFAULT_TAGS" => "shard:1,env:production",
+      "STATSD_IMPLEMENTATION" => "statsd",
+      "STATSD_ADDR" => "1.2.3.4:8125",
     )
     client = StatsD::Instrument::Client.from_env(env,
-      prefix: 'bar', implementation: 'dogstatsd', sink: StatsD::Instrument::NullSink.new)
+      prefix: "bar", implementation: "dogstatsd", sink: StatsD::Instrument::NullSink.new)
 
     assert_equal(0.1, client.default_sample_rate)
-    assert_equal('bar', client.prefix)
-    assert_equal(['shard:1', 'env:production'], client.default_tags)
+    assert_equal("bar", client.prefix)
+    assert_equal(["shard:1", "env:production"], client.default_tags)
     assert_equal(StatsD::Instrument::DogStatsDDatagramBuilder, client.datagram_builder_class)
 
     assert_kind_of(StatsD::Instrument::NullSink, client.sink)
@@ -62,75 +62,75 @@ class ClientTest < Minitest::Test
   def test_capture
     inner_datagrams = nil
 
-    @client.increment('foo')
+    @client.increment("foo")
     outer_datagrams = @client.capture do
-      @client.increment('bar')
+      @client.increment("bar")
       inner_datagrams = @client.capture do
-        @client.increment('baz')
+        @client.increment("baz")
       end
     end
-    @client.increment('quc')
+    @client.increment("quc")
 
-    assert_equal(['bar', 'baz'], outer_datagrams.map(&:name))
-    assert_equal(['baz'], inner_datagrams.map(&:name))
+    assert_equal(["bar", "baz"], outer_datagrams.map(&:name))
+    assert_equal(["baz"], inner_datagrams.map(&:name))
   end
 
   def test_metric_methods_return_truish_void
-    assert(@client.increment('foo'))
-    assert(@client.measure('bar', 122.54))
-    assert(@client.set('baz', 123))
-    assert(@client.gauge('baz', 12.3))
+    assert(@client.increment("foo"))
+    assert(@client.measure("bar", 122.54))
+    assert(@client.set("baz", 123))
+    assert(@client.gauge("baz", 12.3))
   end
 
   def test_increment_with_default_value
-    datagrams = @client.capture { @client.increment('foo') }
+    datagrams = @client.capture { @client.increment("foo") }
     assert_equal(1, datagrams.size)
-    assert_equal('foo:1|c', datagrams.first.source)
+    assert_equal("foo:1|c", datagrams.first.source)
   end
 
   def test_measure_with_value
-    datagrams = @client.capture { @client.measure('foo', 122.54) }
+    datagrams = @client.capture { @client.measure("foo", 122.54) }
     assert_equal(1, datagrams.size)
-    assert_equal('foo:122.54|ms', datagrams.first.source)
+    assert_equal("foo:122.54|ms", datagrams.first.source)
   end
 
   def test_measure_with_block
     Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
     datagrams = @client.capture do
-      @client.measure('foo') {}
+      @client.measure("foo") {}
     end
     assert_equal(1, datagrams.size)
-    assert_equal('foo:100.0|ms', datagrams.first.source)
+    assert_equal("foo:100.0|ms", datagrams.first.source)
   end
 
   def test_gauge
-    datagrams = @client.capture { @client.gauge('foo', 123) }
+    datagrams = @client.capture { @client.gauge("foo", 123) }
     assert_equal(1, datagrams.size)
-    assert_equal('foo:123|g', datagrams.first.source)
+    assert_equal("foo:123|g", datagrams.first.source)
   end
 
   def test_set
-    datagrams = @client.capture { @client.set('foo', 12345) }
+    datagrams = @client.capture { @client.set("foo", 12345) }
     assert_equal(1, datagrams.size)
-    assert_equal('foo:12345|s', datagrams.first.source)
+    assert_equal("foo:12345|s", datagrams.first.source)
   end
 
   def test_histogram
-    datagrams = @dogstatsd_client.capture { @dogstatsd_client.histogram('foo', 12.44) }
+    datagrams = @dogstatsd_client.capture { @dogstatsd_client.histogram("foo", 12.44) }
     assert_equal(1, datagrams.size)
-    assert_equal('foo:12.44|h', datagrams.first.source)
+    assert_equal("foo:12.44|h", datagrams.first.source)
   end
 
   def test_distribution_with_value
-    datagrams = @dogstatsd_client.capture { @dogstatsd_client.distribution('foo', 12.44) }
+    datagrams = @dogstatsd_client.capture { @dogstatsd_client.distribution("foo", 12.44) }
     assert_equal(1, datagrams.size)
-    assert_equal('foo:12.44|d', datagrams.first.source)
+    assert_equal("foo:12.44|d", datagrams.first.source)
   end
 
   def test_distribution_with_block
     Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
     datagrams = @dogstatsd_client.capture do
-      @dogstatsd_client.distribution('foo') {}
+      @dogstatsd_client.distribution("foo") {}
     end
     assert_equal(1, datagrams.size)
     assert_equal("foo:100.0|d", datagrams.first.source)
@@ -139,7 +139,7 @@ class ClientTest < Minitest::Test
   def test_latency_emits_ms_metric
     Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
     datagrams = @client.capture do
-      @client.latency('foo') {}
+      @client.latency("foo") {}
     end
     assert_equal(1, datagrams.size)
     assert_equal("foo:100.0|ms", datagrams.first.source)
@@ -148,7 +148,7 @@ class ClientTest < Minitest::Test
   def test_latency_on_dogstatsd_prefers_distribution_metric_type
     Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
     datagrams = @dogstatsd_client.capture do
-      @dogstatsd_client.latency('foo') {}
+      @dogstatsd_client.latency("foo") {}
     end
     assert_equal(1, datagrams.size)
     assert_equal("foo:100.0|d", datagrams.first.source)
@@ -157,28 +157,28 @@ class ClientTest < Minitest::Test
   def test_latency_calls_block_even_when_not_sending_a_sample
     called = false
     @client.capture do
-      @client.latency('foo', sample_rate: 0) { called = true }
+      @client.latency("foo", sample_rate: 0) { called = true }
     end
     assert(called, "The block should have been called")
   end
 
   def test_service_check
-    datagrams = @dogstatsd_client.capture { @dogstatsd_client.service_check('service', :ok) }
+    datagrams = @dogstatsd_client.capture { @dogstatsd_client.service_check("service", :ok) }
     assert_equal(1, datagrams.size)
     assert_equal("_sc|service|0", datagrams.first.source)
   end
 
   def test_event
-    datagrams = @dogstatsd_client.capture { @dogstatsd_client.event('service', "event\ndescription") }
+    datagrams = @dogstatsd_client.capture { @dogstatsd_client.event("service", "event\ndescription") }
     assert_equal(1, datagrams.size)
     assert_equal("_e{7,18}:service|event\\ndescription", datagrams.first.source)
   end
 
   def test_no_prefix
-    client = StatsD::Instrument::Client.new(prefix: 'foo')
+    client = StatsD::Instrument::Client.new(prefix: "foo")
     datagrams = client.capture do
-      client.increment('bar')
-      client.increment('bar', no_prefix: true)
+      client.increment("bar")
+      client.increment("bar", no_prefix: true)
     end
 
     assert_equal(2, datagrams.size)
@@ -187,36 +187,36 @@ class ClientTest < Minitest::Test
   end
 
   def test_default_tags_normalization
-    client = StatsD::Instrument::Client.new(default_tags: { first_tag: 'f|irst_value', second_tag: 'sec,ond_value' })
+    client = StatsD::Instrument::Client.new(default_tags: { first_tag: "f|irst_value", second_tag: "sec,ond_value" })
     datagrams = client.capture do
-      client.increment('bar', tags: ['th|ird_#,tag'])
+      client.increment("bar", tags: ["th|ird_#,tag"])
     end
 
-    assert_includes(datagrams.first.tags, 'first_tag:first_value')
-    assert_includes(datagrams.first.tags, 'second_tag:second_value')
-    assert_includes(datagrams.first.tags, 'third_#tag')
+    assert_includes(datagrams.first.tags, "first_tag:first_value")
+    assert_includes(datagrams.first.tags, "second_tag:second_value")
+    assert_includes(datagrams.first.tags, "third_#tag")
   end
 
   def test_sampling
-    mock_sink = mock('sink')
+    mock_sink = mock("sink")
     mock_sink.stubs(:sample?).returns(false, true, false, false, true)
     mock_sink.expects(:<<).twice
 
     client = StatsD::Instrument::Client.new(sink: mock_sink)
-    5.times { client.increment('metric') }
+    5.times { client.increment("metric") }
   end
 
   def test_clone_with_prefix_option
     # Both clients will use the same sink.
-    mock_sink = mock('sink')
+    mock_sink = mock("sink")
     mock_sink.stubs(:sample?).returns(true)
     mock_sink.expects(:<<).with("metric:1|c").returns(mock_sink)
     mock_sink.expects(:<<).with("foo.metric:1|c").returns(mock_sink)
 
     original_client = StatsD::Instrument::Client.new(sink: mock_sink)
-    client_with_other_options = original_client.clone_with_options(prefix: 'foo')
+    client_with_other_options = original_client.clone_with_options(prefix: "foo")
 
-    original_client.increment('metric')
-    client_with_other_options.increment('metric')
+    original_client.increment("metric")
+    client_with_other_options.increment("metric")
   end
 end

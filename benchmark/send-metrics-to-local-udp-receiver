@@ -1,16 +1,16 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'bundler/setup'
-require 'benchmark/ips'
-require 'tmpdir'
-require 'socket'
-require 'statsd-instrument'
+require "bundler/setup"
+require "benchmark/ips"
+require "tmpdir"
+require "socket"
+require "statsd-instrument"
 
 revision = %x(git rev-parse HEAD).rstrip
 master_revision = %x(git rev-parse origin/master).rstrip
 branch = if revision == master_revision
-  'master'
+  "master"
 else
   %x(git rev-parse --abbrev-ref HEAD).rstrip
 end
@@ -20,22 +20,22 @@ FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
 
 # Set up an UDP listener to which we can send StatsD packets
 receiver = UDPSocket.new
-receiver.bind('localhost', 0)
+receiver.bind("localhost", 0)
 
 StatsD.singleton_client = StatsD::Instrument::Environment.new(
-  'STATSD_ADDR' => "#{receiver.addr[2]}:#{receiver.addr[1]}",
-  'STATSD_IMPLEMENTATION' => 'dogstatsd',
-  'STATSD_ENV' => 'production',
+  "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
+  "STATSD_IMPLEMENTATION" => "dogstatsd",
+  "STATSD_ENV" => "production",
 ).client
 
 report = Benchmark.ips do |bench|
   bench.report("StatsD metrics to local UDP receiver (branch: #{branch}, sha: #{revision[0, 7]})") do
-    StatsD.increment('StatsD.increment', 10)
-    StatsD.measure('StatsD.measure') { 1 + 1 }
-    StatsD.gauge('StatsD.gauge', 12.0, tags: ["foo:bar", "quc"])
-    StatsD.set('StatsD.set', 'value', tags: { foo: 'bar', baz: 'quc' })
+    StatsD.increment("StatsD.increment", 10)
+    StatsD.measure("StatsD.measure") { 1 + 1 }
+    StatsD.gauge("StatsD.gauge", 12.0, tags: ["foo:bar", "quc"])
+    StatsD.set("StatsD.set", "value", tags: { foo: "bar", baz: "quc" })
     if StatsD.singleton_client.datagram_builder_class == StatsD::Instrument::DogStatsDDatagramBuilder
-      StatsD.event('StasD.event', "12345")
+      StatsD.event("StasD.event", "12345")
       StatsD.service_check("StatsD.service_check", "ok")
     end
   end
@@ -51,7 +51,7 @@ if report.entries.length == 1
   puts
   puts "To compare the performance of this revision against another revision (e.g. master),"
   puts "check out a different branch and run this benchmark script again."
-elsif ENV['KEEP_RESULTS']
+elsif ENV["KEEP_RESULTS"]
   puts
   puts "The intermediate results have been stored in #{intermediate_results_filename}"
 else
