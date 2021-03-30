@@ -58,6 +58,8 @@ class UDPSinkTest < Minitest::Test
     udp_sink = StatsD::Instrument::UDPSink.new("localhost", 8125)
     udp_sink << "foo:1|c"
     udp_sink << "bar:1|c"
+    # Let the dispatcher thread emit
+    sleep 0.1
   end
 
   def test_sends_datagram_in_signal_handler
