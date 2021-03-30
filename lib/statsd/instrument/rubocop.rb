@@ -72,11 +72,11 @@ module RuboCop
   end
 end
 
-require_relative 'rubocop/metaprogramming_positional_arguments'
-require_relative 'rubocop/metric_return_value'
-require_relative 'rubocop/metric_value_keyword_argument'
-require_relative 'rubocop/positional_arguments'
-require_relative 'rubocop/splat_arguments'
-require_relative 'rubocop/measure_as_dist_argument'
-require_relative 'rubocop/metric_prefix_argument'
-require_relative 'rubocop/singleton_configuration'
+require_relative "rubocop/metaprogramming_positional_arguments"
+require_relative "rubocop/metric_return_value"
+require_relative "rubocop/metric_value_keyword_argument"
+require_relative "rubocop/positional_arguments"
+require_relative "rubocop/splat_arguments"
+require_relative "rubocop/measure_as_dist_argument"
+require_relative "rubocop/metric_prefix_argument"
+require_relative "rubocop/singleton_configuration"

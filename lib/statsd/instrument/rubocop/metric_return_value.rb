@@ -1,6 +1,6 @@
 # frozen-string-literal: true
 
-require_relative '../rubocop' unless defined?(RuboCop::Cop::StatsD)
+require_relative "../rubocop" unless defined?(RuboCop::Cop::StatsD)
 
 module RuboCop
   module Cop
@@ -17,7 +17,7 @@ module RuboCop
       class MetricReturnValue < Cop
         include RuboCop::Cop::StatsD
 
-        MSG = 'Do not use the return value of StatsD metric methods'
+        MSG = "Do not use the return value of StatsD metric methods"
 
         INVALID_PARENTS = %i{lvasgn array pair send return yield}
 

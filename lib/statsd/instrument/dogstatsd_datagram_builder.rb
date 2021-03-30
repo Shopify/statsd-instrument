@@ -44,7 +44,7 @@ module StatsD
         datagram << "|p:#{priority}" if priority
         datagram << "|s:#{source_type_name}" if source_type_name
         datagram << "|t:#{alert_type}" if alert_type
-        datagram << "|##{tags.join(',')}" unless tags.empty?
+        datagram << "|##{tags.join(",")}" unless tags.empty?
         datagram
       end
 
@@ -67,7 +67,7 @@ module StatsD
         datagram = +"_sc|#{@prefix}#{normalize_name(name)}|#{status_number}"
         datagram << "|h:#{hostname}" if hostname
         datagram << "|d:#{timestamp.to_i}" if timestamp
-        datagram << "|##{tags.join(',')}" unless tags.empty?
+        datagram << "|##{tags.join(",")}" unless tags.empty?
         datagram << "|m:#{normalize_name(message)}" if message
         datagram
       end

@@ -65,9 +65,9 @@ module StatsD
       end
 
       def to_s
-        str = +"#{name}:#{value || '<anything>'}|#{type}"
+        str = +"#{name}:#{value || "<anything>"}|#{type}"
         str << "|@#{sample_rate}" if sample_rate
-        str << "|#" << tags.join(',') if tags
+        str << "|#" << tags.join(",") if tags
         str << " (expected #{times} times)" if times > 1
         str
       end
@@ -109,7 +109,7 @@ module StatsD
 
         # Fast path when no string replacement is needed
         return tags unless tags.any? { |tag| /[|,]/.match?(tag) }
-        tags.map { |tag| tag.tr('|,', '') }
+        tags.map { |tag| tag.tr("|,", "") }
       end
     end
 

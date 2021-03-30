@@ -35,31 +35,31 @@ module StatsD
       end
 
       def c(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, 'c', sample_rate, tags)
+        generate_generic_datagram(name, value, "c", sample_rate, tags)
       end
 
       def g(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, 'g', sample_rate, tags)
+        generate_generic_datagram(name, value, "g", sample_rate, tags)
       end
 
       def ms(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, 'ms', sample_rate, tags)
+        generate_generic_datagram(name, value, "ms", sample_rate, tags)
       end
 
       def s(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, 's', sample_rate, tags)
+        generate_generic_datagram(name, value, "s", sample_rate, tags)
       end
 
       def h(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, 'h', sample_rate, tags)
+        generate_generic_datagram(name, value, "h", sample_rate, tags)
       end
 
       def d(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, 'd', sample_rate, tags)
+        generate_generic_datagram(name, value, "d", sample_rate, tags)
       end
 
       def kv(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, 'kv', sample_rate, tags)
+        generate_generic_datagram(name, value, "kv", sample_rate, tags)
       end
 
       def latency_metric_type
@@ -83,21 +83,21 @@ module StatsD
 
         # Fast path when no string replacement is needed
         return tags unless tags.any? { |tag| /[|,]/.match?(tag) }
-        tags.map { |tag| tag.tr('|,', '') }
+        tags.map { |tag| tag.tr("|,", "") }
       end
 
       # Utility function to remove invalid characters from a StatsD metric name
       def normalize_name(name)
         # Fast path when no normalization is needed to avoid copying the string
         return name unless /[:|@]/.match?(name)
-        name.tr(':|@', '_')
+        name.tr(":|@", "_")
       end
 
       def generate_generic_datagram(name, value, type, sample_rate, tags)
         tags = normalize_tags(tags) + default_tags
         datagram = +"#{@prefix}#{normalize_name(name)}:#{value}|#{type}"
         datagram << "|@#{sample_rate}" if sample_rate && sample_rate < 1
-        datagram << "|##{tags.join(',')}" unless tags.empty?
+        datagram << "|##{tags.join(",")}" unless tags.empty?
         datagram
       end
     end

@@ -1,6 +1,6 @@
 # frozen-string-literal: true
 
-require_relative '../rubocop' unless defined?(RuboCop::Cop::StatsD)
+require_relative "../rubocop" unless defined?(RuboCop::Cop::StatsD)
 
 module RuboCop
   module Cop
@@ -17,7 +17,7 @@ module RuboCop
       class PositionalArguments < Cop
         include RuboCop::Cop::StatsD
 
-        MSG = 'Use keyword arguments for StatsD calls'
+        MSG = "Use keyword arguments for StatsD calls"
 
         POSITIONAL_ARGUMENT_TYPES = Set[:int, :float, :nil]
         UNKNOWN_ARGUMENT_TYPES = Set[:send, :const, :lvar, :splat]
@@ -80,7 +80,7 @@ module RuboCop
 
               tags = positional_arguments[1]
               if tags && tags.type != :nil
-                keyword_arguments << if tags.type == :hash && tags.source[0] != '{'
+                keyword_arguments << if tags.type == :hash && tags.source[0] != "{"
                   "tags: { #{tags.source} }"
                 else
                   "tags: #{tags.source}"
@@ -88,7 +88,7 @@ module RuboCop
               end
 
               unless keyword_arguments.empty?
-                corrector.insert_after(value_argument.source_range, ", #{keyword_arguments.join(', ')}")
+                corrector.insert_after(value_argument.source_range, ", #{keyword_arguments.join(", ")}")
               end
             end
           end

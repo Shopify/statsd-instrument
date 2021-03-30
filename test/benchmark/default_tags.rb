@@ -1,21 +1,21 @@
 # frozen_string_literal: true
 
-require 'statsd-instrument'
-require 'benchmark/ips'
+require "statsd-instrument"
+require "benchmark/ips"
 
 StatsD.logger = Logger.new(File::NULL)
 
 class Suite
   def warming(*args)
     StatsD.default_tags = if args[0] == "with default tags"
-      { first_tag: 'first_value', second_tag: 'second_value' }
+      { first_tag: "first_value", second_tag: "second_value" }
     end
     puts "warming with default tags: #{StatsD.default_tags}"
   end
 
   def running(*args)
     StatsD.default_tags = if args[0] == "with default tags"
-      { first_tag: 'first_value', second_tag: 'second_value' }
+      { first_tag: "first_value", second_tag: "second_value" }
     end
     puts "running with default tags: #{StatsD.default_tags}"
   end
@@ -32,15 +32,15 @@ suite = Suite.new
 Benchmark.ips do |bench|
   bench.config(suite: suite)
   bench.report("without default tags") do
-    StatsD.increment('GoogleBase.insert', tags: {
-      first_tag: 'first_value',
-      second_tag: 'second_value',
-      third_tag: 'third_value',
+    StatsD.increment("GoogleBase.insert", tags: {
+      first_tag: "first_value",
+      second_tag: "second_value",
+      third_tag: "third_value",
     })
   end
 
   bench.report("with default tags") do
-    StatsD.increment('GoogleBase.insert', tags: { third_tag: 'third_value' })
+    StatsD.increment("GoogleBase.insert", tags: { third_tag: "third_value" })
   end
 
   bench.compare!

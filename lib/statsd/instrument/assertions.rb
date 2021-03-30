@@ -61,7 +61,7 @@ module StatsD
         end
 
         datagrams.select! { |metric| metric_names.include?(metric.name) } unless metric_names.empty?
-        assert(datagrams.empty?, "No StatsD calls for metric #{datagrams.map(&:name).join(', ')} expected.")
+        assert(datagrams.empty?, "No StatsD calls for metric #{datagrams.map(&:name).join(", ")} expected.")
       end
 
       # Asserts that a given counter metric occurred inside the provided block.

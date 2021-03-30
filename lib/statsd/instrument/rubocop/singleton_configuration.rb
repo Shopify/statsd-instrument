@@ -1,6 +1,6 @@
 # frozen-string-literal: true
 
-require_relative '../rubocop' unless defined?(RuboCop::Cop::StatsD)
+require_relative "../rubocop" unless defined?(RuboCop::Cop::StatsD)
 
 module RuboCop
   module Cop

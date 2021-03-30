@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'socket'
-require 'logger'
-require 'forwardable'
+require "socket"
+require "logger"
+require "forwardable"
 
 # The `StatsD` module contains low-level metrics for collecting metrics and
 # sending them to the backend.
@@ -31,7 +31,7 @@ module StatsD
     # @private
     # @return [String]
     def self.generate_metric_name(name, callee, *args)
-      name.respond_to?(:call) ? name.call(callee, args).gsub('::', '.') : name.gsub('::', '.')
+      name.respond_to?(:call) ? name.call(callee, args).gsub("::", ".") : name.gsub("::", ".")
     end
 
     # Even though this method is considered private, and is no longer used internally,
@@ -129,7 +129,7 @@ module StatsD
             result
           ensure
             client ||= StatsD.singleton_client
-            suffix = truthiness == false ? 'failure' : 'success'
+            suffix = truthiness == false ? "failure" : "success"
             key = StatsD::Instrument.generate_metric_name(name, self, *args)
             client.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           end
@@ -347,21 +347,21 @@ module StatsD
   end
 end
 
-require 'statsd/instrument/version'
-require 'statsd/instrument/client'
-require 'statsd/instrument/datagram'
-require 'statsd/instrument/dogstatsd_datagram'
-require 'statsd/instrument/datagram_builder'
-require 'statsd/instrument/statsd_datagram_builder'
-require 'statsd/instrument/dogstatsd_datagram_builder'
-require 'statsd/instrument/null_sink'
-require 'statsd/instrument/udp_sink'
-require 'statsd/instrument/capture_sink'
-require 'statsd/instrument/log_sink'
-require 'statsd/instrument/environment'
-require 'statsd/instrument/helpers'
-require 'statsd/instrument/assertions'
-require 'statsd/instrument/expectation'
-require 'statsd/instrument/matchers' if defined?(::RSpec)
-require 'statsd/instrument/railtie' if defined?(::Rails::Railtie)
-require 'statsd/instrument/strict' if ENV['STATSD_STRICT_MODE']
+require "statsd/instrument/version"
+require "statsd/instrument/client"
+require "statsd/instrument/datagram"
+require "statsd/instrument/dogstatsd_datagram"
+require "statsd/instrument/datagram_builder"
+require "statsd/instrument/statsd_datagram_builder"
+require "statsd/instrument/dogstatsd_datagram_builder"
+require "statsd/instrument/null_sink"
+require "statsd/instrument/udp_sink"
+require "statsd/instrument/capture_sink"
+require "statsd/instrument/log_sink"
+require "statsd/instrument/environment"
+require "statsd/instrument/helpers"
+require "statsd/instrument/assertions"
+require "statsd/instrument/expectation"
+require "statsd/instrument/matchers" if defined?(::RSpec)
+require "statsd/instrument/railtie" if defined?(::Rails::Railtie)
+require "statsd/instrument/strict" if ENV["STATSD_STRICT_MODE"]

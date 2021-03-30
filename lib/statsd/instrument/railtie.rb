@@ -7,7 +7,7 @@ module StatsD
     #
     # @see StatsD::Instrument::Environment
     class Railtie < Rails::Railtie
-      initializer 'statsd-instrument.use_rails_logger' do
+      initializer "statsd-instrument.use_rails_logger" do
         ::StatsD.logger = Rails.logger
       end
     end

@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
-ENV['ENV'] = 'test'
+if Warning.respond_to?(:[]=)
+  Warning[:deprecated] = true
+end
 
-require 'minitest/autorun'
-require 'minitest/pride'
-require 'mocha/minitest'
-require 'statsd-instrument'
+ENV["ENV"] = "test"
 
-require_relative 'helpers/rubocop_helper'
+require "minitest/autorun"
+require "minitest/pride"
+require "mocha/minitest"
+require "statsd-instrument"
+
+require_relative "helpers/rubocop_helper"
 
 module StatsD
   module Instrument

@@ -1,6 +1,6 @@
 # frozen-string-literal: true
 
-require_relative '../rubocop' unless defined?(RuboCop::Cop::StatsD)
+require_relative "../rubocop" unless defined?(RuboCop::Cop::StatsD)
 
 module RuboCop
   module Cop
@@ -16,7 +16,7 @@ module RuboCop
       class SplatArguments < Cop
         include RuboCop::Cop::StatsD
 
-        MSG = 'Do not use splat arguments in StatsD metric calls'
+        MSG = "Do not use splat arguments in StatsD metric calls"
 
         def on_send(node)
           if metric_method?(node)

@@ -1,6 +1,6 @@
 # frozen-string-literal: true
 
-require_relative '../rubocop' unless defined?(RuboCop::Cop::StatsD)
+require_relative "../rubocop" unless defined?(RuboCop::Cop::StatsD)
 
 module RuboCop
   module Cop
@@ -19,7 +19,7 @@ module RuboCop
       class MetaprogrammingPositionalArguments < Cop
         include RuboCop::Cop::StatsD
 
-        MSG = 'Use keyword arguments for StatsD metaprogramming macros'
+        MSG = "Use keyword arguments for StatsD metaprogramming macros"
 
         def on_send(node)
           if metaprogramming_method?(node)

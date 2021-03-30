@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'rubocop'
-require 'rubocop/cop/legacy/corrector'
+require "rubocop"
+require "rubocop/cop/legacy/corrector"
 
 module RubocopHelper
   attr_accessor :cop

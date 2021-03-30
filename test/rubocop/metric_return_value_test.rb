@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'test_helper'
-require 'statsd/instrument/rubocop'
+require "test_helper"
+require "statsd/instrument/rubocop"
 
 module Rubocop
   class MetricReturnValueTest < Minitest::Test
@@ -12,7 +12,7 @@ module Rubocop
     end
 
     def test_ok_for_non_metric_method
-      assert_no_offenses('backend = StatsD.backend')
+      assert_no_offenses("backend = StatsD.backend")
     end
 
     def test_ok_as_naked_statement

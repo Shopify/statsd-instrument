@@ -53,9 +53,9 @@ module StatsD
         #   supported.
         def datagram_builder_class_for_implementation(implementation)
           case implementation.to_s
-          when 'statsd'
+          when "statsd"
             StatsD::Instrument::StatsDDatagramBuilder
-          when 'datadog', 'dogstatsd'
+          when "datadog", "dogstatsd"
             StatsD::Instrument::DogStatsDDatagramBuilder
           else
             raise NotImplementedError, "Implementation named #{implementation} could not be found"
@@ -148,7 +148,7 @@ module StatsD
         prefix: nil,
         default_sample_rate: 1.0,
         default_tags: nil,
-        implementation: 'datadog',
+        implementation: "datadog",
         sink: StatsD::Instrument::NullSink.new,
         datagram_builder_class: self.class.datagram_builder_class_for_implementation(implementation)
       )
