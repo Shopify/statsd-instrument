@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+if Warning.respond_to?(:[]=)
+  Warning[:deprecated] = true
+end
+
 ENV['ENV'] = 'test'
 
 require 'minitest/autorun'
