@@ -24,7 +24,7 @@ module StatsD
       end
 
       def <<(datagram)
-        with_socket { |socket| socket.send(datagram, 0) > 0 }
+        with_socket { |socket| socket.send(datagram, 0) }
         self
 
       rescue ThreadError
@@ -33,13 +33,11 @@ module StatsD
         # to try and send the datagram without a lock.
         socket.send(datagram, 0) > 0
 
-      rescue SocketError, IOError, SystemCallError
-        # TODO: log?
+      rescue SocketError, IOError, SystemCallError => error
+        StatsD.logger.debug do
+          "[StatsD::Instrument::UDPSink] Reseting connection because of #{error.class}: #{error.message}"
+        end
         invalidate_socket
-      end
-
-      def addr
-        "#{host}:#{port}"
       end
 
       private
@@ -49,11 +47,11 @@ module StatsD
       end
 
       def socket
-        if @socket.nil?
-          @socket = UDPSocket.new
-          @socket.connect(@host, @port)
+        @socket ||= begin
+          socket = UDPSocket.new
+          socket.connect(@host, @port)
+          socket
         end
-        @socket
       end
 
       def invalidate_socket

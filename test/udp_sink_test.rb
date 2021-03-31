@@ -46,18 +46,38 @@ class UDPSinkTest < Minitest::Test
     assert_equal(100, datagrams.size)
   end
 
+  class SimpleFormatter < ::Logger::Formatter
+    def call(_severity, _timestamp, _progname, msg)
+      "#{String === msg ? msg : msg.inspect}\n"
+    end
+  end
+
   def test_socket_error_should_invalidate_socket
-    UDPSocket.stubs(:new).returns(socket = mock("socket"))
+    previous_logger = StatsD.logger
+    begin
+      logs = StringIO.new
+      StatsD.logger = Logger.new(logs)
+      StatsD.logger.formatter = SimpleFormatter.new
+      UDPSocket.stubs(:new).returns(socket = mock("socket"))
 
-    seq = sequence("connect_fail_connect_succeed")
-    socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
-    socket.expects(:send).raises(Errno::EDESTADDRREQ).in_sequence(seq)
-    socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
-    socket.expects(:send).returns(1).in_sequence(seq)
+      seq = sequence("connect_fail_connect_succeed")
+      socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
+      socket.expects(:send).raises(Errno::EDESTADDRREQ).in_sequence(seq)
+      socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
+      socket.expects(:send).returns(1).in_sequence(seq)
 
-    udp_sink = StatsD::Instrument::UDPSink.new("localhost", 8125)
-    udp_sink << "foo:1|c"
-    udp_sink << "bar:1|c"
+      udp_sink = StatsD::Instrument::UDPSink.new("localhost", 8125)
+      udp_sink << "foo:1|c"
+      udp_sink << "bar:1|c"
+
+      assert_equal(
+        "[StatsD::Instrument::UDPSink] Reseting connection because of " \
+        "Errno::EDESTADDRREQ: Destination address required\n",
+        logs.string,
+      )
+    ensure
+      StatsD.logger = previous_logger
+    end
   end
 
   def test_sends_datagram_in_signal_handler
