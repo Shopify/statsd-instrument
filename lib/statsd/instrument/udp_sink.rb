@@ -19,6 +19,10 @@ module StatsD
         @socket = nil
       end
 
+      def after_fork
+        # noop
+      end
+
       def sample?(sample_rate)
         sample_rate == 1 || rand < sample_rate
       end

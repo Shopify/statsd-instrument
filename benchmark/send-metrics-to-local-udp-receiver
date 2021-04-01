@@ -26,6 +26,7 @@ StatsD.singleton_client = StatsD::Instrument::Environment.new(
   "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
   "STATSD_IMPLEMENTATION" => "dogstatsd",
   "STATSD_ENV" => "production",
+  "STATSD_BATCH_SIZE" => 50,
 ).client
 
 report = Benchmark.ips do |bench|

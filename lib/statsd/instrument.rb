@@ -343,7 +343,7 @@ module StatsD
     #   (see StatsD::Instrument::Client#service_check)
 
     def_delegators :singleton_client, :increment, :gauge, :set, :measure,
-      :histogram, :distribution, :event, :service_check
+      :histogram, :distribution, :event, :service_check, :after_fork
   end
 end
 
@@ -356,6 +356,7 @@ require "statsd/instrument/statsd_datagram_builder"
 require "statsd/instrument/dogstatsd_datagram_builder"
 require "statsd/instrument/null_sink"
 require "statsd/instrument/udp_sink"
+require "statsd/instrument/batched_udp_sink"
 require "statsd/instrument/capture_sink"
 require "statsd/instrument/log_sink"
 require "statsd/instrument/environment"
