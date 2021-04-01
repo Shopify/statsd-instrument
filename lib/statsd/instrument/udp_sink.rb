@@ -19,6 +19,10 @@ module StatsD
         @socket = nil
       end
 
+      def after_fork
+        # noop
+      end
+
       def sample?(sample_rate)
         sample_rate == 1 || rand < sample_rate
       end
@@ -35,7 +39,7 @@ module StatsD
 
       rescue SocketError, IOError, SystemCallError => error
         StatsD.logger.debug do
-          "[StatsD::Instrument::UDPSink] Reseting connection because of #{error.class}: #{error.message}"
+          "[StatsD::Instrument::UDPSink] Resseting connection because of #{error.class}: #{error.message}"
         end
         invalidate_socket
       end

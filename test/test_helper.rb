@@ -23,3 +23,6 @@ module StatsD
 end
 
 StatsD.logger = Logger.new(File::NULL)
+
+Thread.abort_on_exception = true
+Thread.report_on_exception = true

@@ -78,6 +78,10 @@ module StatsD
         env.key?("STATSD_DEFAULT_TAGS") ? env.fetch("STATSD_DEFAULT_TAGS").split(",") : nil
       end
 
+      def statsd_flush_interval
+        Float(env.fetch("STATSD_FLUSH_INTERVAL", 0.0))
+      end
+
       def client
         StatsD::Instrument::Client.from_env(self)
       end
@@ -85,7 +89,11 @@ module StatsD
       def default_sink_for_environment
         case environment
         when "production", "staging"
-          StatsD::Instrument::UDPSink.for_addr(statsd_addr)
+          if statsd_flush_interval > 0
+            StatsD::Instrument::BatchedUDPSink.for_addr(statsd_addr, flush_interval: statsd_flush_interval)
+          else
+            StatsD::Instrument::UDPSink.for_addr(statsd_addr)
+          end
         when "test"
           StatsD::Instrument::NullSink.new
         else
