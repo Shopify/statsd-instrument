@@ -395,10 +395,6 @@ module StatsD
         )
       end
 
-      def after_fork
-        @sink.after_fork if @sink.respond_to?(:after_fork)
-      end
-
       def capture_sink
         StatsD::Instrument::CaptureSink.new(
           parent: @sink,

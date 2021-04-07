@@ -47,7 +47,6 @@ module UDPSinkTests
     Signal.trap("USR1") { udp_sink << "exiting:1|c" }
 
     pid = fork do
-      udp_sink.after_fork
       sleep(5)
     end
 

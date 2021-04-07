@@ -343,7 +343,7 @@ module StatsD
     #   (see StatsD::Instrument::Client#service_check)
 
     def_delegators :singleton_client, :increment, :gauge, :set, :measure,
-      :histogram, :distribution, :event, :service_check, :after_fork
+      :histogram, :distribution, :event, :service_check
   end
 end
 

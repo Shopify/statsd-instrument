@@ -28,17 +28,13 @@ module StatsD
         spawn_dispatcher
       end
 
-      def after_fork
-        @buffer.clear
-        spawn_dispatcher
-      end
-
       def sample?(sample_rate)
         sample_rate == 1 || rand < sample_rate
       end
 
       def <<(datagram)
         @buffer << datagram
+        spawn_dispatcher unless @dispatcher_thread&.alive?
         self
       end
 
@@ -49,9 +45,7 @@ module StatsD
       private
 
       def spawn_dispatcher
-        unless @dispatcher_thread&.alive?
-          @dispatcher_thread = Thread.new { dispatch }
-        end
+        @dispatcher_thread = Thread.new { dispatch }
       end
 
       NEWLINE = "\n".b.freeze

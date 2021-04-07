@@ -46,26 +46,6 @@ The following environment variables are supported:
   in batch. Only applicable to the UDP configuration. If set to `0.0`, metrics
   are sent immediately.
 
-### Forking setups
-
-If you use some kind of forking server, you must call `StatsD.after_fork` after each fork.
-
-For instance if you use Puma:
-
-```ruby
-on_worker_boot do
-  StatsD.after_fork
-end
-```
-
-Or if you use Unicorn:
-
-```ruby
-after_fork do
-  StatsD.after_fork
-end
-```
-
 ## StatsD keys
 
 StatsD keys look like 'admin.logins.api.success'. Dots are used as namespace separators.
