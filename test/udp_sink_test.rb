@@ -11,6 +11,15 @@ module UDPSinkTests
     assert_equal("foo:1|c", datagram)
   end
 
+  def large_datagram
+    datagram = "#{"a" * 1000}:1|c"
+    udp_sink = build_sink(@host, @port)
+    udp_sink << datagram
+
+    datagram, _source = @receiver.recvfrom(1500)
+    assert_equal(datagram, datagram)
+  end
+
   def test_sample?
     udp_sink = build_sink(@host, @port)
     assert(udp_sink.sample?(1))
