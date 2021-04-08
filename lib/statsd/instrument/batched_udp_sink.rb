@@ -18,7 +18,6 @@ module StatsD
       def initialize(host, port, flush_interval: DEFAULT_FLUSH_INTERVAL)
         @host = host
         @port = port
-        @mutex = Mutex.new
         @socket = nil
         @flush_interval = flush_interval
 
@@ -33,8 +32,12 @@ module StatsD
       end
 
       def <<(datagram)
+        unless @dispatcher_thread&.alive?
+          @buffer.clear
+          spawn_dispatcher
+        end
+
         @buffer << datagram
-        spawn_dispatcher unless @dispatcher_thread&.alive?
         self
       end
 
@@ -89,7 +92,7 @@ module StatsD
         socket.send(packet, 0)
       rescue SocketError, IOError, SystemCallError => error
         StatsD.logger.debug do
-          "[#{self.class.name}] Resseting connection because of #{error.class}: #{error.message}"
+          "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
         end
         invalidate_socket
         if retried

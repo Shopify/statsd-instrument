@@ -89,7 +89,7 @@ module StatsD
       def default_sink_for_environment
         case environment
         when "production", "staging"
-          if statsd_flush_interval > 0
+          if statsd_flush_interval > 0.0
             StatsD::Instrument::BatchedUDPSink.for_addr(statsd_addr, flush_interval: statsd_flush_interval)
           else
             StatsD::Instrument::UDPSink.for_addr(statsd_addr)
