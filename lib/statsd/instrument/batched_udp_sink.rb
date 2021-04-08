@@ -7,6 +7,17 @@ module StatsD
     class BatchedUDPSink
       DEFAULT_FLUSH_INTERVAL = 1.0
       MAX_PACKET_SIZE = 508
+      BUFFER_CLASS = if !::Object.const_defined?(:RUBY_ENGINE) || RUBY_ENGINE == "ruby"
+        ::Array
+      else
+        begin
+          gem("concurrent-ruby")
+        rescue Gem::MissingSpecError
+          raise Gem::MissingSpecError, "statsd-instrument depends on `concurrent-ruby` on #{RUBY_ENGINE}"
+        end
+        require "concurrent/array"
+        Concurrent::Array
+      end
 
       def self.for_addr(addr, flush_interval: DEFAULT_FLUSH_INTERVAL)
         host, port_as_string = addr.split(":", 2)
@@ -22,7 +33,7 @@ module StatsD
         @flush_interval = flush_interval
 
         require "concurrent/array"
-        @buffer = Concurrent::Array.new
+        @buffer = BUFFER_CLASS.new
         @dispatcher_thread = nil
         spawn_dispatcher
       end

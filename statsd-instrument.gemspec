@@ -22,5 +22,5 @@ Gem::Specification.new do |spec|
 
   spec.metadata['allowed_push_host'] = "https://rubygems.org"
 
-  spec.add_runtime_dependency 'concurrent-ruby'
+  spec.add_development_dependency 'concurrent-ruby'
 end
