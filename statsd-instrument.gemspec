@@ -21,4 +21,6 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.metadata['allowed_push_host'] = "https://rubygems.org"
+
+  spec.add_development_dependency 'concurrent-ruby'
 end

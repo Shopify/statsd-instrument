@@ -35,7 +35,7 @@ module StatsD
 
       rescue SocketError, IOError, SystemCallError => error
         StatsD.logger.debug do
-          "[StatsD::Instrument::UDPSink] Reseting connection because of #{error.class}: #{error.message}"
+          "[StatsD::Instrument::UDPSink] Resetting connection because of #{error.class}: #{error.message}"
         end
         invalidate_socket
       end
