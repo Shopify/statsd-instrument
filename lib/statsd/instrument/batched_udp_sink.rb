@@ -35,6 +35,7 @@ module StatsD
         require "concurrent/array"
         @buffer = BUFFER_CLASS.new
         @dispatcher_thread = nil
+        @interrupted = false
         spawn_dispatcher
       end
 
@@ -53,7 +54,9 @@ module StatsD
       end
 
       def shutdown
-        @dispatcher_thread&.kill
+        @interrupted = true
+        @dispatcher_thread&.join
+        invalidate_socket
       end
 
       private
@@ -80,11 +83,12 @@ module StatsD
       end
 
       def dispatch
-        loop do
+        until @interrupted
           begin
             start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
             flush
             next_sleep_duration = @flush_interval - (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
+
             sleep(next_sleep_duration) if next_sleep_duration > 0
           rescue => error
             report_error(error)
@@ -125,6 +129,8 @@ module StatsD
       end
 
       def invalidate_socket
+        @socket&.close
+      ensure
         @socket = nil
       end
     end
