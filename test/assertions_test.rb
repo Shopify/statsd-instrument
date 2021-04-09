@@ -351,12 +351,10 @@ class AssertionsTest < Minitest::Test
   def test_assertion_block_with_expected_exceptions
     @test_case.assert_statsd_increment("expected_happened") do
       @test_case.assert_raises(RuntimeError) do
-        begin
-          raise "expected"
-        rescue
-          StatsD.increment("expected_happened")
-          raise
-        end
+        raise "expected"
+      rescue
+        StatsD.increment("expected_happened")
+        raise
       end
     end
 

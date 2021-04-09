@@ -113,26 +113,24 @@ module StatsD
     def statsd_count_success(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
       add_to_method(method, name, :count_success) do
         define_method(method) do |*args, &block|
-          begin
-            truthiness = result = super(*args, &block)
-          rescue
-            truthiness = false
-            raise
-          else
-            if block_given?
-              begin
-                truthiness = yield(result)
-              rescue
-                truthiness = false
-              end
+          truthiness = result = super(*args, &block)
+        rescue
+          truthiness = false
+          raise
+        else
+          if block_given?
+            begin
+              truthiness = yield(result)
+            rescue
+              truthiness = false
             end
-            result
-          ensure
-            client ||= StatsD.singleton_client
-            suffix = truthiness == false ? "failure" : "success"
-            key = StatsD::Instrument.generate_metric_name(name, self, *args)
-            client.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           end
+          result
+        ensure
+          client ||= StatsD.singleton_client
+          suffix = truthiness == false ? "failure" : "success"
+          key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          client.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
         end
       end
     end
@@ -152,26 +150,24 @@ module StatsD
     def statsd_count_if(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
       add_to_method(method, name, :count_if) do
         define_method(method) do |*args, &block|
-          begin
-            truthiness = result = super(*args, &block)
-          rescue
-            truthiness = false
-            raise
-          else
-            if block_given?
-              begin
-                truthiness = yield(result)
-              rescue
-                truthiness = false
-              end
+          truthiness = result = super(*args, &block)
+        rescue
+          truthiness = false
+          raise
+        else
+          if block_given?
+            begin
+              truthiness = yield(result)
+            rescue
+              truthiness = false
             end
-            result
-          ensure
-            if truthiness
-              client ||= StatsD.singleton_client
-              key = StatsD::Instrument.generate_metric_name(name, self, *args)
-              client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
-            end
+          end
+          result
+        ensure
+          if truthiness
+            client ||= StatsD.singleton_client
+            key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           end
         end
       end
