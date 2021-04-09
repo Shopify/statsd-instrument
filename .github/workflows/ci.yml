@@ -44,6 +44,3 @@ jobs:
 
     - name: Run test suite
       run: rake test
-
-    - name: Run Rubocop
-      run: bin/rubocop

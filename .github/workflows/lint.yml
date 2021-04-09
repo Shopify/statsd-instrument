@@ -1,0 +1,22 @@
+name: Lint
+
+on: push
+
+jobs:
+  test:
+    name: Rubocop
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup Ruby
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.4
+
+    - name: Install dependencies
+      run: gem install bundler && bundle install --jobs 4 --retry 3
+
+    - name: Run Rubocop
+      run: bin/rubocop
