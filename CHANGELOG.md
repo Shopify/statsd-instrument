@@ -12,7 +12,7 @@ _Nothing yet_
 
 - Introduced UDP batching using a dispatcher thread, and made it the
   production default.
-- Dropped Ruby 2.4 and 2.5 testing.
+- Dropped support for Ruby 2.4 and 2.5.
 
 ## Version 3.0.2
 
