@@ -42,9 +42,9 @@ The following environment variables are supported:
   overridden in a metric method call.
 - `STATSD_DEFAULT_TAGS`: A comma-separated list of tags to apply to all metrics.
   (Note: tags are not supported by all implementations.)
-- `STATSD_FLUSH_INTERVAL`: (default: `0.0`) The interval at which events are sent
-  in batch. Only applicable to the UDP configuration. If set to `0.0`, metrics
-  are sent immediately.
+- `STATSD_FLUSH_INTERVAL`: (default: `1.0`) The interval in seconds at which
+  events are sent in batch. Only applicable to the UDP configuration. If set
+  to `0.0`, metrics are sent immediately.
 
 ## StatsD keys
 

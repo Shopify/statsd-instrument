@@ -79,7 +79,7 @@ module StatsD
       end
 
       def statsd_flush_interval
-        Float(env.fetch("STATSD_FLUSH_INTERVAL", 0.0))
+        Float(env.fetch("STATSD_FLUSH_INTERVAL", 1.0))
       end
 
       def client
