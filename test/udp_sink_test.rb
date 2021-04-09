@@ -72,9 +72,7 @@ module UDPSinkTests
   private
 
   def build_sink(host = @host, port = @port)
-    @__last_sink ||= nil
-    @__last_sink.shutdown if @__last_sink.respond_to?(:shutdown)
-    @__last_sink = @sink_class.new(host, port)
+    @sink_class.new(host, port)
   end
 
   class UDPSinkTest < Minitest::Test
@@ -133,7 +131,6 @@ module UDPSinkTests
     end
 
     def teardown
-      @__last_sink&.shutdown
       @receiver.close
     end
 
