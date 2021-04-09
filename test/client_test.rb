@@ -24,7 +24,7 @@ class ClientTest < Minitest::Test
     assert_equal(["shard:1", "env:production"], client.default_tags)
     assert_equal(StatsD::Instrument::StatsDDatagramBuilder, client.datagram_builder_class)
 
-    assert_kind_of(StatsD::Instrument::UDPSink, client.sink)
+    assert_kind_of(StatsD::Instrument::BatchedUDPSink, client.sink)
     assert_equal("1.2.3.4", client.sink.host)
     assert_equal(8125, client.sink.port)
   end

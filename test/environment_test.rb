@@ -46,13 +46,22 @@ class EnvironmentTest < Minitest::Test
     assert_kind_of(StatsD::Instrument::NullSink, env.client.sink)
   end
 
-  def test_client_from_env_uses_udp_sink_in_staging_environment
+  def test_client_from_env_uses_batched_udp_sink_in_staging_environment
     env = StatsD::Instrument::Environment.new("STATSD_USE_NEW_CLIENT" => "1", "STATSD_ENV" => "staging")
-    assert_kind_of(StatsD::Instrument::UDPSink, env.client.sink)
+    assert_kind_of(StatsD::Instrument::BatchedUDPSink, env.client.sink)
   end
 
-  def test_client_from_env_uses_udp_sink_in_production_environment
+  def test_client_from_env_uses_batched_udp_sink_in_production_environment
     env = StatsD::Instrument::Environment.new("STATSD_USE_NEW_CLIENT" => "1", "STATSD_ENV" => "production")
+    assert_kind_of(StatsD::Instrument::BatchedUDPSink, env.client.sink)
+  end
+
+  def test_client_from_env_uses_regular_udp_sink_when_flush_interval_is_0
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_USE_NEW_CLIENT" => "1",
+      "STATSD_ENV" => "staging",
+      "STATSD_FLUSH_INTERVAL" => "0.0",
+    )
     assert_kind_of(StatsD::Instrument::UDPSink, env.client.sink)
   end
 end
