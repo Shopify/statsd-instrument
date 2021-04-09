@@ -8,6 +8,12 @@ section below.
 
 _Nothing yet_
 
+## Version 3.1.0
+
+- Introduced UDP batching using a dispatcher thread, and made it the
+  production default.
+- Dropped Ruby 2.4 and 2.5 testing.
+
 ## Version 3.0.2
 
 - Properly handle no_prefix when using StatsD assertions.
