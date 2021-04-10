@@ -69,6 +69,32 @@ module UDPSinkTests
     pass("Fork is not implemented on #{RUBY_PLATFORM}")
   end
 
+  def test_sends_datagram_before_exit
+    udp_sink = build_sink(@host, @port)
+    fork do
+      udp_sink << "exiting:1|c"
+      Process.exit(0)
+    end
+
+    @receiver.wait_readable(1)
+    assert_equal("exiting:1|c", @receiver.recvfrom_nonblock(100).first)
+  rescue NotImplementedError
+    pass("Fork is not implemented on #{RUBY_PLATFORM}")
+  end
+
+  def test_sends_datagram_when_termed
+    udp_sink = build_sink(@host, @port)
+    fork do
+      udp_sink << "exiting:1|c"
+      Process.kill("TERM", Process.pid)
+    end
+
+    @receiver.wait_readable(1)
+    assert_equal("exiting:1|c", @receiver.recvfrom_nonblock(100).first)
+  rescue NotImplementedError
+    pass("Fork is not implemented on #{RUBY_PLATFORM}")
+  end
+
   private
 
   def build_sink(host = @host, port = @port)

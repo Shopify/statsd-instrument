@@ -71,8 +71,13 @@ module StatsD
           self
         end
 
-        def shutdown
+        def shutdown(wait = @flush_interval * 2)
           @interrupted = true
+          if @dispatcher_thread&.alive?
+            @dispatcher_thread.join(wait)
+          else
+            flush
+          end
         end
 
         private
