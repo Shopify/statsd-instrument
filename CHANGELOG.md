@@ -8,6 +8,10 @@ section below.
 
 _Nothing yet_
 
+## Version 3.1.1
+
+ - Improved flushing of buffered datagrams on process exit when using UDP batching.
+
 ## Version 3.1.0
 
 - Introduced UDP batching using a dispatcher thread, and made it the
