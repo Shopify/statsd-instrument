@@ -78,19 +78,6 @@ module StatsD
 
       private
 
-      # Needed for normalize_tags
-      unless Regexp.method_defined?(:match?) # for ruby 2.3
-        module RubyBackports
-          refine Regexp do
-            def match?(str)
-              (self =~ str) != nil
-            end
-          end
-        end
-
-        using(RubyBackports)
-      end
-
       # @private
       #
       # Utility function to convert tags to the canonical form.

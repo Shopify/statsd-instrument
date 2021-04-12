@@ -5,18 +5,6 @@ module StatsD
     # @note This class is part of the new Client implementation that is intended
     #   to become the new default in the next major release of this library.
     class DatagramBuilder
-      unless Regexp.method_defined?(:match?) # for ruby 2.3
-        module RubyBackports
-          refine Regexp do
-            def match?(str)
-              match(str) != nil
-            end
-          end
-        end
-
-        using(RubyBackports)
-      end
-
       def self.unsupported_datagram_types(*types)
         types.each do |type|
           define_method(type) do |_, _, _, _|
