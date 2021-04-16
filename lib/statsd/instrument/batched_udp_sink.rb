@@ -29,7 +29,7 @@ module StatsD
       end
 
       def sample?(sample_rate)
-        sample_rate == 1 || rand < sample_rate
+        sample_rate == 1.0 || rand < sample_rate
       end
 
       def <<(datagram)
