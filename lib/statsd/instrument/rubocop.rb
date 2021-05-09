@@ -3,34 +3,13 @@
 module RuboCop
   module Cop
     module StatsD
-      METRIC_METHODS = %i{
-        increment
-        gauge
-        measure
-        set
-        histogram
-        distribution
-        key_value
-      }
+      METRIC_METHODS = [:increment, :gauge, :measure, :set, :histogram, :distribution, :key_value]
 
-      METAPROGRAMMING_METHODS = %i{
-        statsd_measure
-        statsd_distribution
-        statsd_count_success
-        statsd_count_if
-        statsd_count
-      }
+      METAPROGRAMMING_METHODS = [:statsd_measure, :statsd_distribution, :statsd_count_success, :statsd_count_if,
+                                 :statsd_count]
 
-      SINGLETON_CONFIGURATION_METHODS = %i{
-        backend
-        backend=
-        prefix
-        prefix=
-        default_tags
-        default_tags=
-        default_sample_rate
-        default_sample_rate=
-      }
+      SINGLETON_CONFIGURATION_METHODS = [:backend, :'backend=', :prefix, :'prefix=', :default_tags, :'default_tags=',
+                                         :default_sample_rate, :'default_sample_rate=']
 
       private
 

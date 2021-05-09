@@ -5,8 +5,9 @@ require:
   - ./lib/statsd/instrument/rubocop.rb
 
 AllCops:
-  TargetRubyVersion: 2.6
+  TargetRubyVersion: 2.7
   UseCache: true
+  SuggestExtensions: false
   CacheRootDirectory: tmp/rubocop
   Exclude:
     - statsd-instrument.gemspec
