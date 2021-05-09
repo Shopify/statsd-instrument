@@ -16,7 +16,7 @@ class DatagramBuilderTest < Minitest::Test
 
   def test_normalize_unsupported_tag_names
     assert_equal(["ign#ored"], @datagram_builder.send(:normalize_tags, ["ign#o|re,d"]))
-    # Note: how this is interpreted by the backend is undefined.
+    # NOTE: how this is interpreted by the backend is undefined.
     # We rely on the user to not do stuff like this if they don't want to be surprised.
     # We do not want to take the performance hit of normalizing this.
     assert_equal(["lol::class:omg::lol"], @datagram_builder.send(:normalize_tags, "lol::class" => "omg::lol"))
