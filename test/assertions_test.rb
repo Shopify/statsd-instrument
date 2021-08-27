@@ -440,4 +440,17 @@ class AssertionsTest < Minitest::Test
       StatsD.increment("incr", no_prefix: true)
     end
   end
+
+  def test_client_propagation_to_expectations
+    foo_1_metric = StatsD::Instrument::Expectation.increment("foo")
+    @test_case.assert_statsd_expectations([foo_1_metric]) do
+      StatsD.increment("foo")
+    end
+
+    client = StatsD::Instrument::Client.new(prefix: "prefix")
+    foo_2_metric = StatsD::Instrument::Expectation.increment("foo", client: client)
+    @test_case.assert_statsd_expectations([foo_2_metric]) do
+      StatsD.increment("prefix.foo")
+    end
+  end
 end
