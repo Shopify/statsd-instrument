@@ -8,8 +8,8 @@ require "socket"
 require "statsd-instrument"
 
 revision = %x(git rev-parse HEAD).rstrip
-master_revision = %x(git rev-parse origin/master).rstrip
-branch = if revision == master_revision
+base_revision = %x(git rev-parse origin/master).rstrip
+branch = if revision == base_revision
   "master"
 else
   %x(git rev-parse --abbrev-ref HEAD).rstrip
