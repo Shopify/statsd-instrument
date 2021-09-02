@@ -8,6 +8,10 @@ section below.
 
 _Nothing yet_
 
+## Version 3.1.2
+
+ - Fix bug when passing custom client to expectation.
+
 ## Version 3.1.1
 
  - Improved flushing of buffered datagrams on process exit when using UDP batching.
