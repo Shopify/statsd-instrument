@@ -32,9 +32,10 @@ module StatsD
 
       attr_accessor :times, :type, :name, :value, :sample_rate, :tags
 
-      def initialize(client: StatsD.singleton_client, type:, name:, value: nil,
+      def initialize(client: nil, type:, name:, value: nil,
         sample_rate: nil, tags: nil, no_prefix: false, times: 1)
 
+        client ||= StatsD.singleton_client
         @type = type
         @name = no_prefix || !client.prefix ? name : "#{client.prefix}.#{name}"
         @value = normalized_value_for_type(type, value) if value

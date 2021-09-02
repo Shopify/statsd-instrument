@@ -345,7 +345,7 @@ class StatsDInstrumentationTest < Minitest::Test
     client = StatsD::Instrument::Client.new(prefix: "prefix")
 
     ActiveMerchant::Gateway.statsd_count(:ssl_post, "ActiveMerchant.Gateway.ssl_post", client: client)
-    assert_statsd_increment("prefix.ActiveMerchant.Gateway.ssl_post", client: client) do
+    assert_statsd_increment("ActiveMerchant.Gateway.ssl_post", client: client) do
       ActiveMerchant::Gateway.new.purchase(true)
     end
   ensure

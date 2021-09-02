@@ -74,7 +74,7 @@ module StatsD
       # @raise [Minitest::Assertion] If an exception occurs, or if the metric did
       #   not occur as specified during the execution the block.
       def assert_statsd_increment(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
-        expectation = StatsD::Instrument::Expectation.increment(metric_name, value, **options)
+        expectation = StatsD::Instrument::Expectation.increment(metric_name, value, client: client, **options)
         assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
       end
 
@@ -86,7 +86,7 @@ module StatsD
       # @return [void]
       # @raise (see #assert_statsd_increment)
       def assert_statsd_measure(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
-        expectation = StatsD::Instrument::Expectation.measure(metric_name, value, **options)
+        expectation = StatsD::Instrument::Expectation.measure(metric_name, value, client: client, **options)
         assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
       end
 
@@ -98,7 +98,7 @@ module StatsD
       # @return [void]
       # @raise (see #assert_statsd_increment)
       def assert_statsd_gauge(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
-        expectation = StatsD::Instrument::Expectation.gauge(metric_name, value, **options)
+        expectation = StatsD::Instrument::Expectation.gauge(metric_name, value, client: client, **options)
         assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
       end
 
@@ -110,7 +110,7 @@ module StatsD
       # @return [void]
       # @raise (see #assert_statsd_increment)
       def assert_statsd_histogram(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
-        expectation = StatsD::Instrument::Expectation.histogram(metric_name, value, **options)
+        expectation = StatsD::Instrument::Expectation.histogram(metric_name, value, client: client, **options)
         assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
       end
 
@@ -122,7 +122,7 @@ module StatsD
       # @return [void]
       # @raise (see #assert_statsd_increment)
       def assert_statsd_distribution(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
-        expectation = StatsD::Instrument::Expectation.distribution(metric_name, value, **options)
+        expectation = StatsD::Instrument::Expectation.distribution(metric_name, value, client: client, **options)
         assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
       end
 
@@ -134,7 +134,7 @@ module StatsD
       # @return [void]
       # @raise (see #assert_statsd_increment)
       def assert_statsd_set(metric_name, value = nil, datagrams: nil, client: nil, **options, &block)
-        expectation = StatsD::Instrument::Expectation.set(metric_name, value, **options)
+        expectation = StatsD::Instrument::Expectation.set(metric_name, value, client: client, **options)
         assert_statsd_expectation(expectation, datagrams: datagrams, client: client, &block)
       end
 
