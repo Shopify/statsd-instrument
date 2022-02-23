@@ -41,7 +41,7 @@ module RuboCop
         end
 
         def autocorrect(node)
-          -> (corrector) do
+          ->(corrector) do
             positional_arguments = if node.arguments.last.type == :block_pass
               node.arguments[2...node.arguments.length - 1]
             else
