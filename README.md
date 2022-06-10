@@ -27,7 +27,7 @@ The following environment variables are supported:
   explicitly, this will be determined based on other environment variables,
   like `RAILS_ENV` or `ENV`. The library will behave differently:
 
-  - In the **production** and **staging** environment, thre library will
+  - In the **production** and **staging** environment, the library will
     actually send UDP packets.
   - In the **test** environment, it will swallow all calls, but allows you to
     capture them for testing purposes. See below for notes on writing tests.
