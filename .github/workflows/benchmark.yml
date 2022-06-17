@@ -5,18 +5,16 @@ on: push
 jobs:
   test:
     name: Send metric over UDP
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v1
 
-    - name: Setup Ruby
-      uses: actions/setup-ruby@v1
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
       with:
         ruby-version: 2.6
-
-    - name: Install dependencies
-      run: gem install bundler && bundle install --jobs 4 --retry 3
+        bundler-cache: true
 
     - name: Run benchmark on branch
       run: benchmark/send-metrics-to-local-udp-receiver

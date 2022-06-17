@@ -4,8 +4,8 @@ on: push
 
 jobs:
   test:
-    name: Ruby ${{ matrix.ruby }} on ubuntu-18.04
-    runs-on: ubuntu-18.04
+    name: Ruby ${{ matrix.ruby }} on ubuntu-latest
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -19,13 +19,11 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Setup Ruby
+    - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}
-
-    - name: Install dependencies
-      run: gem install bundler && bundle install --jobs 4 --retry 3
+        bundler-cache: true
 
     - name: Run test suite
-      run: rake test
+      run: bundle exec rake test
