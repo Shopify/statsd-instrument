@@ -67,10 +67,12 @@ module StatsD
       # @return [Array<String>, nil] the list of tags in canonical form.
       def normalize_tags(tags)
         return [] unless tags
+
         tags = tags.map { |k, v| "#{k}:#{v}" } if tags.is_a?(Hash)
 
         # Fast path when no string replacement is needed
         return tags unless tags.any? { |tag| /[|,]/.match?(tag) }
+
         tags.map { |tag| tag.tr("|,", "") }
       end
 
@@ -78,6 +80,7 @@ module StatsD
       def normalize_name(name)
         # Fast path when no normalization is needed to avoid copying the string
         return name unless /[:|@]/.match?(name)
+
         name.tr(":|@", "_")
       end
 

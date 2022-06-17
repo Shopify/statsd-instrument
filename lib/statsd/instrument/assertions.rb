@@ -57,6 +57,7 @@ module StatsD
       def assert_no_statsd_calls(*metric_names, datagrams: nil, client: nil, &block)
         if datagrams.nil?
           raise LocalJumpError, "assert_no_statsd_calls requires a block" unless block_given?
+
           datagrams = capture_statsd_datagrams_with_exception_handling(client: client, &block)
         end
 
@@ -152,6 +153,7 @@ module StatsD
       def assert_statsd_expectations(expectations, datagrams: nil, client: nil, &block)
         if datagrams.nil?
           raise LocalJumpError, "assert_statsd_expectations requires a block" unless block_given?
+
           datagrams = capture_statsd_datagrams_with_exception_handling(client: client, &block)
         end
 

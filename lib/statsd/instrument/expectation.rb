@@ -93,10 +93,12 @@ module StatsD
       #   to ensure that this logic matches the logic of the active datagram builder.
       def normalize_tags(tags)
         return [] unless tags
+
         tags = tags.map { |k, v| "#{k}:#{v}" } if tags.is_a?(Hash)
 
         # Fast path when no string replacement is needed
         return tags unless tags.any? { |tag| /[|,]/.match?(tag) }
+
         tags.map { |tag| tag.tr("|,", "") }
       end
     end

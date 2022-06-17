@@ -39,6 +39,7 @@ module RuboCop
 
       def keyword_arguments(node)
         return nil if node.arguments.empty?
+
         last_argument = if node.arguments.last&.type == :block_pass
           node.arguments[node.arguments.length - 2]
         else

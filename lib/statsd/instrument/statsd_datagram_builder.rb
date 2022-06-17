@@ -11,6 +11,7 @@ module StatsD
 
       def normalize_tags(tags)
         raise NotImplementedError, "#{self.class.name} does not support tags" if tags
+
         super
       end
     end
