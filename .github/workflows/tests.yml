@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['2.6', '2.7', '3.0']
+        ruby: ['2.6', '2.7', '3.0', '3.1']
 
         # Windows on macOS builds started failing, so they are disabled for noew
         # platform: [windows-2019, macOS-10.14, ubuntu-18.04]
@@ -20,7 +20,7 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: Setup Ruby
-      uses: actions/setup-ruby@v1
+      uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}
 

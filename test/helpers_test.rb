@@ -35,7 +35,6 @@ class HelpersTest < Minitest::Test
     StatsD.gauge("gauge", 15)
 
     assert_equal(2, metrics.length)
-
   ensure
     StatsD.singleton_client = @old_client
   end

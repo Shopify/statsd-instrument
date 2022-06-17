@@ -49,7 +49,7 @@ module StatsD
             raise RSpec::Expectations::ExpectationNotMetError, "No StatsD calls for metric #{metric_name} were made."
           elsif options[:times] && options[:times] != metrics.length
             raise RSpec::Expectations::ExpectationNotMetError, "The numbers of StatsD calls for metric " \
-             "#{metric_name} was unexpected. Expected #{options[:times].inspect}, got #{metrics.length}"
+              "#{metric_name} was unexpected. Expected #{options[:times].inspect}, got #{metrics.length}"
           end
 
           [:sample_rate, :value, :tags].each do |expectation|

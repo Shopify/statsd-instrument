@@ -136,7 +136,7 @@ module UDPSinkTests
 
         assert_equal(
           "[#{@sink_class}] Resetting connection because of " \
-          "Errno::EDESTADDRREQ: Destination address required\n",
+            "Errno::EDESTADDRREQ: Destination address required\n",
           logs.string,
         )
       ensure
