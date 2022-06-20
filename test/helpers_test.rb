@@ -38,4 +38,44 @@ class HelpersTest < Minitest::Test
   ensure
     StatsD.singleton_client = @old_client
   end
+
+  def test_add_tag_works_for_nil
+    assert_equal({ key: 123 }, StatsD::Instrument::Helpers.add_tag(nil, :key, 123))
+  end
+
+  def test_add_tag_works_for_hashes
+    assert_equal({ key: 123 }, StatsD::Instrument::Helpers.add_tag({}, :key, 123))
+
+    existing = { existing: 123 }
+    assert_equal({ existing: 123, new: 456 }, StatsD::Instrument::Helpers.add_tag(existing, :new, 456))
+
+    # ensure we do not modify the existing tags
+    assert_equal({ existing: 123 }, existing)
+  end
+
+  def test_add_tag_works_for_arrays
+    assert_equal(["key:123"], StatsD::Instrument::Helpers.add_tag([], :key, 123))
+
+    existing = ["existing:123"]
+    assert_equal(["existing:123", "new:456"], StatsD::Instrument::Helpers.add_tag(existing, :new, 456))
+
+    # ensure we do not modify the existing tags
+    assert_equal(["existing:123"], existing)
+  end
+
+  def test_add_tag_works_for_strings
+    assert_equal("key:123", StatsD::Instrument::Helpers.add_tag("", :key, 123))
+
+    existing = "existing:123"
+    assert_equal("existing:123,new:456", StatsD::Instrument::Helpers.add_tag(existing, :new, 456))
+
+    # ensure we do not modify the existing tags
+    assert_equal("existing:123", existing)
+  end
+
+  def test_add_tags_raises_for_other
+    assert_raises(ArgumentError, "add_tag only supports string, array or hash, Integer provided") do
+      StatsD::Instrument::Helpers.add_tag(1, :key, 123)
+    end
+  end
 end
