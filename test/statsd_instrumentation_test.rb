@@ -159,6 +159,38 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::UniqueGateway.statsd_remove_count_success(:ssl_post, "ActiveMerchant.Gateway")
   end
 
+  def test_statsd_count_success_tag_error_class
+    ActiveMerchant::Base.statsd_count_success(:ssl_post, "ActiveMerchant.Base", tag_error_class: true)
+
+    assert_statsd_increment("ActiveMerchant.Base.success", tags: nil) do
+      ActiveMerchant::Base.new.ssl_post(true)
+    end
+
+    assert_statsd_increment("ActiveMerchant.Base.failure", tags: ["error_class:RuntimeError"]) do
+      assert_raises(RuntimeError, "Not OK") do
+        ActiveMerchant::Base.new.ssl_post(false)
+      end
+    end
+  ensure
+    ActiveMerchant::Base.statsd_remove_count_success(:ssl_post, "ActiveMerchant.Base")
+  end
+
+  def test_statsd_count_success_tag_error_class_is_opt_in
+    ActiveMerchant::Base.statsd_count_success(:ssl_post, "ActiveMerchant.Base")
+
+    assert_statsd_increment("ActiveMerchant.Base.success", tags: nil) do
+      ActiveMerchant::Base.new.ssl_post(true)
+    end
+
+    assert_statsd_increment("ActiveMerchant.Base.failure", tags: nil) do
+      assert_raises(RuntimeError, "Not OK") do
+        ActiveMerchant::Base.new.ssl_post(false)
+      end
+    end
+  ensure
+    ActiveMerchant::Base.statsd_remove_count_success(:ssl_post, "ActiveMerchant.Base")
+  end
+
   def test_statsd_count
     ActiveMerchant::Gateway.statsd_count(:ssl_post, "ActiveMerchant.Gateway.ssl_post")
 

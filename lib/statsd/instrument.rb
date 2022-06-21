@@ -104,24 +104,26 @@ module StatsD
     # @param method (see #statsd_measure)
     # @param name (see #statsd_measure)
     # @param metric_options (see #statsd_measure)
+    # @param tag_error_class add a <tt>error_class</tt> tag with the error class when an error is thrown
     # @yield You can pass a block to this method if you want to define yourself what is a successful call
     #   based on the return value of the method.
     # @yieldparam result The return value of the instrumented method.
     # @yieldreturn [Boolean] Return true iff the return value is considered a success, false otherwise.
     # @return [void]
     # @see #statsd_count_if
-    def statsd_count_success(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
+    def statsd_count_success(method, name, sample_rate: nil,
+      tags: nil, no_prefix: false, client: nil, tag_error_class: false)
       add_to_method(method, name, :count_success) do
         define_method(method) do |*args, &block|
           truthiness = result = super(*args, &block)
-        rescue
+        rescue => error
           truthiness = false
           raise
         else
           if block_given?
             begin
               truthiness = yield(result)
-            rescue
+            rescue => error
               truthiness = false
             end
           end
@@ -130,6 +132,9 @@ module StatsD
           client ||= StatsD.singleton_client
           suffix = truthiness == false ? "failure" : "success"
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
+
+          tags = Helpers.add_tag(tags, :error_class, error.class.name) if tag_error_class && error
+
           client.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
         end
       end

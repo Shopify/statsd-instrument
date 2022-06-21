@@ -6,7 +6,7 @@ section below.
 
 ### Unreleased changes
 
-_Nothing yet_
+- Add `tag_error_class` option to `statsd_count_success` which tags the class of a thrown error
 
 ## Version 3.1.2
 
