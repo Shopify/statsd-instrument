@@ -313,7 +313,11 @@ module StatsD
         start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         begin
           yield
-        ensure
+        rescue => e 
+          # If there's an exception, calculate the latency and emit it in a rescue block
+          # instead of an ensure block as the call to emit can raise another exception, and
+          # raising an exception within an ensure block can cause issues.
+          # https://bugs.ruby-lang.org/issues/13882
           stop = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
           sample_rate ||= @default_sample_rate
@@ -322,6 +326,15 @@ module StatsD
             latency_in_ms = 1000.0 * (stop - start)
             emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
           end
+          raise e
+        end
+        stop = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+        sample_rate ||= @default_sample_rate
+        if sample?(sample_rate)
+          metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
+          latency_in_ms = 1000.0 * (stop - start)
+          emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
         end
       end
 

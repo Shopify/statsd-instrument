@@ -155,6 +155,17 @@ class ClientTest < Minitest::Test
   end
 
   def test_latency_calls_block_even_when_not_sending_a_sample
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    datagrams = @client.capture do
+      assert_raises(StandardError) do 
+        @client.latency("foo", sample_rate: 0) { raise StandardError "Error in block" }
+      end
+    end
+    assert_equal(1, datagrams.size)
+    assert_equal("foo:100.0|ms", datagrams.first.source)
+  end
+  
+  def test_latency_emits_metrics_when_exception_is_raised
     called = false
     @client.capture do
       @client.latency("foo", sample_rate: 0) { called = true }
