@@ -8,6 +8,10 @@ section below.
 
 _Nothing yet_
 
+## Version 3.2.1
+
+- Fix a bug in UDP batching that could cause the Ruby process to be stuck on exit (#291).
+
 ## Version 3.2.0
 
 - Add `tag_error_class` option to `statsd_count_success` which tags the class of a thrown error
