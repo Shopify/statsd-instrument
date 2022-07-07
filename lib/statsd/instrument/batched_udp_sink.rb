@@ -23,7 +23,8 @@ module StatsD
         end
       end
 
-      def initialize(host, port, flush_interval: DEFAULT_FLUSH_INTERVAL, thread_priority: DEFAULT_THREAD_PRIORITY, flush_threshold: DEFAULT_FLUSH_THRESHOLD)
+      def initialize(host, port, flush_interval: DEFAULT_FLUSH_INTERVAL, thread_priority: DEFAULT_THREAD_PRIORITY,
+        flush_threshold: DEFAULT_FLUSH_THRESHOLD)
         @host = host
         @port = port
         @dispatcher = Dispatcher.new(host, port, flush_interval, flush_threshold, thread_priority)
@@ -184,19 +185,21 @@ module StatsD
 
         def send_packet(packet)
           retried = false
-          socket.send(packet, 0)
-        rescue SocketError, IOError, SystemCallError => error
-          StatsD.logger.debug do
-            "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
-          end
-          invalidate_socket
-          if retried
-            StatsD.logger.warning do
-              "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
+          begin
+            socket.send(packet, 0)
+          rescue SocketError, IOError, SystemCallError => error
+            StatsD.logger.debug do
+              "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
             end
-          else
-            retried = true
-            retry
+            invalidate_socket
+            if retried
+              StatsD.logger.warning do
+                "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
+              end
+            else
+              retried = true
+              retry
+            end
           end
         end
 
