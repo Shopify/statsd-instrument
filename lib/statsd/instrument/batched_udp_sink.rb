@@ -64,9 +64,18 @@ module StatsD
             # If the dispatcher thread is dead, we assume it is because
             # the process was forked. So to avoid ending datagrams twice
             # we clear the buffer.
-            @buffer.clear
-            @dispatcher_thread = Thread.new { dispatch }
+            # However if the main the main thread is dead, we won't be able
+            # to spawn a new thread, so we fallback to sending our datagram directly.
+            if Thread.main.alive?
+              @buffer.clear
+              @dispatcher_thread = Thread.new { dispatch }
+            else
+              @buffer << datagram
+              flush
+              return self
+            end
           end
+
           @buffer << datagram
           self
         end
