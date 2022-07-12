@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "set"
+
 module StatsD
   module Instrument
     # @private
