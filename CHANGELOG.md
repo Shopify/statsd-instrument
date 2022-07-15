@@ -6,7 +6,7 @@ section below.
 
 ### Unreleased changes
 
-_Nothing yet_
+- Require `set` explicitly, to avoid breaking tests for users of this library (#311)
 
 ## Version 3.2.1
 
