@@ -45,6 +45,10 @@ The following environment variables are supported:
 - `STATSD_FLUSH_INTERVAL`: (default: `1.0`) The interval in seconds at which
   events are sent in batch. Only applicable to the UDP configuration. If set
   to `0.0`, metrics are sent immediately.
+- `STATSD_BUFFER_CAPACITY`: (default: `5000`) The maximum amount of events that
+  may be buffered before emitting threads will start to block. Increasing this
+  value may help for application generating spikes of events. However if the
+  application emit events faster than they can be sent, increasing it won't help.
 
 ## StatsD keys
 

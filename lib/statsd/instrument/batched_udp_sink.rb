@@ -8,7 +8,8 @@ module StatsD
       DEFAULT_FLUSH_INTERVAL = 1.0
       DEFAULT_THREAD_PRIORITY = 100
       DEFAULT_FLUSH_THRESHOLD = 50
-      MAX_PACKET_SIZE = 508
+      DEFAULT_BUFFER_CAPACITY = 5_000
+      DEFAULT_MAX_PACKET_SIZE = 1432
 
       def self.for_addr(addr, **kwargs)
         host, port_as_string = addr.split(":", 2)
@@ -23,11 +24,26 @@ module StatsD
         end
       end
 
-      def initialize(host, port, flush_interval: DEFAULT_FLUSH_INTERVAL, thread_priority: DEFAULT_THREAD_PRIORITY,
-        flush_threshold: DEFAULT_FLUSH_THRESHOLD)
+      def initialize(
+        host,
+        port,
+        flush_interval: DEFAULT_FLUSH_INTERVAL,
+        thread_priority: DEFAULT_THREAD_PRIORITY,
+        flush_threshold: DEFAULT_FLUSH_THRESHOLD,
+        buffer_capacity: DEFAULT_BUFFER_CAPACITY,
+        max_packet_size: DEFAULT_MAX_PACKET_SIZE
+      )
         @host = host
         @port = port
-        @dispatcher = Dispatcher.new(host, port, flush_interval, flush_threshold, thread_priority)
+        @dispatcher = Dispatcher.new(
+          host,
+          port,
+          flush_interval,
+          flush_threshold,
+          buffer_capacity,
+          thread_priority,
+          max_packet_size,
+        )
         ObjectSpace.define_finalizer(self, self.class.finalize(@dispatcher))
       end
 
@@ -57,13 +73,15 @@ module StatsD
           Concurrent::Array
         end
 
-        def initialize(host, port, flush_interval, flush_threshold, thread_priority)
+        def initialize(host, port, flush_interval, flush_threshold, buffer_capacity, thread_priority, max_packet_size)
           @host = host
           @port = port
           @interrupted = false
           @flush_interval = flush_interval
           @flush_threshold = flush_threshold
+          @buffer_capacity = buffer_capacity
           @thread_priority = thread_priority
+          @max_packet_size = max_packet_size
           @buffer = BUFFER_CLASS.new
           @dispatcher_thread = Thread.new { dispatch }
           @pid = Process.pid
@@ -79,6 +97,25 @@ module StatsD
             # We only signal when the queue size is a multiple of `flush_threshold`
             if @buffer.size % @flush_threshold == 0
               wakeup_thread
+            end
+
+            # A SizedQueue would be perfect, except that it doesn't have a timeout
+            # Ref: https://bugs.ruby-lang.org/issues/18774
+            if @buffer.size >= @buffer_capacity
+              StatsD.logger.warn do
+                "[#{self.class.name}] Max buffer size reached (#{@buffer_capacity}), pausing " \
+                  "thread##{Thread.current.object_id}"
+              end
+              before = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+              @monitor.synchronize do
+                while @buffer.size >= @buffer_capacity && @dispatcher_thread.alive?
+                  @condition.wait(0.01)
+                end
+              end
+              duration = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond) - before
+              StatsD.logger.warn do
+                "[#{self.class.name}] thread##{Thread.current.object_id} resumed after #{duration.round(2)}ms"
+              end
             end
           else
             flush
@@ -123,12 +160,11 @@ module StatsD
           datagrams = @buffer.shift(@buffer.size)
 
           until datagrams.empty?
-            packet = String.new(datagrams.shift, encoding: Encoding::BINARY, capacity: MAX_PACKET_SIZE)
+            packet = String.new(datagrams.shift, encoding: Encoding::BINARY, capacity: @max_packet_size)
 
-            until datagrams.empty? || packet.bytesize + datagrams.first.bytesize + 1 > MAX_PACKET_SIZE
+            until datagrams.empty? || packet.bytesize + datagrams.first.bytesize + 1 > @max_packet_size
               packet << NEWLINE << datagrams.shift
             end
-
             send_packet(packet)
           end
         end
@@ -161,6 +197,10 @@ module StatsD
             begin
               start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
               flush
+
+              # Other threads may have queued more events while we were doing IO
+              flush while @buffer.size > @flush_threshold
+
               next_sleep_duration = @flush_interval - (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
 
               if next_sleep_duration > 0

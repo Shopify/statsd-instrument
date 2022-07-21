@@ -16,28 +16,48 @@ else
 end
 
 intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}"
+log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}.log"
 FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
 
 # Set up an UDP listener to which we can send StatsD packets
 receiver = UDPSocket.new
 receiver.bind("localhost", 0)
 
-StatsD.singleton_client = StatsD::Instrument::Environment.new(
+log_file = File.open(log_filename, "w+", level: Logger::WARN)
+StatsD.logger = Logger.new(log_file)
+
+udp_client = StatsD::Instrument::Environment.new(
+  "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
+  "STATSD_IMPLEMENTATION" => "dogstatsd",
+  "STATSD_ENV" => "production",
+  "STATSD_FLUSH_INTERVAL" => "0",
+).client
+
+batched_udp_client = StatsD::Instrument::Environment.new(
   "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
   "STATSD_IMPLEMENTATION" => "dogstatsd",
   "STATSD_ENV" => "production",
 ).client
 
+
+def send_metrics(client)
+  client.increment("StatsD.increment", 10)
+  client.measure("StatsD.measure") { 1 + 1 }
+  client.gauge("StatsD.gauge", 12.0, tags: ["foo:bar", "quc"])
+  client.set("StatsD.set", "value", tags: { foo: "bar", baz: "quc" })
+  if client.datagram_builder_class == StatsD::Instrument::DogStatsDDatagramBuilder
+    client.event("StasD.event", "12345")
+    client.service_check("StatsD.service_check", "ok")
+  end
+end
+
 report = Benchmark.ips do |bench|
-  bench.report("StatsD metrics to local UDP receiver (branch: #{branch}, sha: #{revision[0, 7]})") do
-    StatsD.increment("StatsD.increment", 10)
-    StatsD.measure("StatsD.measure") { 1 + 1 }
-    StatsD.gauge("StatsD.gauge", 12.0, tags: ["foo:bar", "quc"])
-    StatsD.set("StatsD.set", "value", tags: { foo: "bar", baz: "quc" })
-    if StatsD.singleton_client.datagram_builder_class == StatsD::Instrument::DogStatsDDatagramBuilder
-      StatsD.event("StasD.event", "12345")
-      StatsD.service_check("StatsD.service_check", "ok")
-    end
+  bench.report("local UDP sync (branch: #{branch}, sha: #{revision[0, 7]})") do
+    send_metrics(udp_client)
+  end
+
+  bench.report("local UDP batched (branch: #{branch}, sha: #{revision[0, 7]})") do
+    send_metrics(batched_udp_client)
   end
 
   # Store the results in between runs
@@ -56,4 +76,12 @@ elsif ENV["KEEP_RESULTS"]
   puts "The intermediate results have been stored in #{intermediate_results_filename}"
 else
   File.unlink(intermediate_results_filename)
+end
+
+log_file.close
+logs = File.read(log_filename)
+unless logs.empty?
+  puts
+  puts "==== logs ===="
+  puts logs 
 end

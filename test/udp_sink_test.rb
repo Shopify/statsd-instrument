@@ -32,10 +32,9 @@ module UDPSinkTests
     refute(udp_sink.sample?(0.5))
   end
 
-  def test_parallelism
+  def test_concurrency
     udp_sink = build_sink(@host, @port)
-    50.times.map { |i| Thread.new { udp_sink << "foo:#{i}|c" << "bar:#{i}|c" } }
-    Thread.pass
+    threads = 50.times.map { |i| Thread.new { udp_sink << "foo:#{i}|c" << "bar:#{i}|c" } }
     datagrams = []
 
     while @receiver.wait_readable(2)
@@ -44,6 +43,8 @@ module UDPSinkTests
     end
 
     assert_equal(100, datagrams.size)
+  ensure
+    threads&.each(&:kill)
   end
 
   class SimpleFormatter < ::Logger::Formatter
@@ -186,7 +187,7 @@ module UDPSinkTests
     private
 
     def build_sink(host = @host, port = @port)
-      sink = @sink_class.new(host, port, flush_threshold: default_flush_threshold)
+      sink = @sink_class.new(host, port, flush_threshold: default_flush_threshold, buffer_capacity: 50)
       @sinks << sink
       sink
     end
@@ -199,7 +200,7 @@ module UDPSinkTests
   class BatchedUDPSinkTest < Minitest::Test
     include BatchedUDPSinkTests
 
-    def test_parallelism_buffering
+    def test_concurrency_buffering
       udp_sink = build_sink(@host, @port)
       threads = 50.times.map do |i|
         Thread.new do
@@ -207,8 +208,9 @@ module UDPSinkTests
         end
       end
       threads.each(&:join)
-
       assert_equal(200, read_datagrams(10, timeout: 2).size)
+    ensure
+      threads&.each(&:kill)
     end
   end
 
