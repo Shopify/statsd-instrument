@@ -6,6 +6,14 @@ section below.
 
 ### Unreleased changes
 
+## Version 3.3.0
+
+- UDP Batching now has a max queue size and emitter threads will block if the queue
+  reaches the limit. This is to prevent the queue from growing unbounded.
+  More generally the UDP batching mode was optimized to improve throughput and to
+  flush the queue more eagerly (#309).
+- Added `STATSD_BUFFER_CAPACITY` configuration.
+- Added `STATSD_MAX_PACKET_SIZE` configuration.
 - Require `set` explicitly, to avoid breaking tests for users of this library (#311)
 
 ## Version 3.2.1
