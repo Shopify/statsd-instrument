@@ -6,11 +6,15 @@ module StatsD
     #   to become the new default in the next major release of this library.
     class BatchedUDPSink
       DEFAULT_FLUSH_INTERVAL = 1.0
-      MAX_PACKET_SIZE = 508
+      DEFAULT_THREAD_PRIORITY = 100
+      DEFAULT_FLUSH_THRESHOLD = 50
+      DEFAULT_BUFFER_CAPACITY = 5_000
+      # https://docs.datadoghq.com/developers/dogstatsd/high_throughput/?code-lang=ruby#ensure-proper-packet-sizes
+      DEFAULT_MAX_PACKET_SIZE = 1472
 
-      def self.for_addr(addr, flush_interval: DEFAULT_FLUSH_INTERVAL)
+      def self.for_addr(addr, **kwargs)
         host, port_as_string = addr.split(":", 2)
-        new(host, Integer(port_as_string), flush_interval: flush_interval)
+        new(host, Integer(port_as_string), **kwargs)
       end
 
       attr_reader :host, :port
@@ -21,10 +25,26 @@ module StatsD
         end
       end
 
-      def initialize(host, port, flush_interval: DEFAULT_FLUSH_INTERVAL)
+      def initialize(
+        host,
+        port,
+        flush_interval: DEFAULT_FLUSH_INTERVAL,
+        thread_priority: DEFAULT_THREAD_PRIORITY,
+        flush_threshold: DEFAULT_FLUSH_THRESHOLD,
+        buffer_capacity: DEFAULT_BUFFER_CAPACITY,
+        max_packet_size: DEFAULT_MAX_PACKET_SIZE
+      )
         @host = host
         @port = port
-        @dispatcher = Dispatcher.new(host, port, flush_interval)
+        @dispatcher = Dispatcher.new(
+          host,
+          port,
+          flush_interval,
+          flush_threshold,
+          buffer_capacity,
+          thread_priority,
+          max_packet_size,
+        )
         ObjectSpace.define_finalizer(self, self.class.finalize(@dispatcher))
       end
 
@@ -35,6 +55,10 @@ module StatsD
       def <<(datagram)
         @dispatcher << datagram
         self
+      end
+
+      def shutdown(*args)
+        @dispatcher.shutdown(*args)
       end
 
       class Dispatcher
@@ -50,33 +74,54 @@ module StatsD
           Concurrent::Array
         end
 
-        def initialize(host, port, flush_interval)
+        def initialize(host, port, flush_interval, flush_threshold, buffer_capacity, thread_priority, max_packet_size)
           @host = host
           @port = port
           @interrupted = false
           @flush_interval = flush_interval
+          @flush_threshold = flush_threshold
+          @buffer_capacity = buffer_capacity
+          @thread_priority = thread_priority
+          @max_packet_size = max_packet_size
           @buffer = BUFFER_CLASS.new
           @dispatcher_thread = Thread.new { dispatch }
+          @pid = Process.pid
+          @monitor = Monitor.new
+          @condition = @monitor.new_cond
         end
 
         def <<(datagram)
-          unless @dispatcher_thread&.alive?
-            # If the dispatcher thread is dead, we assume it is because
-            # the process was forked. So to avoid ending datagrams twice
-            # we clear the buffer.
-            # However if the main the main thread is dead, we won't be able
-            # to spawn a new thread, so we fallback to sending our datagram directly.
-            if Thread.main.alive?
-              @buffer.clear
-              @dispatcher_thread = Thread.new { dispatch }
-            else
-              @buffer << datagram
-              flush
-              return self
+          if thread_healthcheck
+            @buffer << datagram
+
+            # To avoid sending too many signals when the thread is already flushing
+            # We only signal when the queue size is a multiple of `flush_threshold`
+            if @buffer.size % @flush_threshold == 0
+              wakeup_thread
             end
+
+            # A SizedQueue would be perfect, except that it doesn't have a timeout
+            # Ref: https://bugs.ruby-lang.org/issues/18774
+            if @buffer.size >= @buffer_capacity
+              StatsD.logger.warn do
+                "[#{self.class.name}] Max buffer size reached (#{@buffer_capacity}), pausing " \
+                  "thread##{Thread.current.object_id}"
+              end
+              before = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+              @monitor.synchronize do
+                while @buffer.size >= @buffer_capacity && @dispatcher_thread.alive?
+                  @condition.wait(0.01)
+                end
+              end
+              duration = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond) - before
+              StatsD.logger.warn do
+                "[#{self.class.name}] thread##{Thread.current.object_id} resumed after #{duration.round(2)}ms"
+              end
+            end
+          else
+            flush
           end
 
-          @buffer << datagram
           self
         end
 
@@ -91,6 +136,24 @@ module StatsD
 
         private
 
+        def wakeup_thread
+          begin
+            @monitor.synchronize do
+              @condition.signal
+            end
+          rescue ThreadError
+            # Can't synchronize from trap context
+            Thread.new { wakeup_thread }.join
+            return
+          end
+
+          begin
+            @dispatcher_thread&.run
+          rescue ThreadError # Somehow the thread just died
+            thread_healthcheck
+          end
+        end
+
         NEWLINE = "\n".b.freeze
         def flush
           return if @buffer.empty?
@@ -98,14 +161,36 @@ module StatsD
           datagrams = @buffer.shift(@buffer.size)
 
           until datagrams.empty?
-            packet = String.new(datagrams.pop, encoding: Encoding::BINARY, capacity: MAX_PACKET_SIZE)
+            packet = String.new(datagrams.shift, encoding: Encoding::BINARY, capacity: @max_packet_size)
 
-            until datagrams.empty? || packet.bytesize + datagrams.first.bytesize + 1 > MAX_PACKET_SIZE
+            until datagrams.empty? || packet.bytesize + datagrams.first.bytesize + 1 > @max_packet_size
               packet << NEWLINE << datagrams.shift
             end
-
             send_packet(packet)
           end
+        end
+
+        def thread_healthcheck
+          # TODO: We have a race condition on JRuby / Truffle here. It could cause multiple
+          # dispatcher threads to be spawned, which would cause problems.
+          # However we can't simply lock here as we might be called from a trap context.
+          unless @dispatcher_thread&.alive?
+            # If the main the main thread is dead the VM is shutting down so we won't be able
+            # to spawn a new thread, so we fallback to sending our datagram directly.
+            return false unless Thread.main.alive?
+
+            # If the dispatcher thread is dead, it might be because the process was forked.
+            # So to avoid sending datagrams twice we clear the buffer.
+            if @pid != Process.pid
+              StatsD.logger.info { "[#{self.class.name}] Restarting the dispatcher thread after fork" }
+              @pid = Process.pid
+              @buffer.clear
+            else
+              StatsD.logger.info { "[#{self.class.name}] Restarting the dispatcher thread" }
+            end
+            @dispatcher_thread = Thread.new { dispatch }.tap { |t| t.priority = @thread_priority }
+          end
+          true
         end
 
         def dispatch
@@ -113,9 +198,17 @@ module StatsD
             begin
               start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
               flush
+
+              # Other threads may have queued more events while we were doing IO
+              flush while @buffer.size > @flush_threshold
+
               next_sleep_duration = @flush_interval - (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start)
 
-              sleep(next_sleep_duration) if next_sleep_duration > 0
+              if next_sleep_duration > 0
+                @monitor.synchronize do
+                  @condition.wait(next_sleep_duration)
+                end
+              end
             rescue => error
               report_error(error)
             end
@@ -133,19 +226,21 @@ module StatsD
 
         def send_packet(packet)
           retried = false
-          socket.send(packet, 0)
-        rescue SocketError, IOError, SystemCallError => error
-          StatsD.logger.debug do
-            "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
-          end
-          invalidate_socket
-          if retried
-            StatsD.logger.warning do
-              "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
+          begin
+            socket.send(packet, 0)
+          rescue SocketError, IOError, SystemCallError => error
+            StatsD.logger.debug do
+              "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
             end
-          else
-            retried = true
-            retry
+            invalidate_socket
+            if retried
+              StatsD.logger.warn do
+                "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
+              end
+            else
+              retried = true
+              retry
+            end
           end
         end
 

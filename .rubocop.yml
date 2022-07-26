@@ -17,6 +17,12 @@ Naming/FileName:
   Exclude:
     - lib/statsd-instrument.rb
 
+Metrics/ParameterLists:
+  Enabled: false
+
+Style/WhileUntilModifier:
+  Enabled: false
+
 # Enable our own cops on our own repo
 
 StatsD/MetricReturnValue:

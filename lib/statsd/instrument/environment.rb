@@ -79,7 +79,15 @@ module StatsD
       end
 
       def statsd_flush_interval
-        Float(env.fetch("STATSD_FLUSH_INTERVAL", 1.0))
+        Float(env.fetch("STATSD_FLUSH_INTERVAL", StatsD::Instrument::BatchedUDPSink::DEFAULT_FLUSH_INTERVAL))
+      end
+
+      def statsd_buffer_capacity
+        Float(env.fetch("STATSD_BUFFER_CAPACITY", StatsD::Instrument::BatchedUDPSink::DEFAULT_BUFFER_CAPACITY))
+      end
+
+      def statsd_max_packet_size
+        Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::BatchedUDPSink::DEFAULT_MAX_PACKET_SIZE))
       end
 
       def client
@@ -90,7 +98,12 @@ module StatsD
         case environment
         when "production", "staging"
           if statsd_flush_interval > 0.0
-            StatsD::Instrument::BatchedUDPSink.for_addr(statsd_addr, flush_interval: statsd_flush_interval)
+            StatsD::Instrument::BatchedUDPSink.for_addr(
+              statsd_addr,
+              flush_interval: statsd_flush_interval,
+              buffer_capacity: statsd_buffer_capacity,
+              max_packet_size: statsd_max_packet_size,
+            )
           else
             StatsD::Instrument::UDPSink.for_addr(statsd_addr)
           end
