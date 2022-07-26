@@ -9,7 +9,8 @@ module StatsD
       DEFAULT_THREAD_PRIORITY = 100
       DEFAULT_FLUSH_THRESHOLD = 50
       DEFAULT_BUFFER_CAPACITY = 5_000
-      DEFAULT_MAX_PACKET_SIZE = 1432
+      # https://docs.datadoghq.com/developers/dogstatsd/high_throughput/?code-lang=ruby#ensure-proper-packet-sizes
+      DEFAULT_MAX_PACKET_SIZE = 1472
 
       def self.for_addr(addr, **kwargs)
         host, port_as_string = addr.split(":", 2)
@@ -233,7 +234,7 @@ module StatsD
             end
             invalidate_socket
             if retried
-              StatsD.logger.warning do
+              StatsD.logger.warn do
                 "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
               end
             else

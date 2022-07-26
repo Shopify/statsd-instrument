@@ -49,6 +49,10 @@ The following environment variables are supported:
   may be buffered before emitting threads will start to block. Increasing this
   value may help for application generating spikes of events. However if the
   application emit events faster than they can be sent, increasing it won't help.
+- `STATSD_MAX_PACKET_SIZE`: (default: `1472`) The maximum size of UDP packets.
+  If your network is properly configured to handle larger packets you may try
+  to increase this value for better performance, but most network can't handle
+  larger packets.
 
 ## StatsD keys
 
