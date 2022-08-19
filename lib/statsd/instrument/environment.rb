@@ -82,6 +82,10 @@ module StatsD
         Float(env.fetch("STATSD_FLUSH_INTERVAL", StatsD::Instrument::BatchedUDPSink::DEFAULT_FLUSH_INTERVAL))
       end
 
+      def experimental_sink
+        env.fetch("STATSD_EXPERIMENTAL", false)
+      end
+
       def statsd_buffer_capacity
         Float(env.fetch("STATSD_BUFFER_CAPACITY", StatsD::Instrument::BatchedUDPSink::DEFAULT_BUFFER_CAPACITY))
       end
@@ -98,7 +102,11 @@ module StatsD
         case environment
         when "production", "staging"
           if statsd_flush_interval > 0.0
-            StatsD::Instrument::BatchedUDPSink.for_addr(
+            sink_class = StatsD::Instrument::BatchedUDPSink
+            if sink_name = experimental_sink
+              sink_class = StatsD::Instrument.const_get(sink_name)
+            end
+            sink_class.for_addr(
               statsd_addr,
               flush_interval: statsd_flush_interval,
               buffer_capacity: statsd_buffer_capacity,

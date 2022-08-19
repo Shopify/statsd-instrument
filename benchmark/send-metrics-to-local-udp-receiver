@@ -26,17 +26,31 @@ receiver.bind("localhost", 0)
 log_file = File.open(log_filename, "w+", level: Logger::WARN)
 StatsD.logger = Logger.new(log_file)
 
-udp_client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
-  "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
-  "STATSD_IMPLEMENTATION" => "dogstatsd",
-  "STATSD_ENV" => "production",
-  "STATSD_FLUSH_INTERVAL" => "0",
-)).client
+# udp_client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
+#   "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
+#   "STATSD_IMPLEMENTATION" => "dogstatsd",
+#   "STATSD_ENV" => "production",
+#   "STATSD_FLUSH_INTERVAL" => "0",
+# )).client
 
 batched_udp_client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
   "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
   "STATSD_IMPLEMENTATION" => "dogstatsd",
   "STATSD_ENV" => "production",
+)).client
+
+batched_udp_client_v2 = StatsD::Instrument::Environment.new(ENV.to_h.merge(
+  "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
+  "STATSD_IMPLEMENTATION" => "dogstatsd",
+  "STATSD_ENV" => "production",
+  "STATSD_EXPERIMENTAL" => "BatchedUDPSinkV2",
+)).client
+
+batched_udp_client_v3 = StatsD::Instrument::Environment.new(ENV.to_h.merge(
+  "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
+  "STATSD_IMPLEMENTATION" => "dogstatsd",
+  "STATSD_ENV" => "production",
+  "STATSD_EXPERIMENTAL" => "BatchedUDPSinkV3",
 )).client
 
 def send_metrics(client)
@@ -50,18 +64,27 @@ def send_metrics(client)
   end
 end
 
+
 report = Benchmark.ips do |bench|
-  bench.report("local UDP sync (branch: #{branch}, sha: #{revision[0, 7]})") do
-    send_metrics(udp_client)
+  # bench.report("local UDP sync (branch: #{branch}, sha: #{revision[0, 7]})") do
+  #   send_metrics(udp_client)
+  # end
+
+  bench.report("thread condition") do
+    send_metrics(batched_udp_client)
   end
 
-  bench.report("local UDP batched (branch: #{branch}, sha: #{revision[0, 7]})") do
-    send_metrics(batched_udp_client)
+  bench.report("SizedQueue#pop(count:)") do
+    send_metrics(batched_udp_client_v2)
+  end
+
+  bench.report("SizedQueue#pop(nonblock)") do
+    send_metrics(batched_udp_client_v3)
   end
 
   # Store the results in between runs
   bench.save!(intermediate_results_filename)
-  bench.compare!
+  bench.compare!(order: :baseline)
 end
 
 receiver.close
@@ -83,4 +106,18 @@ unless logs.empty?
   puts
   puts "==== logs ===="
   puts logs
+end
+
+require 'stackprof'
+
+StackProf.run(mode: :cpu, out: "/tmp/stackprof-statsd-pop-count.dump", raw: true) do
+  250_000.times do
+    send_metrics(batched_udp_client_v2)
+  end
+end
+
+StackProf.run(mode: :cpu, out: "/tmp/stackprof-statsd-multi-pop.dump", raw: true) do
+  250_000.times do
+    send_metrics(batched_udp_client_v3)
+  end
 end

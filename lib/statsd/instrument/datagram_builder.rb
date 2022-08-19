@@ -86,10 +86,9 @@ module StatsD
 
       def generate_generic_datagram(name, value, type, sample_rate, tags)
         tags = normalize_tags(tags) + default_tags
-        datagram = +"#{@prefix}#{normalize_name(name)}:#{value}|#{type}"
-        datagram << "|@#{sample_rate}" if sample_rate && sample_rate < 1
-        datagram << "|##{tags.join(",")}" unless tags.empty?
-        datagram
+        sampling = sample_rate && sample_rate < 1 ? "|@#{sample_rate}" : nil
+        tagging = tags.empty? ? nil : "|##{tags.join(",")}"
+        "#{@prefix}#{normalize_name(name)}:#{value}|#{type}#{sampling}#{tagging}"
       end
     end
   end
