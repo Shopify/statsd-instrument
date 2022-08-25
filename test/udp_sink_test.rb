@@ -34,15 +34,14 @@ module UDPSinkTests
 
   def test_concurrency
     udp_sink = build_sink(@host, @port)
-    threads = 50.times.map { |i| Thread.new { udp_sink << "foo:#{i}|c" << "bar:#{i}|c" } }
-    datagrams = []
-
-    while @receiver.wait_readable(2)
-      datagram, _source = @receiver.recvfrom(4096)
-      datagrams += datagram.split("\n")
+    threads = 10.times.map do |i|
+      Thread.new do
+        udp_sink << "foo:#{i}|c" << "bar:#{i}|c" << "baz:#{i}|c" << "plop:#{i}|c"
+      end
     end
-
-    assert_equal(100, datagrams.size)
+    threads.each(&:join)
+    udp_sink.shutdown if udp_sink.respond_to?(:shutdown)
+    assert_equal(40, read_datagrams(40).size)
   ensure
     threads&.each(&:kill)
   end
@@ -111,11 +110,12 @@ module UDPSinkTests
     @sink_class.new(host, port)
   end
 
-  def read_datagrams(count, timeout: 2)
+  def read_datagrams(count, timeout: ENV["CI"] ? 5 : 1)
     datagrams = []
     count.times do
       if @receiver.wait_readable(timeout)
-        datagrams += @receiver.recvfrom_nonblock(1000).first.lines(chomp: true)
+        datagrams += @receiver.recvfrom(2000).first.lines(chomp: true)
+        break if datagrams.size >= count
       else
         break
       end
@@ -188,52 +188,13 @@ module UDPSinkTests
     private
 
     def build_sink(host = @host, port = @port)
-      sink = @sink_class.new(host, port, flush_threshold: default_flush_threshold, buffer_capacity: 50)
+      sink = @sink_class.new(host, port, buffer_capacity: 50)
       @sinks << sink
       sink
-    end
-
-    def default_flush_threshold
-      StatsD::Instrument::BatchedUDPSink::DEFAULT_FLUSH_THRESHOLD
     end
   end
 
   class BatchedUDPSinkTest < Minitest::Test
     include BatchedUDPSinkTests
-
-    def test_concurrency_buffering
-      udp_sink = build_sink(@host, @port)
-      threads = 50.times.map do |i|
-        Thread.new do
-          udp_sink << "foo:#{i}|c" << "bar:#{i}|c" << "baz:#{i}|c" << "plop:#{i}|c"
-        end
-      end
-      threads.each(&:join)
-      assert_equal(200, read_datagrams(10, timeout: 2).size)
-    ensure
-      threads&.each(&:kill)
-    end
-  end
-
-  class LowThresholdBatchedUDPSinkTest < Minitest::Test
-    include BatchedUDPSinkTests
-
-    def test_sends_datagram_when_termed
-      # When the main thread exit, the dispatcher thread is aborted
-      # and there's no exceptions or anything like that to rescue.
-      # So if the dispatcher thread poped some events from the buffer
-      # but didn't sent them yet, then they may be lost.
-      skip("Unfortunately this can't be guaranteed")
-    end
-    alias_method :test_sends_datagram_in_at_exit_callback, :test_sends_datagram_when_termed
-    alias_method :test_sends_datagram_before_exit, :test_sends_datagram_when_termed
-
-    private
-
-    # We run the same tests again, but this time we wake up the dispatcher
-    # thread on every call to make sure trap context is properly handled
-    def default_flush_threshold
-      1
-    end
   end
 end
