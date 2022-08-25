@@ -75,8 +75,7 @@ module StatsD
         end
 
         def initialize(host, port, flush_interval, flush_threshold, buffer_capacity, thread_priority, max_packet_size)
-          @host = host
-          @port = port
+          @udp_sink = RawUDPSink.new(host, port)
           @interrupted = false
           @flush_interval = flush_interval
           @flush_threshold = flush_threshold
@@ -166,7 +165,7 @@ module StatsD
             until datagrams.empty? || packet.bytesize + datagrams.first.bytesize + 1 > @max_packet_size
               packet << NEWLINE << datagrams.shift
             end
-            send_packet(packet)
+            @udp_sink << packet
           end
         end
 
@@ -215,47 +214,12 @@ module StatsD
           end
 
           flush
-          invalidate_socket
         end
 
         def report_error(error)
           StatsD.logger.error do
             "[#{self.class.name}] The dispatcher thread encountered an error #{error.class}: #{error.message}"
           end
-        end
-
-        def send_packet(packet)
-          retried = false
-          begin
-            socket.send(packet, 0)
-          rescue SocketError, IOError, SystemCallError => error
-            StatsD.logger.debug do
-              "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
-            end
-            invalidate_socket
-            if retried
-              StatsD.logger.warn do
-                "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
-              end
-            else
-              retried = true
-              retry
-            end
-          end
-        end
-
-        def socket
-          @socket ||= begin
-            socket = UDPSocket.new
-            socket.connect(@host, @port)
-            socket
-          end
-        end
-
-        def invalidate_socket
-          @socket&.close
-        ensure
-          @socket = nil
         end
       end
     end

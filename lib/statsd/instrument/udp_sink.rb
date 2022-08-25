@@ -2,9 +2,7 @@
 
 module StatsD
   module Instrument
-    # @note This class is part of the new Client implementation that is intended
-    #   to become the new default in the next major release of this library.
-    class UDPSink
+    class RawUDPSink
       def self.for_addr(addr)
         host, port_as_string = addr.split(":", 2)
         new(host, Integer(port_as_string))
@@ -15,7 +13,6 @@ module StatsD
       def initialize(host, port)
         @host = host
         @port = port
-        @mutex = Mutex.new
         @socket = nil
       end
 
@@ -24,29 +21,31 @@ module StatsD
       end
 
       def <<(datagram)
-        with_socket { |socket| socket.send(datagram, 0) }
-        self
-      rescue SocketError, IOError, SystemCallError => error
-        StatsD.logger.debug do
-          "[StatsD::Instrument::UDPSink] Resetting connection because of #{error.class}: #{error.message}"
+        retried = false
+        begin
+          socket.send(datagram, 0)
+        rescue SocketError, IOError, SystemCallError => error
+          StatsD.logger.debug do
+            "[StatsD::Instrument::UDPSink] Resetting connection because of #{error.class}: #{error.message}"
+          end
+          invalidate_socket
+          if retried
+            StatsD.logger.warn do
+              "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
+            end
+          else
+            retried = true
+            retry
+          end
         end
-        invalidate_socket
         self
       end
 
       private
 
-      def synchronize(&block)
-        @mutex.synchronize(&block)
-      rescue ThreadError
-        # In cases where a TERM or KILL signal has been sent, and we send stats as
-        # part of a signal handler, locks cannot be acquired, so we do our best
-        # to try and send the datagram without a lock.
-        yield
-      end
-
-      def with_socket
-        synchronize { yield(socket) }
+      def invalidate_socket
+        @socket&.close
+        @socket = nil
       end
 
       def socket
@@ -56,11 +55,24 @@ module StatsD
           socket
         end
       end
+    end
+    # @note This class is part of the new Client implementation that is intended
+    #   to become the new default in the next major release of this library.
+    class UDPSink < RawUDPSink
+      def initialize(*)
+        super
+        @mutex = Mutex.new
+      end
 
-      def invalidate_socket
-        synchronize do
-          @socket = nil
+      def <<(datagram)
+        @mutex.synchronize do
+          super
         end
+      rescue ThreadError
+        # In cases where a TERM or KILL signal has been sent, and we send stats as
+        # part of a signal handler, locks cannot be acquired, so we do our best
+        # to try and send the datagram without a lock.
+        super
       end
     end
   end

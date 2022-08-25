@@ -149,8 +149,9 @@ module UDPSinkTests
         seq = sequence("connect_fail_connect_succeed")
         socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
         socket.expects(:send).raises(Errno::EDESTADDRREQ).in_sequence(seq)
+        socket.expects(:close).in_sequence(seq)
         socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
-        socket.expects(:send).returns(1).in_sequence(seq)
+        socket.expects(:send).twice.returns(1).in_sequence(seq)
 
         udp_sink = build_sink("localhost", 8125)
         udp_sink << "foo:1|c"
