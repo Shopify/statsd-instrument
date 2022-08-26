@@ -7,38 +7,6 @@ require "tmpdir"
 require "socket"
 require "statsd-instrument"
 
-revision = %x(git rev-parse HEAD).rstrip
-base_revision = %x(git rev-parse origin/master).rstrip
-branch = if revision == base_revision
-  "master"
-else
-  %x(git rev-parse --abbrev-ref HEAD).rstrip
-end
-
-intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}"
-log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}.log"
-FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
-
-# Set up an UDP listener to which we can send StatsD packets
-receiver = UDPSocket.new
-receiver.bind("localhost", 0)
-
-log_file = File.open(log_filename, "w+", level: Logger::WARN)
-StatsD.logger = Logger.new(log_file)
-
-udp_client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
-  "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
-  "STATSD_IMPLEMENTATION" => "dogstatsd",
-  "STATSD_ENV" => "production",
-  "STATSD_FLUSH_INTERVAL" => "0",
-)).client
-
-batched_udp_client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
-  "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
-  "STATSD_IMPLEMENTATION" => "dogstatsd",
-  "STATSD_ENV" => "production",
-)).client
-
 def send_metrics(client)
   client.increment("StatsD.increment", 10)
   client.measure("StatsD.measure") { 1 + 1 }
@@ -50,37 +18,66 @@ def send_metrics(client)
   end
 end
 
-report = Benchmark.ips do |bench|
-  bench.report("local UDP sync (branch: #{branch}, sha: #{revision[0, 7]})") do
-    send_metrics(udp_client)
+def benchmark_implementation(name, env = {})
+  revision = %x(git rev-parse HEAD).rstrip
+  base_revision = %x(git rev-parse origin/master).rstrip
+  branch = if revision == base_revision
+    "master"
+  else
+    %x(git rev-parse --abbrev-ref HEAD).rstrip
   end
 
-  bench.report("local UDP batched (branch: #{branch}, sha: #{revision[0, 7]})") do
-    send_metrics(batched_udp_client)
+  intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}"
+  log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
+  FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
+
+  # Set up an UDP listener to which we can send StatsD packets
+  receiver = UDPSocket.new
+  receiver.bind("localhost", 0)
+
+  log_file = File.open(log_filename, "w+", level: Logger::WARN)
+  StatsD.logger = Logger.new(log_file)
+
+  udp_client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
+    "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
+    "STATSD_IMPLEMENTATION" => "dogstatsd",
+    "STATSD_ENV" => "production",
+  ).merge(env)).client
+
+  puts "===== #{name} ====="
+  report = Benchmark.ips do |bench|
+    bench.report("#{name} (branch: #{branch}, sha: #{revision[0, 7]})") do
+      send_metrics(udp_client)
+    end
+
+    # Store the results in between runs
+    bench.save!(intermediate_results_filename)
+    bench.compare!
   end
 
-  # Store the results in between runs
-  bench.save!(intermediate_results_filename)
-  bench.compare!
+  receiver.close
+  udp_client.shutdown if udp_client.respond_to?(:shutdown)
+
+  if report.entries.length == 1
+    puts
+    puts "To compare the performance of this revision against another revision (e.g. master),"
+    puts "check out a different branch and run this benchmark script again."
+  elsif ENV["KEEP_RESULTS"]
+    puts
+    puts "The intermediate results have been stored in #{intermediate_results_filename}"
+  else
+    File.unlink(intermediate_results_filename)
+  end
+
+  log_file.close
+  logs = File.read(log_filename)
+  unless logs.empty?
+    puts
+    puts "==== logs ===="
+    puts logs
+  end
+  puts "================"
 end
 
-receiver.close
-
-if report.entries.length == 1
-  puts
-  puts "To compare the performance of this revision against another revision (e.g. master),"
-  puts "check out a different branch and run this benchmark script again."
-elsif ENV["KEEP_RESULTS"]
-  puts
-  puts "The intermediate results have been stored in #{intermediate_results_filename}"
-else
-  File.unlink(intermediate_results_filename)
-end
-
-log_file.close
-logs = File.read(log_filename)
-unless logs.empty?
-  puts
-  puts "==== logs ===="
-  puts logs
-end
+benchmark_implementation("UDP sync", "STATSD_FLUSH_INTERVAL" => "0")
+benchmark_implementation("UDP batched")
