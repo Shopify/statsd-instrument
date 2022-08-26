@@ -75,7 +75,7 @@ module StatsD
         end
 
         def initialize(host, port, flush_interval, flush_threshold, buffer_capacity, thread_priority, max_packet_size)
-          @udp_sink = RawUDPSink.new(host, port)
+          @udp_sink = UDPSink.new(host, port)
           @interrupted = false
           @flush_interval = flush_interval
           @flush_threshold = flush_threshold

@@ -6,6 +6,9 @@ section below.
 
 ### Unreleased changes
 
+- The synchronous UDP sink now use one socket per thread, instead of a single socket
+  protected by a mutex.
+
 ## Version 3.3.0
 
 - UDP Batching now has a max queue size and emitter threads will block if the queue

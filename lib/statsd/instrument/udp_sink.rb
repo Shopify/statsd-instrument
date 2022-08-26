@@ -2,7 +2,9 @@
 
 module StatsD
   module Instrument
-    class RawUDPSink
+    # @note This class is part of the new Client implementation that is intended
+    #   to become the new default in the next major release of this library.
+    class UDPSink
       def self.for_addr(addr)
         host, port_as_string = addr.split(":", 2)
         new(host, Integer(port_as_string))
@@ -10,10 +12,18 @@ module StatsD
 
       attr_reader :host, :port
 
+      FINALIZER = ->(object_id) do
+        Thread.list.each do |thread|
+          if (store = thread["StatsD::UDPSink"])
+            store.delete(object_id)&.close
+          end
+        end
+      end
+
       def initialize(host, port)
+        ObjectSpace.define_finalizer(self, FINALIZER)
         @host = host
         @port = port
-        @socket = nil
       end
 
       def sample?(sample_rate)
@@ -44,35 +54,20 @@ module StatsD
       private
 
       def invalidate_socket
-        @socket&.close
-        @socket = nil
+        socket = thread_store.delete(object_id)
+        socket&.close
       end
 
       def socket
-        @socket ||= begin
+        thread_store[object_id] ||= begin
           socket = UDPSocket.new
           socket.connect(@host, @port)
           socket
         end
       end
-    end
-    # @note This class is part of the new Client implementation that is intended
-    #   to become the new default in the next major release of this library.
-    class UDPSink < RawUDPSink
-      def initialize(*)
-        super
-        @mutex = Mutex.new
-      end
 
-      def <<(datagram)
-        @mutex.synchronize do
-          super
-        end
-      rescue ThreadError
-        # In cases where a TERM or KILL signal has been sent, and we send stats as
-        # part of a signal handler, locks cannot be acquired, so we do our best
-        # to try and send the datagram without a lock.
-        super
+      def thread_store
+        Thread.current["StatsD::UDPSink"] ||= {}
       end
     end
   end
