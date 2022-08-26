@@ -13,11 +13,14 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 2.6
+        ruby-version: 3.1
         bundler-cache: true
 
     - name: Run benchmark on branch
       run: benchmark/send-metrics-to-local-udp-receiver
+
+    - name: Run throughput benchmark on branch
+      run: benchmark/local-udp-throughput
 
     - uses: actions/checkout@v1
       with:
@@ -28,3 +31,6 @@ jobs:
 
     - name: Run benchmark on master
       run: benchmark/send-metrics-to-local-udp-receiver
+
+    - name: Run throughput benchmark on master
+      run: benchmark/local-udp-throughput

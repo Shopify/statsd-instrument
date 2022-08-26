@@ -1,0 +1,67 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "benchmark/ips"
+require "tmpdir"
+require "socket"
+require "statsd-instrument"
+
+def send_metrics(client)
+  client.increment("StatsD.increment", 10)
+  client.measure("StatsD.measure") { 1 + 1 }
+  client.gauge("StatsD.gauge", 12.0, tags: ["foo:bar", "quc"])
+  client.set("StatsD.set", "value", tags: { foo: "bar", baz: "quc" })
+  client.event("StasD.event", "12345")
+  client.service_check("StatsD.service_check", "ok")
+end
+
+THREAD_COUNT = Integer(ENV.fetch("THREAD_COUNT", 5))
+EVENTS_PER_ITERATION = 6
+ITERATIONS = 50_000
+def benchmark_implementation(name, env = {})
+  revision = %x(git rev-parse HEAD).rstrip
+  base_revision = %x(git rev-parse origin/master).rstrip
+  branch = if revision == base_revision
+    "master"
+  else
+    %x(git rev-parse --abbrev-ref HEAD).rstrip
+  end
+
+  intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}"
+  log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
+  FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
+
+  # Set up an UDP listener to which we can send StatsD packets
+  receiver = UDPSocket.new
+  receiver.bind("localhost", 0)
+
+  log_file = File.open(log_filename, "w+", level: Logger::WARN)
+  StatsD.logger = Logger.new(log_file)
+
+  udp_client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
+    "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
+    "STATSD_IMPLEMENTATION" => "dogstatsd",
+    "STATSD_ENV" => "production",
+  ).merge(env)).client
+
+  puts "===== #{name} throughtput (#{THREAD_COUNT} threads) ====="
+  threads = THREAD_COUNT.times.map do
+    Thread.new do
+      count = ITERATIONS
+      while (count -= 1) > 0
+        send_metrics(udp_client)
+      end
+    end
+  end
+  start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  threads.each(&:join)
+  duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+  events_sent = THREAD_COUNT * EVENTS_PER_ITERATION * ITERATIONS
+  puts "events: #{(events_sent / duration).round(1)}/s"
+  receiver.close
+  udp_client.shutdown if udp_client.respond_to?(:shutdown)
+end
+
+benchmark_implementation("UDP sync", "STATSD_FLUSH_INTERVAL" => "0")
+benchmark_implementation("UDP batched")
