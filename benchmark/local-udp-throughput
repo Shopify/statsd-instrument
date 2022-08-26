@@ -20,6 +20,10 @@ THREAD_COUNT = Integer(ENV.fetch("THREAD_COUNT", 5))
 EVENTS_PER_ITERATION = 6
 ITERATIONS = 50_000
 def benchmark_implementation(name, env = {})
+  intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
+  log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
+  FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
+
   # Set up an UDP listener to which we can send StatsD packets
   receiver = UDPSocket.new
   receiver.bind("localhost", 0)
