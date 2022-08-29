@@ -64,4 +64,13 @@ class EnvironmentTest < Minitest::Test
     )
     assert_kind_of(StatsD::Instrument::UDPSink, env.client.sink)
   end
+
+  def test_client_from_env_uses_regular_udp_sink_when_buffer_capacity_is_0
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_USE_NEW_CLIENT" => "1",
+      "STATSD_ENV" => "staging",
+      "STATSD_BUFFER_CAPACITY" => "0",
+    )
+    assert_kind_of(StatsD::Instrument::UDPSink, env.client.sink)
+  end
 end

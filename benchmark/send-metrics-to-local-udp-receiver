@@ -79,5 +79,5 @@ def benchmark_implementation(name, env = {})
   puts "================"
 end
 
-benchmark_implementation("UDP sync", "STATSD_FLUSH_INTERVAL" => "0")
+benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
 benchmark_implementation("UDP batched")
