@@ -20,7 +20,13 @@ Naming/FileName:
 Metrics/ParameterLists:
   Enabled: false
 
+Metrics/BlockNesting:
+  Enabled: false
+
 Style/WhileUntilModifier:
+  Enabled: false
+
+Style/IdenticalConditionalBranches:
   Enabled: false
 
 # Enable our own cops on our own repo

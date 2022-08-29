@@ -42,13 +42,14 @@ The following environment variables are supported:
   overridden in a metric method call.
 - `STATSD_DEFAULT_TAGS`: A comma-separated list of tags to apply to all metrics.
   (Note: tags are not supported by all implementations.)
-- `STATSD_FLUSH_INTERVAL`: (default: `1.0`) The interval in seconds at which
-  events are sent in batch. Only applicable to the UDP configuration. If set
-  to `0.0`, metrics are sent immediately.
 - `STATSD_BUFFER_CAPACITY`: (default: `5000`) The maximum amount of events that
   may be buffered before emitting threads will start to block. Increasing this
   value may help for application generating spikes of events. However if the
   application emit events faster than they can be sent, increasing it won't help.
+  If set to `0`, batching will be disabled, and events will be sent in individual
+  UDP packets, which is much slower.
+- `STATSD_FLUSH_INTERVAL`: (default: `1`) Deprecated. Setting this to `0` is
+  equivalent to setting `STATSD_BUFFER_CAPACITY` to `0`.
 - `STATSD_MAX_PACKET_SIZE`: (default: `1472`) The maximum size of UDP packets.
   If your network is properly configured to handle larger packets you may try
   to increase this value for better performance, but most network can't handle

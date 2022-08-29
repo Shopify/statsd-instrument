@@ -6,6 +6,9 @@ section below.
 
 ### Unreleased changes
 
+- UDP Batching has been largely refactored again. The `STATSD_FLUSH_INTERVAL` environment variable
+  is deprecated. It still disable batching if set to `0`, but other than that is has no effect.
+  Setting `STATSD_BUFFER_CAPACITY` to `0` is now the recommended way to disable batching.
 - The synchronous UDP sink now use one socket per thread, instead of a single socket
   protected by a mutex.
 
