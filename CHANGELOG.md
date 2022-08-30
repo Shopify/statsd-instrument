@@ -4,7 +4,9 @@ This file documents the changes between releases of this library. When
 creating a pull request, please add an entry to the "unreleased changes"
 section below.
 
-### Unreleased changes
+## Unreleased changes
+
+## Version 3.4.0
 
 - UDP Batching has been largely refactored again. The `STATSD_FLUSH_INTERVAL` environment variable
   is deprecated. It still disable batching if set to `0`, but other than that is has no effect.
@@ -516,123 +518,123 @@ average metric considerably.
 
 - Add mutex around UDP socket invalidation (#147)
 
-### Version 2.3.0
+## Version 2.3.0
 
 - No changes from `beta6`, distributions are GA at DataDog so making the distribution changes GA in gem
 
-### Version 2.3.0.beta6
+## Version 2.3.0.beta6
 
 - Fix invalidate socket on connectivity issues in UDP (#135)
 
-### Version 2.3.0.beta5
+## Version 2.3.0.beta5
 
 - Fixes bug in return value for blocks used in distributions (#132)
 
-### Version 2.3.0.beta4
+## Version 2.3.0.beta4
 
 - Add support for distribution to accept a block
 - Add class method for defining and removing a distribution from a method (same as a measure)
 - Refactor most instrument methods to reduce code duplication
 
-### Version 2.3.0.beta3
+## Version 2.3.0.beta3
 
 - fix for `:as_dist` parameter in the `statsd_measure` class method
 
-### Version 2.3.0.beta2
+## Version 2.3.0.beta2
 
 - Add support for specifying a measure to emit as a distribution using `:as_dist` parameter
 
-### Version 2.3.0.beta
+## Version 2.3.0.beta
 
 - Add support for beta, Datadog specific distribution metrics
 - Invalidate socket on connectivity issues
 
-### Version 2.2.1
+## Version 2.2.1
 
 - Fix performance regression from v2.2.0
 
-### Version 2.2.0
+## Version 2.2.0
 
 - Add support for two new Datadog specific metric types: events and service checks.
 
-### Version 2.1.3
+## Version 2.1.3
 
 - The `assert_statsd_calls` test helper will now raise an exception whenever a block isn't passed.
 - Sending stats inside an exit handler will no longer cause programs to exit abruptly.
 
-### Version 2.1.2
+## Version 2.1.2
 
 - Use `prepend` instead of rewriting classes for metaprogramming methods.
 - RSpec: make matchers more flexible.
 - Bugfix: Only ask Rails for the environment when it's actually loaded.
 
-### Version 2.1.1
+## Version 2.1.1
 
 - Add `assert_statsd_calls` to from validating cases where one has multiple metrics with the same name and type being recorded, but with different options.
 
-### Version 2.1.0
+## Version 2.1.0
 
 - Fix rspec-rails compatibility
 - Add `value` keyword argument to all metric types.
 
-### Version 2.0.12
+## Version 2.0.12
 
 - Make StatsD client thread-safe
 - Assertions: Ensure sample rates have proper values.
 - Assertions: Make tag assertions work more intuitively
 - RSpec: Add backwards compatibility for RSpec 2
 
-### Version 2.0.11
+## Version 2.0.11
 
 - Don't change method visibility when adding instrumentation to methods using metaprogramming
 - RSpec: add support for Compound expectations
 
-### Version 2.0.10
+## Version 2.0.10
 
 - Assertions: allow ignoring certain tags when asserting for other tags to be present.
 
-### Version 2.0.9
+## Version 2.0.9
 
 - Better error message for `assert_no_statsd_calls`
 
-### Version 2.0.8
+## Version 2.0.8
 
 - More tag handling performance improvements.
 - RSpec matchers documentation improvements
 
-### Version 2.0.7
+## Version 2.0.7
 
 - Tag handling performance improvements.
 - Test against Ruby 2.2.
 - Drop support for Ruby 1.9.3.
 
-### Version 2.0.6
+## Version 2.0.6
 
 - Fix some loading order issues in Rails environments.
 - Default behavior: in a **staging** environment, the defaults are now the same as in a **production environment**.
 - Documentation overhaul
 
-### Version 2.0.5
+## Version 2.0.5
 
 - Allow for nested assertions using the `assert_statsd_*` assertion methods.
 
-### Version 2.0.4
+## Version 2.0.4
 
 - Add a Railtie to fix some initialization issues.
 
-### Version 2.0.3
+## Version 2.0.3
 
 - Assertion method bugfixes
 
-### Version 2.0.2
+## Version 2.0.2
 
 - Documentation fixes
 
-### Version 2.0.1
+## Version 2.0.1
 
 - Add assertion methods `assert_statsd_histogram`, `assert_statsd_set`, and `assert_statsd_key_value`.
 
-### Version 2.0.0
+## Version 2.0.0
 
 - Complete rewrite using pluggable backends.
 - Add assertion methods in `StatsD::Instrument::Assertions` to make testing easier and less brittle.
