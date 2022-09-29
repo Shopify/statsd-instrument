@@ -34,6 +34,15 @@ module StatsD
       name.respond_to?(:call) ? name.call(callee, args).gsub("::", ".") : name.gsub("::", ".")
     end
 
+    # Generates the tags for an instrumented method.
+    # @private
+    # @return [Array[String]]
+    def self.generate_tags(tags, callee, *args)
+      return if tags.nil?
+
+      tags.respond_to?(:call) ? tags.call(callee, args) : tags
+    end
+
     # Even though this method is considered private, and is no longer used internally,
     # applications in the wild rely on it. As a result, we cannot remove this method
     # until the next major version.
@@ -61,6 +70,8 @@ module StatsD
     # @param method [Symbol] The name of the method to instrument.
     # @param name [String, #call] The name of the metric to use. You can also pass in a
     #    callable to dynamically generate a metric name
+    # @param tags [Hash, #call] The tags to be associated with the metric. You can also
+    #    pass in a callable to dynamically generate the tags key and values
     # @param metric_options (see StatsD#measure)
     # @return [void]
     def statsd_measure(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
@@ -68,6 +79,7 @@ module StatsD
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          tags = StatsD::Instrument.generate_tags(tags, self, *args)
           client.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
             super(*args, &block)
           end
@@ -88,6 +100,7 @@ module StatsD
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          tags = StatsD::Instrument.generate_tags(tags, self, *args)
           client.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
             super(*args, &block)
           end
@@ -132,7 +145,7 @@ module StatsD
           client ||= StatsD.singleton_client
           suffix = truthiness == false ? "failure" : "success"
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
-
+          tags = StatsD::Instrument.generate_tags(tags, self, *args)
           tags = Helpers.add_tag(tags, :error_class, error.class.name) if tag_error_class && error
 
           client.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
@@ -172,6 +185,7 @@ module StatsD
           if truthiness
             client ||= StatsD.singleton_client
             key = StatsD::Instrument.generate_metric_name(name, self, *args)
+            tags = StatsD::Instrument.generate_tags(tags, self, *args)
             client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           end
         end
@@ -192,6 +206,7 @@ module StatsD
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
+          tags = StatsD::Instrument.generate_tags(tags, self, *args)
           client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
           super(*args, &block)
         end

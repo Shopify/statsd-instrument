@@ -223,6 +223,30 @@ class StatsDInstrumentationTest < Minitest::Test
     ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
   end
 
+  def test_statsd_count_with_tags_as_lambda
+    metric_namer = lambda { |object, args| "#{object.metric_name}.#{args.first}" }
+    metric_tagger = lambda { |_object, args| { "key": args.first } }
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, metric_namer, tags: metric_tagger)
+
+    assert_statsd_increment("subgateway.foo", tags: { "key": "foo" }) do
+      GatewaySubClass.new.purchase("foo")
+    end
+  ensure
+    ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
+  end
+
+  def test_statsd_count_with_tags_as_proc
+    metric_namer = proc { |object, args| "#{object.metric_name}.#{args.first}" }
+    metric_tagger = proc { |_object, args| { "key": args.first } }
+    ActiveMerchant::Gateway.statsd_count(:ssl_post, metric_namer, tags: metric_tagger)
+
+    assert_statsd_increment("subgateway.foo", tags: { "key": "foo" }) do
+      GatewaySubClass.new.purchase("foo")
+    end
+  ensure
+    ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
+  end
+
   def test_statsd_count_with_method_receiving_block
     ActiveMerchant::Base.statsd_count(:post_with_block, "ActiveMerchant.Base.post_with_block")
 
