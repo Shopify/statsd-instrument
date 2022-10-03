@@ -7,7 +7,7 @@ class StatsDInstrumentationTest < Minitest::Test
     class Base
       extend StatsD::Instrument
 
-      def ssl_post(arg)
+      def ssl_post(arg, async: false)
         if arg
           "OK"
         else
@@ -21,8 +21,8 @@ class StatsDInstrumentationTest < Minitest::Test
     end
 
     class Gateway < Base
-      def purchase(arg)
-        ssl_post(arg)
+      def purchase(arg, async: false)
+        ssl_post(arg, async: async)
         true
       rescue
         false
@@ -34,12 +34,12 @@ class StatsDInstrumentationTest < Minitest::Test
     end
 
     class UniqueGateway < Base
-      def ssl_post(arg)
+      def ssl_post(arg, async: false)
         { success: arg }
       end
 
-      def purchase(arg)
-        ssl_post(arg)
+      def purchase(arg, async: false)
+        ssl_post(arg, async: async)
       end
     end
   end
