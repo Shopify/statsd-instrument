@@ -255,6 +255,16 @@ GoogleBase.statsd_count :insert, 'GoogleBase.insert', tags: ['env:production']
 If implementation is not set to `:datadog`, tags will not be included in the UDP packets, and a
 warning is logged to `StatsD.logger`.
 
+You can use lambda function that instead of a list of tags to set the metric tags.
+Like the dynamic metric name, the lambda function must accept two arguments:
+the object the function is being called on and the array of arguments
+passed.
+
+``` ruby
+metric_tagger = lambda { |object, args| { "key": args.first } }
+GoogleBase.statsd_count(:insert, 'GoogleBase.insert', tags: metric_tagger)
+```
+
 ## Testing
 
 This library comes with a module called `StatsD::Instrument::Assertions` and `StatsD::Instrument::Matchers` to help you write tests

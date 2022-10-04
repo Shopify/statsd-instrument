@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+- Allow user to provide a lambda function to dynamically set metric tags
+
 ## Version 3.4.0
 
 - UDP Batching has been largely refactored again. The `STATSD_FLUSH_INTERVAL` environment variable
