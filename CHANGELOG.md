@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.0
+
 - Allow user to provide a lambda function to dynamically set metric tags
 
 ## Version 3.4.0
