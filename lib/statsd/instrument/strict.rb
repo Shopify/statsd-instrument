@@ -97,8 +97,8 @@ module StatsD
         unless sample_rate.nil? || sample_rate.is_a?(Numeric)
           raise ArgumentError, "The sample_rate argument should be a number, got #{sample_rate}"
         end
-        unless tags.nil? || tags.is_a?(Hash) || tags.is_a?(Array)
-          raise ArgumentError, "The tags argument should be a hash or an array, got #{tags.inspect}"
+        unless tags.nil? || tags.is_a?(Hash) || tags.is_a?(Array) || tags.is_a?(Proc)
+          raise ArgumentError, "The tags argument should be a hash, a proc or an array, got #{tags.inspect}"
         end
       end
     end
