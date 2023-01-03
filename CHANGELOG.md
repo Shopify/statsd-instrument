@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.1
+
+- Fix bug when passing a lambda function to dynamically set the tags in the strict mode.
+
 ## Version 3.5.0
 
 - Allow user to provide a lambda function to dynamically set metric tags
