@@ -265,6 +265,8 @@ metric_tagger = lambda { |object, args| { "key": args.first } }
 GoogleBase.statsd_count(:insert, 'GoogleBase.insert', tags: metric_tagger)
 ```
 
+> You can only use the dynamic tag while using the instrumentation through metaprogramming methods
+
 ## Testing
 
 This library comes with a module called `StatsD::Instrument::Assertions` and `StatsD::Instrument::Matchers` to help you write tests
