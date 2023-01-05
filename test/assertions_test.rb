@@ -303,6 +303,23 @@ class AssertionsTest < Minitest::Test
       StatsD.increment("counter", tags: { foo: 1 })
       StatsD.increment("counter", tags: { foo: 2 })
     end
+
+    foo_1_metric = StatsD::Instrument::Expectation.increment("counter", times: 2, tags: ["foo:1"])
+    foo_2_metric = StatsD::Instrument::Expectation.increment("counter", times: 0, tags: ["foo:2"])
+    @test_case.assert_statsd_expectations([foo_1_metric, foo_2_metric]) do
+      StatsD.increment("counter", tags: { foo: 1 })
+      StatsD.increment("counter", tags: { foo: 1 })
+    end
+
+    assert_raises(Minitest::Assertion) do
+      foo_1_metric = StatsD::Instrument::Expectation.increment("counter", times: 2, tags: ["foo:1"])
+      foo_2_metric = StatsD::Instrument::Expectation.increment("counter", times: 0, tags: ["foo:2"])
+      @test_case.assert_statsd_expectations([foo_1_metric, foo_2_metric]) do
+        StatsD.increment("counter", tags: { foo: 1 })
+        StatsD.increment("counter", tags: { foo: 1 })
+        StatsD.increment("counter", tags: { foo: 2 })
+      end
+    end
   end
 
   def test_assert_statsd_increment_with_tags

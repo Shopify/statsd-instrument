@@ -165,6 +165,8 @@ module StatsD
           filtered_datagrams = datagrams.select { |m| m.type == expectation.type && m.name == expectation.name }
 
           if filtered_datagrams.empty?
+            next if expectation_times == 0
+
             flunk("No StatsD calls for metric #{expectation.name} of type #{expectation.type} were made.")
           end
 
@@ -193,7 +195,7 @@ module StatsD
         end
         expectations -= matched_expectations
 
-        unless expectations.empty?
+        if expectations.any? { |m| m.times != 0 }
           flunk("Unexpected StatsD calls; the following metric expectations " \
             "were not satisfied: #{expectations.inspect}")
         end
