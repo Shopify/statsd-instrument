@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.2
+
+- Fix bug on assertions to allow the user passes `times: 0` as expectation.
+
 ## Version 3.5.1
 
 - Fix bug when passing a lambda function to dynamically set the tags in the strict mode.
