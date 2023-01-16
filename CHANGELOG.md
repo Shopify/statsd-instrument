@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+- Improve shapes friendliness for Ruby 3.2+
+
 ## Version 3.5.2
 
 - Fix bug on assertions to allow the user passes `times: 0` as expectation.
