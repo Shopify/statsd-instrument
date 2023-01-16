@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.3
+
 - Improve shapes friendliness for Ruby 3.2+
 
 ## Version 3.5.2
