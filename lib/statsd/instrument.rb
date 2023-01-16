@@ -360,6 +360,12 @@ module StatsD
 
     def_delegators :singleton_client, :increment, :gauge, :set, :measure,
       :histogram, :distribution, :event, :service_check
+
+    private
+
+    def extended(klass)
+      klass.statsd_instrumentations # eagerly define
+    end
   end
 end
 
