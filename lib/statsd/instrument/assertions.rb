@@ -54,14 +54,22 @@ module StatsD
       # @return [void]
       # @raise [Minitest::Assertion] If an exception occurs, or if any metric (with the
       #   provided names, or any), occurred during the execution of the provided block.
-      def assert_no_statsd_calls(*metric_names, datagrams: nil, client: nil, &block)
+      def assert_no_statsd_calls(*metric_names, datagrams: nil, client: nil, no_prefix: false, &block)
+        client ||= StatsD.singleton_client
+
         if datagrams.nil?
           raise LocalJumpError, "assert_no_statsd_calls requires a block" unless block_given?
 
           datagrams = capture_statsd_datagrams_with_exception_handling(client: client, &block)
         end
 
-        datagrams.select! { |metric| metric_names.include?(metric.name) } unless metric_names.empty?
+        formatted_metrics = if no_prefix
+          metric_names
+        else
+          metric_names.map { |metric| StatsD::Instrument::Expectation.prefix_metric(metric, client: client) }
+        end
+
+        datagrams.select! { |metric| formatted_metrics.include?(metric.name) } unless formatted_metrics.empty?
         assert(datagrams.empty?, "No StatsD calls for metric #{datagrams.map(&:name).join(", ")} expected.")
       end
 

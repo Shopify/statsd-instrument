@@ -30,6 +30,11 @@ module StatsD
         def histogram(name, value = nil, **options)
           new(type: :h, name: name, value: value, **options)
         end
+
+        def prefix_metric(metric_name, client: nil)
+          client ||= StatsD.singleton_client
+          client&.prefix ? "#{client.prefix}.#{metric_name}" : metric_name
+        end
       end
 
       attr_accessor :times, :type, :name, :value, :sample_rate, :tags
@@ -37,9 +42,8 @@ module StatsD
       def initialize(client: nil, type:, name:, value: nil,
         sample_rate: nil, tags: nil, no_prefix: false, times: 1)
 
-        client ||= StatsD.singleton_client
         @type = type
-        @name = no_prefix || !client.prefix ? name : "#{client.prefix}.#{name}"
+        @name = no_prefix ? name : self.class.prefix_metric(name, client: client)
         @value = normalized_value_for_type(type, value) if value
         @sample_rate = sample_rate
         @tags = normalize_tags(tags)
