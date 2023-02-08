@@ -49,6 +49,13 @@ module StatsD
       # @param [Array<String>] metric_names (default: []) The metric names that are not
       #   allowed to happen inside the block. If this is set to `[]`, the assertion
       #   will fail if any metric occurs.
+      # @param [Array<StatsD::Instrument::Datagram>] datagrams (default: nil) The datagrams
+      #   to be inspected for metric emission.
+      # @param [StatsD::Instrument::Client] client (default: nil) The client to be used
+      #   for fetching datagrams (if not provided) and metric prefix. If not provided, the
+      #   singleton client will attempt to be used.
+      # @param [Boolean] no_prefix (default: false) A directive to indicate if the client's
+      #   prefix should be prepended to the metric names.
       # @yield A block in which the specified metric should not occur. This block
       #   should not raise any exceptions.
       # @return [void]
