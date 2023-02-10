@@ -88,6 +88,24 @@ class AssertionsTest < Minitest::Test
     end
     assert_equal(assertion.message, "No StatsD calls for metric prefix.counter expected.")
 
+    @test_case.expects(:warn).with(
+      "`assert_no_statsd_calls` will prefix metrics by default. `prefix.counter` skipped due to existing prefix."
+    )
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_no_statsd_calls("prefix.counter", client: client) do
+        client.increment("counter")
+      end
+    end
+    assert_equal(assertion.message, "No StatsD calls for metric prefix.counter expected.")
+
+    @test_case.expects(:warn).never
+    assertion = assert_raises(Minitest::Assertion) do
+      @test_case.assert_no_statsd_calls("prefix.counter", client: client, no_prefix: true) do
+        client.increment("counter")
+      end
+    end
+    assert_equal(assertion.message, "No StatsD calls for metric prefix.counter expected.")
+
     assertion = assert_raises(Minitest::Assertion) do
       @test_case.assert_no_statsd_calls("counter", client: client, no_prefix: true) do
         client.increment("counter", no_prefix: true)

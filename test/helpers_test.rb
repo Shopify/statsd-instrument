@@ -7,6 +7,11 @@ class HelpersTest < Minitest::Test
     test_class = Class.new(Minitest::Test)
     test_class.send(:include, StatsD::Instrument::Helpers)
     @test_case = test_class.new("fake")
+    @old_client = StatsD.singleton_client
+  end
+
+  def teardown
+    StatsD.singleton_client = @old_client
   end
 
   def test_capture_metrics_inside_block_only
@@ -77,5 +82,59 @@ class HelpersTest < Minitest::Test
     assert_raises(ArgumentError, "add_tag only supports string, array or hash, Integer provided") do
       StatsD::Instrument::Helpers.add_tag(1, :key, 123)
     end
+  end
+
+  def test_prefix_metric_returns_metric_if_no_prefix
+    metric = "metric"
+    client = StatsD::Instrument::Client.new(prefix: nil)
+    assert_equal(metric, StatsD::Instrument::Helpers.prefix_metric(metric, client: client))
+  end
+
+  def test_prefix_metric_returns_prefixed_metric
+    prefix = "prefix"
+    metric = "metric"
+    client = StatsD::Instrument::Client.new(prefix: prefix)
+    assert_equal("#{prefix}.#{metric}", StatsD::Instrument::Helpers.prefix_metric(metric, client: client))
+  end
+
+  def test_prefix_metric_can_use_singleton_client
+    prefix = "prefix"
+    metric = "metric"
+    StatsD.singleton_client = StatsD::Instrument::Client.new(prefix: prefix)
+    assert_equal("#{prefix}.#{metric}", StatsD::Instrument::Helpers.prefix_metric(metric))
+  end
+
+  def test_prefixed_metric_return_true_if_prefix_present
+    prefix = "prefix"
+    metric = "prefix.metric"
+    client = StatsD::Instrument::Client.new(prefix: prefix)
+    assert(StatsD::Instrument::Helpers.prefixed_metric?(metric, client: client))
+  end
+
+  def test_prefixed_meric_returns_false_if_prefix_missing
+    prefix = "prefix"
+    metric = "metric"
+    client = StatsD::Instrument::Client.new(prefix: prefix)
+    refute(StatsD::Instrument::Helpers.prefixed_metric?(metric, client: client))
+  end
+
+  def test_prefixed_metric_returns_false_if_prefix_not_at_beginning
+    prefix = "prefix"
+    metric = "metric.prefix"
+    client = StatsD::Instrument::Client.new(prefix: prefix)
+    refute(StatsD::Instrument::Helpers.prefixed_metric?(metric, client: client))
+  end
+
+  def test_prefixed_metrics_returns_false_if_no_prefix_defined
+    metric = "prefix.metric"
+    client = StatsD::Instrument::Client.new(prefix: nil)
+    refute(StatsD::Instrument::Helpers.prefixed_metric?(metric, client: client))
+  end
+
+  def test_prefixed_metric_can_use_singleton_client
+    prefix = "prefix"
+    metric = "prefix.metric"
+    StatsD.singleton_client = StatsD::Instrument::Client.new(prefix: prefix)
+    assert(StatsD::Instrument::Helpers.prefixed_metric?(metric))
   end
 end

@@ -26,6 +26,18 @@ module StatsD
 
         tags
       end
+
+      def self.prefix_metric(metric_name, client: nil)
+        client ||= StatsD.singleton_client
+        client&.prefix ? "#{client.prefix}.#{metric_name}" : metric_name
+      end
+
+      def self.prefixed_metric?(metric_name, client: nil)
+        client ||= StatsD.singleton_client
+        return false unless client&.prefix
+
+        metric_name =~ /\A#{Regexp.escape(client.prefix)}\./
+      end
     end
   end
 end

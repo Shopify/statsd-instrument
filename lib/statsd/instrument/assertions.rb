@@ -73,7 +73,14 @@ module StatsD
         formatted_metrics = if no_prefix
           metric_names
         else
-          metric_names.map { |metric| StatsD::Instrument::Expectation.prefix_metric(metric, client: client) }
+          metric_names.map do |metric|
+            if StatsD::Instrument::Helpers.prefixed_metric?(metric, client: client)
+              warn("`#{__method__}` will prefix metrics by default. `#{metric}` skipped due to existing prefix.")
+              metric
+            else
+              StatsD::Instrument::Helpers.prefix_metric(metric, client: client)
+            end
+          end
         end
 
         datagrams.select! { |metric| formatted_metrics.include?(metric.name) } unless formatted_metrics.empty?
