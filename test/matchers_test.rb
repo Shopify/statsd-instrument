@@ -34,6 +34,26 @@ class MatchersTest < Minitest::Test
     }))
   end
 
+  def test_statsd_increment_compound_using_and_matched
+    matcher_1 = StatsD::Instrument::Matchers::Increment.new(:c, "counter", times: 1, tags: ["a"])
+    matcher_2 = StatsD::Instrument::Matchers::Increment.new(:c, "counter", times: 1, tags: ["b"])
+
+    assert(matcher_1.and(matcher_2).matches?(lambda {
+      StatsD.increment("counter", tags: ["a"])
+      StatsD.increment("counter", tags: ["b"])
+    }))
+  end
+
+  def test_statsd_increment_compound_using_and_not_matched
+    matcher_1 = StatsD::Instrument::Matchers::Increment.new(:c, "counter", times: 1, tags: ["a"])
+    matcher_2 = StatsD::Instrument::Matchers::Increment.new(:c, "counter", times: 1, tags: ["b"])
+
+    refute(matcher_1.and(matcher_2).matches?(lambda {
+      StatsD.increment("counter", tags: ["a"])
+      StatsD.increment("counter", tags: ["c"])
+    }))
+  end
+
   def test_statsd_increment_with_times_matched
     assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", times: 1)
       .matches?(lambda { StatsD.increment("counter") }))

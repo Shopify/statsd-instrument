@@ -355,6 +355,13 @@ RSpec.describe 'Matchers' do
     it 'will pass if there is no matching StatsD call on negative expectation' do
       expect { StatsD.increment('other_counter') }.not_to trigger_statsd_increment('counter')
     end
+
+    it 'will pass if every statsD call matches its call tag variations' do
+      expect do
+        StatsD.increment('counter', tags: ['variation:a'])
+        StatsD.increment('counter', tags: ['variation:b'])
+      end.to trigger_statsd_increment('counter', times: 1, tags: ["variation:a"]).and trigger_statsd_increment('counter', times: 1, tags: ["variation:b"])
+    end
   end
 end
 ```
