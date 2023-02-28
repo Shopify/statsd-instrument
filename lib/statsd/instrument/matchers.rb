@@ -43,7 +43,11 @@ module StatsD
 
         def expect_statsd_call(metric_type, metric_name, options, &block)
           metrics = capture_statsd_calls(&block)
-          metrics = metrics.select { |m| m.type == metric_type && m.name == metric_name }
+          metrics = metrics.select do |m|
+            options_tags = options[:tags] || []
+            metric_tags = m.tags || []
+            m.type == metric_type && m.name == metric_name && metric_tags.all? { |t| options_tags.include?(t) }
+          end
 
           if metrics.empty?
             raise RSpec::Expectations::ExpectationNotMetError, "No StatsD calls for metric #{metric_name} were made."
