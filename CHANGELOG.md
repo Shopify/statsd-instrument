@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.4
+
+- Allow user to assert different tags using RSpec composable matcher
+
 ## Version 3.5.3
 
 - Improve shapes friendliness for Ruby 3.2+
