@@ -44,9 +44,10 @@ module StatsD
         def expect_statsd_call(metric_type, metric_name, options, &block)
           metrics = capture_statsd_calls(&block)
           metrics = metrics.select do |m|
-            options_tags = options[:tags] || []
             metric_tags = m.tags || []
-            m.type == metric_type && m.name == metric_name && metric_tags.all? { |t| options_tags.include?(t) }
+            options_tags = options[:tags] || []
+            tag_matches = options_tags.empty? || metric_tags.all? { |t| options_tags.include?(t) }
+            m.type == metric_type && m.name == metric_name && tag_matches
           end
 
           if metrics.empty?

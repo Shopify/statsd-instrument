@@ -54,6 +54,17 @@ class MatchersTest < Minitest::Test
     }))
   end
 
+  def test_statsd_increment_compound_without_explicit_tags_using_and_matched
+    matcher_1 = StatsD::Instrument::Matchers::Increment.new(:c, "first_counter", times: 2)
+    matcher_2 = StatsD::Instrument::Matchers::Increment.new(:c, "second_counter", times: 1)
+
+    assert(matcher_1.and(matcher_2).matches?(lambda {
+      StatsD.increment("first_counter", tags: ["a"])
+      StatsD.increment("first_counter", tags: ["b"])
+      StatsD.increment("second_counter", tags: ["c"])
+    }))
+  end
+
   def test_statsd_increment_with_times_matched
     assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", times: 1)
       .matches?(lambda { StatsD.increment("counter") }))
