@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.5
+
+- Fix issue on 3.5.4, allowing user to specify compound matcher without tags
+
 ## Version 3.5.4
 
 - Allow user to assert different tags using RSpec composable matcher
