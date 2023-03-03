@@ -116,7 +116,7 @@ class AssertionsTest < Minitest::Test
     StatsD.singleton_client = client
 
     @test_case.assert_no_statsd_calls("counter") do
-      client.increment("other")
+      StatsD.increment("other")
     end
 
     assertion = assert_raises(Minitest::Assertion) do

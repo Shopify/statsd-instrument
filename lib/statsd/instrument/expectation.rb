@@ -30,11 +30,6 @@ module StatsD
         def histogram(name, value = nil, **options)
           new(type: :h, name: name, value: value, **options)
         end
-
-        def prefix_metric(metric_name, client: nil)
-          client ||= StatsD.singleton_client
-          client&.prefix ? "#{client.prefix}.#{metric_name}" : metric_name
-        end
       end
 
       attr_accessor :times, :type, :name, :value, :sample_rate, :tags
