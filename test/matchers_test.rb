@@ -5,7 +5,6 @@ require "statsd/instrument/matchers"
 require "rspec/mocks/argument_matchers"
 
 class MatchersTest < Minitest::Test
-
   def test_statsd_increment_matched
     assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", {})
       .matches?(lambda { StatsD.increment("counter") }))
