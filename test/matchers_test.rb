@@ -2,8 +2,10 @@
 
 require "test_helper"
 require "statsd/instrument/matchers"
+require "rspec/mocks/argument_matchers"
 
 class MatchersTest < Minitest::Test
+
   def test_statsd_increment_matched
     assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", {})
       .matches?(lambda { StatsD.increment("counter") }))
@@ -112,6 +114,13 @@ class MatchersTest < Minitest::Test
   def test_statsd_increment_with_tags_matched
     assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", tags: ["a", "b"])
       .matches?(lambda { StatsD.increment("counter", tags: ["a", "b"]) }))
+  end
+
+  def test_statsd_increment_with_subset_matcher
+    include_matcher = RSpec::Matchers::BuiltIn::Include.new("foo:bar")
+    final = RSpec::Matchers::AliasedMatcher.new(include_matcher, :include)
+    assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", tags: final)
+      .matches?(lambda { StatsD.increment("counter", tags: ["foo:bar", "bar:baz"]) }))
   end
 
   def test_statsd_increment_with_tags_not_matched
