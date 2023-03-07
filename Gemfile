@@ -6,7 +6,6 @@ gemspec
 gem "rake"
 gem "minitest"
 gem "rspec"
-gem "rspec-mocks"
 gem "mocha"
 gem "yard"
 gem "rubocop", [">= 1.0", "< 1.30"] # TODO: Our cops are broken by rubocop 1.30, we need to figure out why
