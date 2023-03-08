@@ -45,7 +45,7 @@ module StatsD
           metrics = capture_statsd_calls(&block)
           metrics = metrics.select do |m|
             metric_tags = m.tags || []
-            options_tags = options[:tags] || nil
+            options_tags = options[:tags]
             tag_matches = options_tags.nil? || RSpec::Matchers::BuiltIn::Match.new(options_tags).matches?(metric_tags)
             m.type == metric_type && m.name == metric_name && tag_matches
           end
