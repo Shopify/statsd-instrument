@@ -37,9 +37,8 @@ module StatsD
       def initialize(client: nil, type:, name:, value: nil,
         sample_rate: nil, tags: nil, no_prefix: false, times: 1)
 
-        client ||= StatsD.singleton_client
         @type = type
-        @name = no_prefix || !client.prefix ? name : "#{client.prefix}.#{name}"
+        @name = no_prefix ? name : StatsD::Instrument::Helpers.prefix_metric(name, client: client)
         @value = normalized_value_for_type(type, value) if value
         @sample_rate = sample_rate
         @tags = normalize_tags(tags)

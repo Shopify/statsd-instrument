@@ -49,19 +49,41 @@ module StatsD
       # @param [Array<String>] metric_names (default: []) The metric names that are not
       #   allowed to happen inside the block. If this is set to `[]`, the assertion
       #   will fail if any metric occurs.
+      # @param [Array<StatsD::Instrument::Datagram>] datagrams (default: nil) The datagrams
+      #   to be inspected for metric emission.
+      # @param [StatsD::Instrument::Client] client (default: nil) The client to be used
+      #   for fetching datagrams (if not provided) and metric prefix. If not provided, the
+      #   singleton client will attempt to be used.
+      # @param [Boolean] no_prefix (default: false) A directive to indicate if the client's
+      #   prefix should be prepended to the metric names.
       # @yield A block in which the specified metric should not occur. This block
       #   should not raise any exceptions.
       # @return [void]
       # @raise [Minitest::Assertion] If an exception occurs, or if any metric (with the
       #   provided names, or any), occurred during the execution of the provided block.
-      def assert_no_statsd_calls(*metric_names, datagrams: nil, client: nil, &block)
+      def assert_no_statsd_calls(*metric_names, datagrams: nil, client: nil, no_prefix: false, &block)
+        client ||= StatsD.singleton_client
+
         if datagrams.nil?
           raise LocalJumpError, "assert_no_statsd_calls requires a block" unless block_given?
 
           datagrams = capture_statsd_datagrams_with_exception_handling(client: client, &block)
         end
 
-        datagrams.select! { |metric| metric_names.include?(metric.name) } unless metric_names.empty?
+        formatted_metrics = if no_prefix
+          metric_names
+        else
+          metric_names.map do |metric|
+            if StatsD::Instrument::Helpers.prefixed_metric?(metric, client: client)
+              warn("`#{__method__}` will prefix metrics by default. `#{metric}` skipped due to existing prefix.")
+              metric
+            else
+              StatsD::Instrument::Helpers.prefix_metric(metric, client: client)
+            end
+          end
+        end
+
+        datagrams.select! { |metric| formatted_metrics.include?(metric.name) } unless formatted_metrics.empty?
         assert(datagrams.empty?, "No StatsD calls for metric #{datagrams.map(&:name).join(", ")} expected.")
       end
 
