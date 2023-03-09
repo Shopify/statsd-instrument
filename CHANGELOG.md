@@ -6,6 +6,11 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.6
+
+- Fix issue from 3.5.5 where tests using RSpec matcher for tag assertion would fail, because the matcher as being
+  use as an array.
+
 ## Version 3.5.5
 
 - Fix issue on 3.5.4, allowing user to specify compound matcher without tags
