@@ -310,16 +310,16 @@ module StatsD
       # @yield The latency (execution time) of the block
       # @return The return value of the provided block will be passed through.
       def latency(name, sample_rate: nil, tags: nil, metric_type: nil, no_prefix: false)
-        start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        start = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
         begin
           yield
         ensure
-          stop = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
 
           sample_rate ||= @default_sample_rate
           if sample?(sample_rate)
             metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
-            latency_in_ms = 1000.0 * (stop - start)
+            latency_in_ms = stop - start
             emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
           end
         end

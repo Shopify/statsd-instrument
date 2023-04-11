@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+- Improve time measurement to avoid seconds to milliseconds conversions.
+
 ## Version 3.5.6
 
 - Fix issue from 3.5.5 where tests using RSpec matcher for tag assertion would fail, because the matcher as being
