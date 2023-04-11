@@ -95,7 +95,7 @@ class ClientTest < Minitest::Test
   end
 
   def test_measure_with_block
-    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0)
     datagrams = @client.capture do
       @client.measure("foo") {}
     end
@@ -128,7 +128,7 @@ class ClientTest < Minitest::Test
   end
 
   def test_distribution_with_block
-    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0)
     datagrams = @dogstatsd_client.capture do
       @dogstatsd_client.distribution("foo") {}
     end
@@ -137,7 +137,7 @@ class ClientTest < Minitest::Test
   end
 
   def test_latency_emits_ms_metric
-    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0)
     datagrams = @client.capture do
       @client.latency("foo") {}
     end
@@ -146,7 +146,7 @@ class ClientTest < Minitest::Test
   end
 
   def test_latency_on_dogstatsd_prefers_distribution_metric_type
-    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC).returns(0.1, 0.2)
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0)
     datagrams = @dogstatsd_client.capture do
       @dogstatsd_client.latency("foo") {}
     end
