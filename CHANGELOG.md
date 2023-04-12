@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.7
+
 - Improve time measurement to avoid seconds to milliseconds conversions.
 
 ## Version 3.5.6
