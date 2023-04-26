@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.8
+
 - Allow the `tag_error_class` option for `statsd_count_success` in strict mode.
 
 ## Version 3.5.7
