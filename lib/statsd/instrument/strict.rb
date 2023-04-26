@@ -114,7 +114,8 @@ module StatsD
         super
       end
 
-      def statsd_count_success(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
+      def statsd_count_success(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil,
+        tag_error_class: false)
         check_method_and_metric_name(method, name)
         super
       end

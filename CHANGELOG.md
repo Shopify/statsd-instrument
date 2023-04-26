@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+- Allow the `tag_error_class` option for `statsd_count_success` in strict mode.
+
 ## Version 3.5.7
 
 - Improve time measurement to avoid seconds to milliseconds conversions.
