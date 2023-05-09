@@ -231,6 +231,9 @@ class StatsDInstrumentationTest < Minitest::Test
     assert_statsd_increment("subgateway.foo", tags: { "key": "foo" }) do
       GatewaySubClass.new.purchase("foo")
     end
+    assert_statsd_increment("subgateway.bar", tags: { "key": "bar" }) do
+      GatewaySubClass.new.purchase("bar")
+    end
   ensure
     ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
   end
@@ -242,6 +245,9 @@ class StatsDInstrumentationTest < Minitest::Test
 
     assert_statsd_increment("subgateway.foo", tags: { "key": "foo" }) do
       GatewaySubClass.new.purchase("foo")
+    end
+    assert_statsd_increment("subgateway.bar", tags: { "key": "bar" }) do
+      GatewaySubClass.new.purchase("bar")
     end
   ensure
     ActiveMerchant::Gateway.statsd_remove_count(:ssl_post, metric_namer)
