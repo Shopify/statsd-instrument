@@ -79,8 +79,8 @@ module StatsD
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
-          tags = StatsD::Instrument.generate_tags(tags, self, *args)
-          client.measure(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
+          generated_tags = StatsD::Instrument.generate_tags(tags, self, *args)
+          client.measure(key, sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix) do
             super(*args, &block)
           end
         end
@@ -100,8 +100,8 @@ module StatsD
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
-          tags = StatsD::Instrument.generate_tags(tags, self, *args)
-          client.distribution(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix) do
+          generated_tags = StatsD::Instrument.generate_tags(tags, self, *args)
+          client.distribution(key, sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix) do
             super(*args, &block)
           end
         end
@@ -145,10 +145,10 @@ module StatsD
           client ||= StatsD.singleton_client
           suffix = truthiness == false ? "failure" : "success"
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
-          tags = StatsD::Instrument.generate_tags(tags, self, *args)
-          tags = Helpers.add_tag(tags, :error_class, error.class.name) if tag_error_class && error
+          generated_tags = StatsD::Instrument.generate_tags(tags, self, *args)
+          generated_tags = Helpers.add_tag(generated_tags, :error_class, error.class.name) if tag_error_class && error
 
-          client.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+          client.increment("#{key}.#{suffix}", sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix)
         end
       end
     end
@@ -185,8 +185,8 @@ module StatsD
           if truthiness
             client ||= StatsD.singleton_client
             key = StatsD::Instrument.generate_metric_name(name, self, *args)
-            tags = StatsD::Instrument.generate_tags(tags, self, *args)
-            client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+            generated_tags = StatsD::Instrument.generate_tags(tags, self, *args)
+            client.increment(key, sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix)
           end
         end
       end
@@ -206,8 +206,8 @@ module StatsD
         define_method(method) do |*args, &block|
           client ||= StatsD.singleton_client
           key = StatsD::Instrument.generate_metric_name(name, self, *args)
-          tags = StatsD::Instrument.generate_tags(tags, self, *args)
-          client.increment(key, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+          generated_tags = StatsD::Instrument.generate_tags(tags, self, *args)
+          client.increment(key, sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix)
           super(*args, &block)
         end
       end
