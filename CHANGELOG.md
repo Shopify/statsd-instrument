@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.9
+
+- Fix dynamic tags being evaluated only once.
+
 ## Version 3.5.8
 
 - Allow the `tag_error_class` option for `statsd_count_success` in strict mode.
