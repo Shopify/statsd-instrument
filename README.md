@@ -32,7 +32,10 @@ The following environment variables are supported:
   - In the **test** environment, it will swallow all calls, but allows you to
     capture them for testing purposes. See below for notes on writing tests.
   - In **development** and all other environments, it will write all calls to
-    the log (`StatsD.logger`, which by default writes to STDOUT).
+    the log (`StatsD.logger`, which by default writes to STDOUT). (Note that other
+    repos may change this default behaviour. For example, `Shopify/shopify` doesn't
+    do anything with metrics, _unless_ the environment variable `STATSD_LOG_ENABLED`
+    is set. Check your repo's documentation for details.)
 
 - `STATSD_SAMPLE_RATE`: (default: `1.0`) The default sample rate to use for all
   metrics. This can be used to reduce the amount of network traffic and CPU
