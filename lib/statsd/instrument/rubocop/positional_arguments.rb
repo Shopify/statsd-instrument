@@ -14,7 +14,8 @@ module RuboCop
       #       --only StatsD/PositionalArguments
       #
       # This cop can autocorrect some offenses it finds, but not all of them.
-      class PositionalArguments < Cop
+      class PositionalArguments < Base
+        extend AutoCorrector
         include RuboCop::Cop::StatsD
 
         MSG = "Use keyword arguments for StatsD calls"
@@ -31,7 +32,9 @@ module RuboCop
           if metric_method?(node) && node.arguments.length >= 3
             case node.arguments[2].type
             when *REFUSED_ARGUMENT_TYPES
-              add_offense(node)
+              add_offense(node) do |corrector|
+                autocorrect(corrector, node)
+              end
             when *ACCEPTED_ARGUMENT_TYPES
               nil
             else
@@ -40,57 +43,56 @@ module RuboCop
           end
         end
 
-        def autocorrect(node)
-          ->(corrector) do
-            positional_arguments = if node.arguments.last.type == :block_pass
-              node.arguments[2...node.arguments.length - 1]
-            else
-              node.arguments[2...node.arguments.length]
+        def autocorrect(corrector, node)
+          positional_arguments = if node.arguments.last.type == :block_pass
+            node.arguments[2...node.arguments.length - 1]
+          else
+            node.arguments[2...node.arguments.length]
+          end
+
+          case positional_arguments[0].type
+          when *UNKNOWN_ARGUMENT_TYPES
+            # We don't know whether the method returns a hash, in which case it would be interpreted
+            # as keyword arguments. In this case, the fix would be to add a keyword splat:
+            #
+            # `StatsD.instrument('foo', 1, method_call)`
+            # => `StatsD.instrument('foo', 1, **method_call)`
+            #
+            # However, it's also possible this method returns a sample rate, in which case the fix
+            # above will not do the right thing.
+            #
+            # `StatsD.instrument('foo', 1, SAMPLE_RATE_CONSTANT)`
+            # => `StatsD.instrument('foo', 1, sample_rate: SAMPLE_RATE_CONSTANT)`
+            #
+            # Because of this, we will not auto-correct and let the user fix the issue manually.
+            nil
+
+          when *POSITIONAL_ARGUMENT_TYPES
+            value_argument = node.arguments[1]
+            from = value_argument.source_range.end_pos
+            to = positional_arguments.last.source_range.end_pos
+            range = Parser::Source::Range.new(node.source_range.source_buffer, from, to)
+            corrector.remove(range)
+
+            keyword_arguments = []
+            sample_rate = positional_arguments[0]
+            if sample_rate && sample_rate.type != :nil
+              keyword_arguments << "sample_rate: #{sample_rate.source}"
             end
 
-            case positional_arguments[0].type
-            when *UNKNOWN_ARGUMENT_TYPES
-              # We don't know whether the method returns a hash, in which case it would be interpreted
-              # as keyword arguments. In this case, the fix would be to add a keyword splat:
-              #
-              # `StatsD.instrument('foo', 1, method_call)`
-              # => `StatsD.instrument('foo', 1, **method_call)`
-              #
-              # However, it's also possible this method returns a sample rate, in which case the fix
-              # above will not do the right thing.
-              #
-              # `StatsD.instrument('foo', 1, SAMPLE_RATE_CONSTANT)`
-              # => `StatsD.instrument('foo', 1, sample_rate: SAMPLE_RATE_CONSTANT)`
-              #
-              # Because of this, we will not auto-correct and let the user fix the issue manually.
-              return
-
-            when *POSITIONAL_ARGUMENT_TYPES
-              value_argument = node.arguments[1]
-              from = value_argument.source_range.end_pos
-              to = positional_arguments.last.source_range.end_pos
-              range = Parser::Source::Range.new(node.source_range.source_buffer, from, to)
-              corrector.remove(range)
-
-              keyword_arguments = []
-              sample_rate = positional_arguments[0]
-              if sample_rate && sample_rate.type != :nil
-                keyword_arguments << "sample_rate: #{sample_rate.source}"
-              end
-
-              tags = positional_arguments[1]
-              if tags && tags.type != :nil
-                keyword_arguments << if tags.type == :hash && tags.source[0] != "{"
-                  "tags: { #{tags.source} }"
-                else
-                  "tags: #{tags.source}"
-                end
-              end
-
-              unless keyword_arguments.empty?
-                corrector.insert_after(value_argument.source_range, ", #{keyword_arguments.join(", ")}")
+            tags = positional_arguments[1]
+            if tags && tags.type != :nil
+              keyword_arguments << if tags.type == :hash && tags.source[0] != "{"
+                "tags: { #{tags.source} }"
+              else
+                "tags: #{tags.source}"
               end
             end
+
+            unless keyword_arguments.empty?
+              corrector.insert_after(value_argument.source_range, ", #{keyword_arguments.join(", ")}")
+            end
+
           end
         end
       end
