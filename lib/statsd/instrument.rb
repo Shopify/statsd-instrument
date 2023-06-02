@@ -27,42 +27,44 @@ module StatsD
       end
     end
 
-    # Generates a metric name for an instrumented method.
-    # @private
-    # @return [String]
-    def self.generate_metric_name(name, callee, *args)
-      name.respond_to?(:call) ? name.call(callee, args).gsub("::", ".") : name.gsub("::", ".")
-    end
+    class << self
+      # Generates a metric name for an instrumented method.
+      # @private
+      # @return [String]
+      def generate_metric_name(name, callee, *args)
+        name.respond_to?(:call) ? name.call(callee, args).gsub("::", ".") : name.gsub("::", ".")
+      end
 
-    # Generates the tags for an instrumented method.
-    # @private
-    # @return [Array[String]]
-    def self.generate_tags(tags, callee, *args)
-      return if tags.nil?
+      # Generates the tags for an instrumented method.
+      # @private
+      # @return [Array[String]]
+      def generate_tags(tags, callee, *args)
+        return if tags.nil?
 
-      tags.respond_to?(:call) ? tags.call(callee, args) : tags
-    end
+        tags.respond_to?(:call) ? tags.call(callee, args) : tags
+      end
 
-    # Even though this method is considered private, and is no longer used internally,
-    # applications in the wild rely on it. As a result, we cannot remove this method
-    # until the next major version.
-    #
-    # @deprecated Use Process.clock_gettime(Process::CLOCK_MONOTONIC) instead.
-    def self.current_timestamp
-      Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    end
+      # Even though this method is considered private, and is no longer used internally,
+      # applications in the wild rely on it. As a result, we cannot remove this method
+      # until the next major version.
+      #
+      # @deprecated Use Process.clock_gettime(Process::CLOCK_MONOTONIC) instead.
+      def current_timestamp
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
 
-    # Even though this method is considered private, and is no longer used internally,
-    # applications in the wild rely on it. As a result, we cannot remove this method
-    # until the next major version.
-    #
-    # @deprecated You can implement similar functionality yourself using
-    #   `Process.clock_gettime(Process::CLOCK_MONOTONIC)`. Think about what will
-    #   happen if an exception happens during the block execution though.
-    def self.duration
-      start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      yield
-      Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+      # Even though this method is considered private, and is no longer used internally,
+      # applications in the wild rely on it. As a result, we cannot remove this method
+      # until the next major version.
+      #
+      # @deprecated You can implement similar functionality yourself using
+      #   `Process.clock_gettime(Process::CLOCK_MONOTONIC)`. Think about what will
+      #   happen if an exception happens during the block execution though.
+      def duration
+        start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        yield
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+      end
     end
 
     # Adds execution duration instrumentation to a method as a timing.
@@ -294,7 +296,12 @@ module StatsD
       if instrumentation_module.respond_to?(:ruby2_keywords, true)
         instrumentation_module.send(:ruby2_keywords, method)
       end
-      prepend(instrumentation_module) unless self < instrumentation_module
+
+      if self < instrumentation_module
+        return
+      end
+
+      prepend(instrumentation_module)
     end
 
     def remove_from_method(method, name, action)
@@ -358,8 +365,15 @@ module StatsD
     # @!method service_check(name, status, tags: nil, hostname: nil, timestamp: nil, message: nil)
     #   (see StatsD::Instrument::Client#service_check)
 
-    def_delegators :singleton_client, :increment, :gauge, :set, :measure,
-      :histogram, :distribution, :event, :service_check
+    def_delegators :singleton_client,
+      :increment,
+      :gauge,
+      :set,
+      :measure,
+      :histogram,
+      :distribution,
+      :event,
+      :service_check
 
     private
 
@@ -385,6 +399,6 @@ require "statsd/instrument/environment"
 require "statsd/instrument/helpers"
 require "statsd/instrument/assertions"
 require "statsd/instrument/expectation"
-require "statsd/instrument/matchers" if defined?(::RSpec)
-require "statsd/instrument/railtie" if defined?(::Rails::Railtie)
+require "statsd/instrument/matchers" if defined?(RSpec)
+require "statsd/instrument/railtie" if defined?(Rails::Railtie)
 require "statsd/instrument/strict" if ENV["STATSD_STRICT_MODE"]

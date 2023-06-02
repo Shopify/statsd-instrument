@@ -21,8 +21,14 @@ class DogStatsDDatagramBuilderTest < Minitest::Test
   end
 
   def test_complex_service_check
-    datagram = @datagram_builder._sc("service", :warning, timestamp: Time.parse("2019-09-30T04:22:12Z"),
-      hostname: "localhost", tags: { foo: "bar|baz" }, message: "blah")
+    datagram = @datagram_builder._sc(
+      "service",
+      :warning,
+      timestamp: Time.parse("2019-09-30T04:22:12Z"),
+      hostname: "localhost",
+      tags: { foo: "bar|baz" },
+      message: "blah",
+    )
     assert_equal("_sc|service|1|h:localhost|d:1569817332|#foo:barbaz|m:blah", datagram)
 
     parsed_datagram = StatsD::Instrument::DogStatsDDatagramBuilder.datagram_class.new(datagram)
@@ -46,11 +52,22 @@ class DogStatsDDatagramBuilderTest < Minitest::Test
   end
 
   def test_complex_event
-    datagram = @datagram_builder._e("testing", "with\nnewline", timestamp: Time.parse("2019-09-30T04:22:12Z"),
-      hostname: "localhost", aggregation_key: "my-key", priority: "low", source_type_name: "source",
-      alert_type: "success", tags: { foo: "bar|baz" })
-    assert_equal('_e{7,13}:testing|with\\nnewline|h:localhost|d:1569817332|k:my-key|' \
-      "p:low|s:source|t:success|#foo:barbaz", datagram)
+    datagram = @datagram_builder._e(
+      "testing",
+      "with\nnewline",
+      timestamp: Time.parse("2019-09-30T04:22:12Z"),
+      hostname: "localhost",
+      aggregation_key: "my-key",
+      priority: "low",
+      source_type_name: "source",
+      alert_type: "success",
+      tags: { foo: "bar|baz" },
+    )
+    assert_equal(
+      '_e{7,13}:testing|with\\nnewline|h:localhost|d:1569817332|k:my-key|' \
+        "p:low|s:source|t:success|#foo:barbaz",
+      datagram,
+    )
 
     parsed_datagram = StatsD::Instrument::DogStatsDDatagramBuilder.datagram_class.new(datagram)
     assert_equal(:_e, parsed_datagram.type)

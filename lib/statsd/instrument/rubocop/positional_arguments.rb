@@ -1,4 +1,4 @@
-# frozen-string-literal: true
+# frozen_string_literal: true
 
 require_relative "../rubocop" unless defined?(RuboCop::Cop::StatsD)
 

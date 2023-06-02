@@ -5,9 +5,11 @@ module StatsD
     # @note This class is part of the new Client implementation that is intended
     #   to become the new default in the next major release of this library.
     class UDPSink
-      def self.for_addr(addr)
-        host, port_as_string = addr.split(":", 2)
-        new(host, Integer(port_as_string))
+      class << self
+        def for_addr(addr)
+          host, port_as_string = addr.split(":", 2)
+          new(host, Integer(port_as_string))
+        end
       end
 
       attr_reader :host, :port

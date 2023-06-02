@@ -36,13 +36,13 @@ module RubocopHelper
     report = investigate(processed_source)
     corrector = RuboCop::Cop::Legacy::Corrector.new(
       processed_source.buffer,
-      correctors(report)
+      correctors(report),
     )
     corrector.process
   end
 
   def correctors(report)
-    correctors = report.correctors.reject { |c| c.nil? }
+    correctors = report.correctors.reject(&:nil?)
     if correctors.empty?
       return []
     end

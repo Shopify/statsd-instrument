@@ -7,10 +7,11 @@ module StatsD
     class DogStatsDDatagramBuilder < StatsD::Instrument::DatagramBuilder
       unsupported_datagram_types :kv
 
-      def self.datagram_class
-        StatsD::Instrument::DogStatsDDatagram
+      class << self
+        def datagram_class
+          StatsD::Instrument::DogStatsDDatagram
+        end
       end
-
       def latency_metric_type
         :d
       end
