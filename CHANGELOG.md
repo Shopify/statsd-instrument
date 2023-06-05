@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.10
+
+- Fix rubocop 1.30 compatibilitty
+
 ## Version 3.5.9
 
 - Fix dynamic tags being evaluated only once.
