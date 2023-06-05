@@ -48,8 +48,12 @@ class ClientTest < Minitest::Test
       "STATSD_IMPLEMENTATION" => "statsd",
       "STATSD_ADDR" => "1.2.3.4:8125",
     )
-    client = StatsD::Instrument::Client.from_env(env,
-      prefix: "bar", implementation: "dogstatsd", sink: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.from_env(
+      env,
+      prefix: "bar",
+      implementation: "dogstatsd",
+      sink: StatsD::Instrument::NullSink.new,
+    )
 
     assert_equal(0.1, client.default_sample_rate)
     assert_equal("bar", client.prefix)

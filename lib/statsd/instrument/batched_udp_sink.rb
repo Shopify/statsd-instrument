@@ -10,14 +10,14 @@ module StatsD
       # https://docs.datadoghq.com/developers/dogstatsd/high_throughput/?code-lang=ruby#ensure-proper-packet-sizes
       DEFAULT_MAX_PACKET_SIZE = 1472
 
-      def self.for_addr(addr, **kwargs)
-        host, port_as_string = addr.split(":", 2)
-        new(host, Integer(port_as_string), **kwargs)
-      end
-
       attr_reader :host, :port
 
       class << self
+        def for_addr(addr, **kwargs)
+          host, port_as_string = addr.split(":", 2)
+          new(host, Integer(port_as_string), **kwargs)
+        end
+
         def finalize(dispatcher)
           proc { dispatcher.shutdown }
         end
@@ -122,7 +122,7 @@ module StatsD
 
             packet << next_datagram
             next_datagram = nil
-            unless packet.bytesize > @max_packet_size
+            if packet.bytesize <= @max_packet_size
               while (next_datagram = @buffer.pop_nonblock)
                 if @max_packet_size - packet.bytesize - 1 > next_datagram.bytesize
                   packet << NEWLINE << next_datagram

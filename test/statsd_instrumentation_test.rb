@@ -28,8 +28,10 @@ class StatsDInstrumentationTest < Minitest::Test
         false
       end
 
-      def self.sync
-        true
+      class << self
+        def sync
+          true
+        end
       end
     end
 
@@ -417,8 +419,12 @@ class StatsDInstrumentationTest < Minitest::Test
   def test_statsd_macro_can_disable_prefix
     client = StatsD::Instrument::Client.new(prefix: "foo")
     ActiveMerchant::Gateway.singleton_class.extend(StatsD::Instrument)
-    ActiveMerchant::Gateway.singleton_class.statsd_count_success(:sync,
-      "ActiveMerchant.Gateway.sync", no_prefix: true, client: client)
+    ActiveMerchant::Gateway.singleton_class.statsd_count_success(
+      :sync,
+      "ActiveMerchant.Gateway.sync",
+      no_prefix: true,
+      client: client,
+    )
 
     datagrams = client.capture { ActiveMerchant::Gateway.sync }
     assert_equal(1, datagrams.length)

@@ -5,16 +5,18 @@ module StatsD
     # @note This class is part of the new Client implementation that is intended
     #   to become the new default in the next major release of this library.
     class DatagramBuilder
-      def self.unsupported_datagram_types(*types)
-        types.each do |type|
-          define_method(type) do |_, _, _, _|
-            raise NotImplementedError, "Type #{type} metrics are not supported by #{self.class.name}."
+      class << self
+        def unsupported_datagram_types(*types)
+          types.each do |type|
+            define_method(type) do |_, _, _, _|
+              raise NotImplementedError, "Type #{type} metrics are not supported by #{self.class.name}."
+            end
           end
         end
-      end
 
-      def self.datagram_class
-        StatsD::Instrument::Datagram
+        def datagram_class
+          StatsD::Instrument::Datagram
+        end
       end
 
       def initialize(prefix: nil, default_tags: nil)

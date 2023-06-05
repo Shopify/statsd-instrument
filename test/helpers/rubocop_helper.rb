@@ -12,13 +12,13 @@ module RubocopHelper
   private_constant :RUBY_VERSION
 
   def assert_no_offenses(source)
-    investigate(RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil))
-    assert_predicate(cop.offenses, :empty?, "Did not expect Rubocop to find offenses")
+    report = investigate(RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil))
+    assert_predicate(report.offenses, :empty?, "Did not expect Rubocop to find offenses")
   end
 
   def assert_offense(source)
-    investigate(RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil))
-    refute_predicate(cop.offenses, :empty?, "Expected Rubocop to find offenses")
+    report = investigate(RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil))
+    refute_predicate(report.offenses, :empty?, "Expected Rubocop to find offenses")
   end
 
   def assert_no_autocorrect(source)
@@ -29,13 +29,27 @@ module RubocopHelper
   def autocorrect_source(source)
     RuboCop::Formatter::DisabledConfigFormatter.config_to_allow_offenses = {}
     RuboCop::Formatter::DisabledConfigFormatter.detected_styles = {}
-    cop.instance_variable_get(:@options)[:auto_correct] = true
+    cop.instance_variable_get(:@options)[:autocorrect] = true
+    cop.instance_variable_get(:@options)[:raise_error] = true
 
     processed_source = RuboCop::ProcessedSource.new(source, RUBY_VERSION, nil)
-    investigate(processed_source)
+    report = investigate(processed_source)
+    corrector = RuboCop::Cop::Legacy::Corrector.new(
+      processed_source.buffer,
+      correctors(report),
+    )
+    corrector.process
+  end
 
-    corrector = RuboCop::Cop::Legacy::Corrector.new(processed_source.buffer, cop.corrections)
-    corrector.rewrite
+  def correctors(report)
+    correctors = report.correctors.reject(&:nil?)
+    if correctors.empty?
+      return []
+    end
+
+    corrections_proxy = RuboCop::Cop::Legacy::CorrectionsProxy.new(correctors.first)
+    correctors.drop(1).each { |c| corrections_proxy.concat(c) }
+    corrections_proxy
   end
 
   def investigate(processed_source)
@@ -43,8 +57,7 @@ module RubocopHelper
       instances << klass.new([cop])
     end
 
-    commissioner = RuboCop::Cop::Commissioner.new([cop], forces, raise_error: true)
+    commissioner = RuboCop::Cop::Commissioner.new([cop], forces)
     commissioner.investigate(processed_source)
-    commissioner
   end
 end

@@ -338,8 +338,14 @@ module StatsD
       #
       # @note Supported by the Datadog implementation only.
       def service_check(name, status, timestamp: nil, hostname: nil, tags: nil, message: nil, no_prefix: false)
-        emit(datagram_builder(no_prefix: no_prefix)._sc(name, status,
-          timestamp: timestamp, hostname: hostname, tags: tags, message: message))
+        emit(datagram_builder(no_prefix: no_prefix)._sc(
+          name,
+          status,
+          timestamp: timestamp,
+          hostname: hostname,
+          tags: tags,
+          message: message,
+        ))
       end
 
       # Emits an event. An event represents any record of activity noteworthy for engineers.
@@ -359,9 +365,17 @@ module StatsD
       def event(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
         source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
 
-        emit(datagram_builder(no_prefix: no_prefix)._e(title, text, timestamp: timestamp,
-          hostname: hostname, tags: tags, aggregation_key: aggregation_key, priority: priority,
-          source_type_name: source_type_name, alert_type: alert_type))
+        emit(datagram_builder(no_prefix: no_prefix)._e(
+          title,
+          text,
+          timestamp: timestamp,
+          hostname: hostname,
+          tags: tags,
+          aggregation_key: aggregation_key,
+          priority: priority,
+          source_type_name: source_type_name,
+          alert_type: alert_type,
+        ))
       end
 
       # Instantiates a new StatsD client that uses the settings of the current client,
@@ -378,9 +392,13 @@ module StatsD
         default_tags: nil,
         datagram_builder_class: nil
       )
-        client = clone_with_options(sink: sink, prefix: prefix,
-          default_sample_rate: default_sample_rate, default_tags: default_tags,
-          datagram_builder_class: datagram_builder_class)
+        client = clone_with_options(
+          sink: sink,
+          prefix: prefix,
+          default_sample_rate: default_sample_rate,
+          default_tags: default_tags,
+          datagram_builder_class: datagram_builder_class,
+        )
 
         yield(client)
       end
