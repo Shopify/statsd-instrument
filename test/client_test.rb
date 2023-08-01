@@ -223,4 +223,18 @@ class ClientTest < Minitest::Test
     original_client.increment("metric")
     client_with_other_options.increment("metric")
   end
+
+  def test_clone_can_remove_prefix
+    # Both clients will use the same sink.
+    mock_sink = mock("sink")
+    mock_sink.stubs(:sample?).returns(true)
+    mock_sink.expects(:<<).with("foo.metric:1|c").returns(mock_sink)
+    mock_sink.expects(:<<).with("metric:1|c").returns(mock_sink)
+
+    original_client = StatsD::Instrument::Client.new(sink: mock_sink, prefix: "foo")
+    client_with_other_options = original_client.clone_with_options(prefix: nil)
+
+    original_client.increment("metric")
+    client_with_other_options.increment("metric")
+  end
 end
