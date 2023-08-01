@@ -417,7 +417,8 @@ module StatsD
           prefix: prefix == NO_CHANGE ? @prefix : prefix,
           default_sample_rate: default_sample_rate == NO_CHANGE ? @default_sample_rate : default_sample_rate,
           default_tags: default_tags == NO_CHANGE ? @default_tags : default_tags,
-          datagram_builder_class: datagram_builder_class == NO_CHANGE ? @datagram_builder_class : datagram_builder_class,
+          datagram_builder_class:
+            datagram_builder_class == NO_CHANGE ? @datagram_builder_class : datagram_builder_class,
         )
       end
 
