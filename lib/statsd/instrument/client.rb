@@ -378,6 +378,8 @@ module StatsD
         ))
       end
 
+      NO_CHANGE = Object.new
+
       # Instantiates a new StatsD client that uses the settings of the current client,
       # except for the provided overrides.
       #
@@ -386,11 +388,11 @@ module StatsD
       #   will be disposed after the block returns
       # @return The return value of the block will be passed on as return value.
       def with_options(
-        sink: nil,
-        prefix: nil,
-        default_sample_rate: nil,
-        default_tags: nil,
-        datagram_builder_class: nil
+        sink: NO_CHANGE,
+        prefix: NO_CHANGE,
+        default_sample_rate: NO_CHANGE,
+        default_tags: NO_CHANGE,
+        datagram_builder_class: NO_CHANGE
       )
         client = clone_with_options(
           sink: sink,
@@ -404,18 +406,19 @@ module StatsD
       end
 
       def clone_with_options(
-        sink: nil,
-        prefix: nil,
-        default_sample_rate: nil,
-        default_tags: nil,
-        datagram_builder_class: nil
+        sink: NO_CHANGE,
+        prefix: NO_CHANGE,
+        default_sample_rate: NO_CHANGE,
+        default_tags: NO_CHANGE,
+        datagram_builder_class: NO_CHANGE
       )
         self.class.new(
-          sink: sink || @sink,
-          prefix: prefix || @prefix,
-          default_sample_rate: default_sample_rate || @default_sample_rate,
-          default_tags: default_tags || @default_tags,
-          datagram_builder_class: datagram_builder_class || @datagram_builder_class,
+          sink: sink == NO_CHANGE ? @sink : sink,
+          prefix: prefix == NO_CHANGE ? @prefix : prefix,
+          default_sample_rate: default_sample_rate == NO_CHANGE ? @default_sample_rate : default_sample_rate,
+          default_tags: default_tags == NO_CHANGE ? @default_tags : default_tags,
+          datagram_builder_class:
+            datagram_builder_class == NO_CHANGE ? @datagram_builder_class : datagram_builder_class,
         )
       end
 
