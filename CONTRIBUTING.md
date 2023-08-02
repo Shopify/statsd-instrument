@@ -59,5 +59,5 @@ we are depending on the current behavior of the library.
 
 1. Update the version number in `lib/statsd/instrument/version.rb`.
 2. Move the "Unreleased changes" items in [CHANGELOG.md](./CHANGELOG.md) to a new section for the release.
-3. Commit these changes.
-4. Run `bundle exec rake release`.
+3. Open a PR with these changes, have it reviewed and merged.
+4. The new version will be automatically uploaded by our deployment pipeline.
