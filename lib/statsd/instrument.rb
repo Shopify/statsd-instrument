@@ -279,6 +279,7 @@ module StatsD
     end
 
     def add_to_method(method, name, action, &block)
+      GC.stress = true
       instrumentation_module = statsd_instrumentation_for(method, name, action)
 
       if instrumentation_module.method_defined?(method)
@@ -302,6 +303,8 @@ module StatsD
       end
 
       prepend(instrumentation_module)
+    ensure
+      GC.stress = false
     end
 
     def remove_from_method(method, name, action)
