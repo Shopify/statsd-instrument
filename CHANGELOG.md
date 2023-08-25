@@ -6,6 +6,11 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.5.12
+
+- Update CONTRIBUTING docs about release process
+- Rename branch `master` to `main`.
+
 ## Version 3.5.11
 
 - Fix a bug where passing `nil` to `clone_with_options` did not overwrite existing values

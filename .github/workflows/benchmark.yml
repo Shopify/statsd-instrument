@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
@@ -22,7 +22,7 @@ jobs:
     - name: Run throughput benchmark on branch
       run: benchmark/local-udp-throughput
 
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
       with:
         ref: 'main'
 

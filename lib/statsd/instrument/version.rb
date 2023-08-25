@@ -2,6 +2,6 @@
 
 module StatsD
   module Instrument
-    VERSION = "3.5.11"
+    VERSION = "3.5.12"
   end
 end
