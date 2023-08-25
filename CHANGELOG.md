@@ -9,6 +9,8 @@ section below.
 ## Version 3.5.11
 
 - Fix a bug where passing `nil` to `clone_with_options` did not overwrite existing values
+- Update CONTRIBUTING docs about release process
+- Rename branch `maaster` to `main`.
 
 ## Version 3.5.10
 
