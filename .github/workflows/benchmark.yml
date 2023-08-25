@@ -24,13 +24,13 @@ jobs:
 
     - uses: actions/checkout@v1
       with:
-        ref: 'master'
+        ref: 'main'
 
     - name: Install dependencies if needed
       run: bundle check || bundle install --jobs 4 --retry 3
 
-    - name: Run benchmark on master
+    - name: Run benchmark on main
       run: benchmark/send-metrics-to-local-udp-receiver
 
-    - name: Run throughput benchmark on master
+    - name: Run throughput benchmark on main
       run: benchmark/local-udp-throughput

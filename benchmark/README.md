@@ -23,7 +23,7 @@ To benchmark your changes:
      be available if you check out another branch.
 2. Run these scripts on your pull request branch. The results will be stored in
    a temporary file.
-3. Checkout the latest version of `master`.
+3. Checkout the latest version of `main`.
 4. Run the benchmark again. The benchmark script will now print a comparison
-   between your branch and master.
+   between your branch and main.
 5. Include the output in your pull request description.

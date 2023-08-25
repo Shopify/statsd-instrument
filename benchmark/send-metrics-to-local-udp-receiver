@@ -20,9 +20,9 @@ end
 
 def benchmark_implementation(name, env = {})
   revision = %x(git rev-parse HEAD).rstrip
-  base_revision = %x(git rev-parse origin/master).rstrip
+  base_revision = %x(git rev-parse origin/main).rstrip
   branch = if revision == base_revision
-    "master"
+    "main"
   else
     %x(git rev-parse --abbrev-ref HEAD).rstrip
   end
@@ -60,7 +60,7 @@ def benchmark_implementation(name, env = {})
 
   if report.entries.length == 1
     puts
-    puts "To compare the performance of this revision against another revision (e.g. master),"
+    puts "To compare the performance of this revision against another revision (e.g. main),"
     puts "check out a different branch and run this benchmark script again."
   elsif ENV["KEEP_RESULTS"]
     puts
