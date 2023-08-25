@@ -9,7 +9,7 @@ section below.
 ## Version 3.5.12
 
 - Update CONTRIBUTING docs about release process
-- Rename branch `maaster` to `main`.
+- Rename branch `master` to `main`.
 
 ## Version 3.5.11
 
