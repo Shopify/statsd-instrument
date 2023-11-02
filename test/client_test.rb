@@ -206,7 +206,7 @@ class ClientTest < Minitest::Test
     mock_sink.stubs(:sample?).returns(false, true, false, false, true)
     mock_sink.expects(:<<).twice
 
-    client = StatsD::Instrument::Client.new(sink: mock_sink)
+    client = StatsD::Instrument::Client.new(sink: mock_sink, default_sample_rate: 0.5)
     5.times { client.increment("metric") }
   end
 

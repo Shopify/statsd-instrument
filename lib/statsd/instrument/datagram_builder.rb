@@ -20,8 +20,8 @@ module StatsD
       end
 
       def initialize(prefix: nil, default_tags: nil)
-        @prefix = prefix.nil? ? "" : "#{normalize_name(prefix)}."
-        @default_tags = normalize_tags(default_tags)
+        @prefix = prefix.nil? ? "" : "#{prefix}.".tr(":|@", "_")
+        @default_tags = default_tags.nil? || default_tags.empty? ? nil : compile_tags(default_tags, "|#".b)
       end
 
       def c(name, value, sample_rate, tags)
@@ -58,26 +58,6 @@ module StatsD
 
       protected
 
-      attr_reader :prefix, :default_tags
-
-      # Utility function to convert tags to the canonical form.
-      #
-      # - Tags specified as key value pairs will be converted into an array
-      # - Tags are normalized to remove unsupported characters
-      #
-      # @param tags [Array<String>, Hash<String, String>, nil] Tags specified in any form.
-      # @return [Array<String>, nil] the list of tags in canonical form.
-      def normalize_tags(tags)
-        return [] unless tags
-
-        tags = tags.map { |k, v| "#{k}:#{v}" } if tags.is_a?(Hash)
-
-        # Fast path when no string replacement is needed
-        return tags unless tags.any? { |tag| /[|,]/.match?(tag) }
-
-        tags.map { |tag| tag.tr("|,", "") }
-      end
-
       # Utility function to remove invalid characters from a StatsD metric name
       def normalize_name(name)
         # Fast path when no normalization is needed to avoid copying the string
@@ -87,11 +67,48 @@ module StatsD
       end
 
       def generate_generic_datagram(name, value, type, sample_rate, tags)
-        tags = normalize_tags(tags) + default_tags
-        datagram = +"#{@prefix}#{normalize_name(name)}:#{value}|#{type}"
-        datagram << "|@#{sample_rate}" if sample_rate && sample_rate < 1
-        datagram << "|##{tags.join(",")}" unless tags.empty?
+        datagram = "".b <<
+          @prefix <<
+          (/[:|@]/.match?(name) ? name.tr(":|@", "_") : name) <<
+          ":" << value.to_s <<
+          "|" << type
+
+        datagram << "|@" << sample_rate.to_s if sample_rate && sample_rate < 1
+
+        unless @default_tags.nil?
+          datagram << @default_tags
+        end
+
+        unless tags.nil?
+          datagram << (@default_tags.nil? ? "|#" : ",")
+          compile_tags(tags, datagram)
+        end
+
         datagram
+      end
+
+      def compile_tags(tags, buffer = "".b)
+        if tags.is_a?(Hash)
+          first = true
+          tags.each do |key, value|
+            if first
+              first = false
+            else
+              buffer << ","
+            end
+            key = key.to_s
+            key = key.tr("|,", "") if /[|,]/.match?(key)
+            value = value.to_s
+            value = value.tr("|,", "") if /[|,]/.match?(value)
+            buffer << key << ":" << value
+          end
+        else
+          if tags.any? { |tag| /[|,]/.match?(tag) }
+            tags = tags.map { |tag| tag.tr("|,", "") }
+          end
+          buffer << tags.join(",")
+        end
+        buffer
       end
     end
   end

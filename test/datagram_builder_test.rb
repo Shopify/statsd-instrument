@@ -14,17 +14,17 @@ class DatagramBuilderTest < Minitest::Test
     assert_equal("fo_o", @datagram_builder.send(:normalize_name, "fo:o"))
   end
 
-  def test_normalize_unsupported_tag_names
-    assert_equal(["ign#ored"], @datagram_builder.send(:normalize_tags, ["ign#o|re,d"]))
+  def test_compile_unsupported_tag_names
+    assert_equal("ign#ored", @datagram_builder.send(:compile_tags, ["ign#o|re,d"]))
     # NOTE: how this is interpreted by the backend is undefined.
     # We rely on the user to not do stuff like this if they don't want to be surprised.
     # We do not want to take the performance hit of normalizing this.
-    assert_equal(["lol::class:omg::lol"], @datagram_builder.send(:normalize_tags, "lol::class" => "omg::lol"))
+    assert_equal("lol::class:omg::lol", @datagram_builder.send(:compile_tags, { "lol::class" => "omg::lol" }))
   end
 
-  def test_normalize_tags_converts_hash_to_array
-    assert_equal(["tag:value"], @datagram_builder.send(:normalize_tags, tag: "value"))
-    assert_equal(["tag1:v1", "tag2:v2"], @datagram_builder.send(:normalize_tags, tag1: "v1", tag2: "v2"))
+  def test_compile_tags_converts_hash_to_array
+    assert_equal("tag:value", @datagram_builder.send(:compile_tags, { tag: "value" }))
+    assert_equal("tag1:v1,tag2:v2", @datagram_builder.send(:compile_tags, { tag1: "v1", tag2: "v2" }))
   end
 
   def test_c
@@ -103,7 +103,7 @@ class DatagramBuilderTest < Minitest::Test
     assert_equal("bar:1|c|#foo", datagram)
 
     datagram = datagram_builder.c("bar", 1, nil, a: "b")
-    assert_equal("bar:1|c|#a:b,foo", datagram)
+    assert_equal("bar:1|c|#foo,a:b", datagram)
 
     # We do not filter out duplicates, because detecting dupes is too time consuming.
     # We let the server deal with the situation
