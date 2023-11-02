@@ -36,7 +36,6 @@ module StatsD
 
         escaped_title = "#{@prefix}#{title}".gsub("\n", '\n')
         escaped_text = text.gsub("\n", '\n')
-        tags = normalize_tags(tags) + default_tags
 
         datagram = +"_e{#{escaped_title.length},#{escaped_text.length}}:#{escaped_title}|#{escaped_text}"
         datagram << "|h:#{hostname}" if hostname
@@ -45,7 +44,16 @@ module StatsD
         datagram << "|p:#{priority}" if priority
         datagram << "|s:#{source_type_name}" if source_type_name
         datagram << "|t:#{alert_type}" if alert_type
-        datagram << "|##{tags.join(",")}" unless tags.empty?
+
+        unless @default_tags.nil?
+          datagram << @default_tags
+        end
+
+        unless tags.nil?
+          datagram << (@default_tags.nil? ? "|#" : ",")
+          compile_tags(tags, datagram)
+        end
+
         datagram
       end
 
@@ -63,12 +71,20 @@ module StatsD
       # @see https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/#service-checks
       def _sc(name, status, timestamp: nil, hostname: nil, tags: nil, message: nil)
         status_number = status.is_a?(Integer) ? status : SERVICE_CHECK_STATUS_VALUES.fetch(status.to_sym)
-        tags = normalize_tags(tags) + default_tags
 
         datagram = +"_sc|#{@prefix}#{normalize_name(name)}|#{status_number}"
         datagram << "|h:#{hostname}" if hostname
         datagram << "|d:#{timestamp.to_i}" if timestamp
-        datagram << "|##{tags.join(",")}" unless tags.empty?
+
+        unless @default_tags.nil?
+          datagram << @default_tags
+        end
+
+        unless tags.nil?
+          datagram << (@default_tags.nil? ? "|#" : ",")
+          compile_tags(tags, datagram)
+        end
+
         datagram << "|m:#{normalize_name(message)}" if message
         datagram
       end
