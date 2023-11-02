@@ -140,13 +140,15 @@ module StatsD
       # on their frequency, rather than changing the default sample rate.
       #
       # @return [Float] (default: 1.0) A value between 0.0 and 1.0.
-      attr_reader :default_sample_rate
+      def default_sample_rate
+        @default_sample_rate || 1.0
+      end
 
       # Instantiates a new client.
       # @see .from_env to instantiate a client using environment variables.
       def initialize(
         prefix: nil,
-        default_sample_rate: 1.0,
+        default_sample_rate: nil,
         default_tags: nil,
         implementation: "datadog",
         sink: StatsD::Instrument::NullSink.new,
@@ -199,9 +201,10 @@ module StatsD
       # @return [void]
       def increment(name, value = 1, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        return StatsD::Instrument::VOID unless sample?(sample_rate)
-
-        emit(datagram_builder(no_prefix: no_prefix).c(name, value, sample_rate, tags))
+        if sample_rate.nil? || sample?(sample_rate)
+          emit(datagram_builder(no_prefix: no_prefix).c(name, value, sample_rate, tags))
+        end
+        StatsD::Instrument::VOID
       end
 
       # Emits a timing metric.
@@ -217,9 +220,10 @@ module StatsD
         end
 
         sample_rate ||= @default_sample_rate
-        return StatsD::Instrument::VOID unless sample?(sample_rate)
-
-        emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
+        if sample_rate.nil? || sample?(sample_rate)
+          emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
+        end
+        StatsD::Instrument::VOID
       end
 
       # Emits a gauge metric.
@@ -237,9 +241,10 @@ module StatsD
       # @return [void]
       def gauge(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        return StatsD::Instrument::VOID unless sample?(sample_rate)
-
-        emit(datagram_builder(no_prefix: no_prefix).g(name, value, sample_rate, tags))
+        if sample_rate.nil? || sample?(sample_rate)
+          emit(datagram_builder(no_prefix: no_prefix).g(name, value, sample_rate, tags))
+        end
+        StatsD::Instrument::VOID
       end
 
       # Emits a set metric, which counts distinct values.
@@ -251,9 +256,10 @@ module StatsD
       # @return [void]
       def set(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        return StatsD::Instrument::VOID unless sample?(sample_rate)
-
-        emit(datagram_builder(no_prefix: no_prefix).s(name, value, sample_rate, tags))
+        if sample_rate.nil? || sample?(sample_rate)
+          emit(datagram_builder(no_prefix: no_prefix).s(name, value, sample_rate, tags))
+        end
+        StatsD::Instrument::VOID
       end
 
       # Emits a distribution metric, which builds a histogram of the reported
@@ -274,9 +280,10 @@ module StatsD
         end
 
         sample_rate ||= @default_sample_rate
-        return StatsD::Instrument::VOID unless sample?(sample_rate)
-
-        emit(datagram_builder(no_prefix: no_prefix).d(name, value, sample_rate, tags))
+        if sample_rate.nil? || sample?(sample_rate)
+          emit(datagram_builder(no_prefix: no_prefix).d(name, value, sample_rate, tags))
+        end
+        StatsD::Instrument::VOID
       end
 
       # Emits a histogram metric, which builds a histogram of the reported values.
@@ -292,9 +299,10 @@ module StatsD
       # @return [void]
       def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        return StatsD::Instrument::VOID unless sample?(sample_rate)
-
-        emit(datagram_builder(no_prefix: no_prefix).h(name, value, sample_rate, tags))
+        if sample_rate.nil? || sample?(sample_rate)
+          emit(datagram_builder(no_prefix: no_prefix).h(name, value, sample_rate, tags))
+        end
+        StatsD::Instrument::VOID
       end
 
       # @!endgroup
@@ -317,7 +325,7 @@ module StatsD
           stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
 
           sample_rate ||= @default_sample_rate
-          if sample?(sample_rate)
+          if sample_rate.nil? || sample?(sample_rate)
             metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
             latency_in_ms = stop - start
             emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
