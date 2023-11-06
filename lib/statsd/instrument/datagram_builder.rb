@@ -79,7 +79,7 @@ module StatsD
           datagram << @default_tags
         end
 
-        unless tags.nil?
+        unless tags.nil? || tags.empty?
           datagram << (@default_tags.nil? ? "|#" : ",")
           compile_tags(tags, datagram)
         end

@@ -76,6 +76,12 @@ class DatagramBuilderTest < Minitest::Test
   end
 
   def test_tags
+    datagram = @datagram_builder.d("foo", 10, nil, {})
+    assert_equal("foo:10|d", datagram)
+
+    datagram = @datagram_builder.d("foo", 10, nil, [])
+    assert_equal("foo:10|d", datagram)
+
     datagram = @datagram_builder.d("foo", 10, nil, ["foo", "bar"])
     assert_equal("foo:10|d|#foo,bar", datagram)
 
