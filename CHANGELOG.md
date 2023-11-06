@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.6.1
+
+- Fix `ArgumentError` when passing an empty Hash as tags.
+
 ## Version 3.6.0
 
 - Optimized datagram building.
