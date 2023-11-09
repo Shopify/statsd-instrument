@@ -16,7 +16,7 @@ module StatsD
         :d
       end
 
-      # Constricts an event datagram.
+      # Constructs an event datagram.
       #
       # @param [String] title Event title.
       # @param [String] text Event description. Newlines are allowed.
@@ -57,7 +57,7 @@ module StatsD
         datagram
       end
 
-      # Constricts a service check datagram.
+      # Constructs a service check datagram.
       #
       # @param [String] name Name of the service
       # @param [Symbol] status Either `:ok`, `:warning`, `:critical` or `:unknown`
