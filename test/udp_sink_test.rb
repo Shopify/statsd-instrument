@@ -122,82 +122,91 @@ module UDPSinkTests
     end
     datagrams
   end
+end
 
-  class UDPSinkTest < Minitest::Test
-    include UDPSinkTests
+class UDPSinkTest < Minitest::Test
+  include UDPSinkTests
 
-    def setup
-      @receiver = UDPSocket.new
-      @receiver.bind("localhost", 0)
-      @host = @receiver.addr[2]
-      @port = @receiver.addr[1]
-      @sink_class = StatsD::Instrument::UDPSink
-    end
-
-    def teardown
-      @receiver.close
-    end
-
-    def test_socket_error_should_invalidate_socket
-      previous_logger = StatsD.logger
-      begin
-        logs = StringIO.new
-        StatsD.logger = Logger.new(logs)
-        StatsD.logger.formatter = SimpleFormatter.new
-        UDPSocket.stubs(:new).returns(socket = mock("socket"))
-
-        seq = sequence("connect_fail_connect_succeed")
-        socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
-        socket.expects(:send).raises(Errno::EDESTADDRREQ).in_sequence(seq)
-        socket.expects(:close).in_sequence(seq)
-        socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
-        socket.expects(:send).twice.returns(1).in_sequence(seq)
-        socket.expects(:close).in_sequence(seq)
-
-        udp_sink = build_sink("localhost", 8125)
-        udp_sink << "foo:1|c"
-        udp_sink << "bar:1|c"
-
-        assert_equal(
-          "[#{@sink_class}] Resetting connection because of " \
-            "Errno::EDESTADDRREQ: Destination address required\n",
-          logs.string,
-        )
-      ensure
-        StatsD.logger = previous_logger
-        # Make sure our fake socket is closed so that it doesn't interfere with other tests
-        udp_sink&.send(:invalidate_socket)
-      end
-    end
+  def setup
+    @receiver = UDPSocket.new
+    @receiver.bind("localhost", 0)
+    @host = @receiver.addr[2]
+    @port = @receiver.addr[1]
+    @sink_class = StatsD::Instrument::UDPSink
   end
 
-  module BatchedUDPSinkTests
-    include UDPSinkTests
-
-    def setup
-      @receiver = UDPSocket.new
-      @receiver.bind("localhost", 0)
-      @host = @receiver.addr[2]
-      @port = @receiver.addr[1]
-      @sink_class = StatsD::Instrument::BatchedUDPSink
-      @sinks = []
-    end
-
-    def teardown
-      @receiver.close
-      @sinks.each(&:shutdown)
-    end
-
-    private
-
-    def build_sink(host = @host, port = @port)
-      sink = @sink_class.new(host, port, buffer_capacity: 50)
-      @sinks << sink
-      sink
-    end
+  def teardown
+    @receiver.close
   end
 
-  class BatchedUDPSinkTest < Minitest::Test
-    include BatchedUDPSinkTests
+  def test_socket_error_should_invalidate_socket
+    previous_logger = StatsD.logger
+    begin
+      logs = StringIO.new
+      StatsD.logger = Logger.new(logs)
+      StatsD.logger.formatter = SimpleFormatter.new
+      UDPSocket.stubs(:new).returns(socket = mock("socket"))
+
+      seq = sequence("connect_fail_connect_succeed")
+      socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
+      socket.expects(:send).raises(Errno::EDESTADDRREQ).in_sequence(seq)
+      socket.expects(:close).in_sequence(seq)
+      socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
+      socket.expects(:send).twice.returns(1).in_sequence(seq)
+      socket.expects(:close).in_sequence(seq)
+
+      udp_sink = build_sink("localhost", 8125)
+      udp_sink << "foo:1|c"
+      udp_sink << "bar:1|c"
+
+      assert_equal(
+        "[#{@sink_class}] Resetting connection because of " \
+          "Errno::EDESTADDRREQ: Destination address required\n",
+        logs.string,
+      )
+    ensure
+      StatsD.logger = previous_logger
+      # Make sure our fake socket is closed so that it doesn't interfere with other tests
+      udp_sink&.send(:invalidate_socket)
+    end
+  end
+end
+
+class BatchedUDPSinkTest < Minitest::Test
+  include UDPSinkTests
+
+  def setup
+    @receiver = UDPSocket.new
+    @receiver.bind("localhost", 0)
+    @host = @receiver.addr[2]
+    @port = @receiver.addr[1]
+    @sink_class = StatsD::Instrument::BatchedUDPSink
+    @sinks = []
+  end
+
+  def teardown
+    @receiver.close
+    @sinks.each(&:shutdown)
+  end
+
+  def test_flush
+    buffer_size = 50
+
+    sink = build_sink(@host, @port, buffer_capacity: buffer_size)
+    dispatcher = sink.instance_variable_get(:@dispatcher)
+    buffer = dispatcher.instance_variable_get(:@buffer)
+    # Send a few datagrams to fill the buffer
+    (buffer_size * 2).times { |i| sink << "foo:#{i}|c" }
+    assert(!buffer.empty?)
+    sink.flush(blocking: false)
+    assert(buffer.empty?)
+  end
+
+  private
+
+  def build_sink(host = @host, port = @port, buffer_capacity: 50)
+    sink = @sink_class.new(host, port, buffer_capacity: buffer_capacity)
+    @sinks << sink
+    sink
   end
 end
