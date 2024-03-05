@@ -152,6 +152,7 @@ module UDPSinkTests
         socket.expects(:close).in_sequence(seq)
         socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
         socket.expects(:send).twice.returns(1).in_sequence(seq)
+        socket.expects(:close).in_sequence(seq)
 
         udp_sink = build_sink("localhost", 8125)
         udp_sink << "foo:1|c"
@@ -164,6 +165,8 @@ module UDPSinkTests
         )
       ensure
         StatsD.logger = previous_logger
+        # Make sure our fake socket is closed so that it doesn't interfere with other tests
+        udp_sink&.send(:invalidate_socket)
       end
     end
   end

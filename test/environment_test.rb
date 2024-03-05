@@ -57,6 +57,9 @@ class EnvironmentTest < Minitest::Test
   end
 
   def test_client_from_env_uses_regular_udp_sink_when_flush_interval_is_0
+    StatsD::Instrument::Environment.any_instance.expects(:warn).with(
+      "STATSD_FLUSH_INTERVAL=0.0 is deprecated, please set STATSD_BUFFER_CAPACITY=0 instead.",
+    ).once
     env = StatsD::Instrument::Environment.new(
       "STATSD_USE_NEW_CLIENT" => "1",
       "STATSD_ENV" => "staging",
