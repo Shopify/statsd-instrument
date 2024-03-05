@@ -23,6 +23,10 @@ module StatsD
         logger.add(severity, "[StatsD] #{datagram.chomp}")
         self
       end
+
+      def flush(blocking:)
+        # noop
+      end
     end
   end
 end

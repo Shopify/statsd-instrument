@@ -26,6 +26,10 @@ module StatsD
       def clear
         @datagrams.clear
       end
+
+      def flush(blocking:)
+        @parent.flush(blocking: blocking)
+      end
     end
   end
 end

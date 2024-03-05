@@ -55,6 +55,10 @@ module StatsD
         @dispatcher.shutdown(*args)
       end
 
+      def flush(blocking:)
+        @dispatcher.flush(blocking: blocking)
+      end
+
       class Buffer < SizedQueue
         def push_nonblock(item)
           push(item, true)
@@ -104,10 +108,6 @@ module StatsD
           flush(blocking: false)
         end
 
-        private
-
-        NEWLINE = "\n".b.freeze
-
         def flush(blocking:)
           packet = "".b
           next_datagram = nil
@@ -136,6 +136,10 @@ module StatsD
             packet.clear
           end
         end
+
+        private
+
+        NEWLINE = "\n".b.freeze
 
         def thread_healthcheck
           # TODO: We have a race condition on JRuby / Truffle here. It could cause multiple

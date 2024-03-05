@@ -12,6 +12,10 @@ module StatsD
       def <<(_datagram)
         self # noop
       end
+
+      def flush(blocking:)
+        # noop
+      end
     end
   end
 end

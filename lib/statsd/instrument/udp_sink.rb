@@ -53,6 +53,10 @@ module StatsD
         self
       end
 
+      def flush(blocking:)
+        # noop
+      end
+
       private
 
       def invalidate_socket
