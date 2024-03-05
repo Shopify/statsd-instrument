@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.7.0
+
+- Add public `.flush` method to sink classes.
+
 ## Version 3.6.1
 
 - Fix `ArgumentError` when passing an empty Hash as tags.
