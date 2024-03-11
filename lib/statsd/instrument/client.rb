@@ -57,6 +57,8 @@ module StatsD
             StatsD::Instrument::StatsDDatagramBuilder
           when "datadog", "dogstatsd"
             StatsD::Instrument::DogStatsDDatagramBuilder
+          when "graphite"
+            StatsD::Instrument::GraphiteStatsDDatagramBuilder
           else
             raise NotImplementedError, "Implementation named #{implementation} could not be found"
           end
