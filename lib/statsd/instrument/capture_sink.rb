@@ -18,6 +18,11 @@ module StatsD
       end
 
       def <<(datagram)
+        puts "-- Start StatsD::Instrument::CaptureSink#<< --"
+        puts caller
+        puts "---"
+        puts datagram.inspect
+        puts "-- End StatsD::Instrument::CaptureSink#<< --"
         @datagrams << datagram_class.new(datagram)
         parent << datagram
         self
