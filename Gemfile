@@ -8,6 +8,6 @@ gem "minitest"
 gem "rspec"
 gem "mocha"
 gem "yard"
-gem "rubocop", ">= 1.0"
+gem "rubocop", "~> 1.61"
 gem "rubocop-shopify", require: false
 gem "benchmark-ips"

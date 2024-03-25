@@ -14,6 +14,7 @@ Gem::Specification.new do |spec|
   spec.summary = %q{A StatsD client for Ruby apps}
   spec.description = %q{A StatsD client for Ruby apps. Provides metaprogramming methods to inject StatsD instrumentation into your code.}
   spec.license = "MIT"
+  spec.required_ruby_version = ">= 3.0"
 
   spec.files = `git ls-files`.split($/)
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
