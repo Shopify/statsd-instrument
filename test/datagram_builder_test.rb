@@ -92,6 +92,17 @@ class DatagramBuilderTest < Minitest::Test
     assert_equal("foo:10|d|#foo:bar,baz:quc", datagram)
   end
 
+  def test_lazy_tags
+    datagram = @datagram_builder.d("foo", 10, nil, -> { { foo: "bar" } })
+    assert_equal("foo:10|d|#foo:bar", datagram)
+
+    datagram = @datagram_builder.d("foo", 10, nil, -> { ["foo", "bar"] })
+    assert_equal("foo:10|d|#foo,bar", datagram)
+
+    datagram = @datagram_builder.d("foo", 10, nil, -> { ["foo:bar"] })
+    assert_equal("foo:10|d|#foo:bar", datagram)
+  end
+
   def test_prefix
     datagram_builder = StatsD::Instrument::DatagramBuilder.new(prefix: "foo")
     datagram = datagram_builder.c("bar", 1, nil, nil)
