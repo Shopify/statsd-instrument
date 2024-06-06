@@ -3,8 +3,11 @@
 module StatsD
   module Instrument
     class CounterAggregator
-      def initialize(sink)
+      CONST_SAMPLE_RATE = 1.0
+
+      def initialize(sink, datagram_builder)
         @sink = sink
+        @datagram_builder = datagram_builder
         @counters = {}
       end
 
@@ -29,7 +32,7 @@ module StatsD
 
       def flush
         @counters.each do |key, counter|
-          @sink << build_datagram(counter)
+          @sink << @datagram_builder.c( counter[:name], counter[:value], CONST_SAMPLE_RATE, tags: counter[:tags])
         end
         @counters.clear
       end
@@ -38,10 +41,6 @@ module StatsD
 
       def packet_key(name, tags = [])
         "#{name}#{tags.join('')}"
-      end
-
-      def build_datagram(counter)
-        "#{counter[:name]}:#{counter[:value]}|c|##{counter[:tags].join(',')}"
       end
 
       def tags_sorted(tags)
