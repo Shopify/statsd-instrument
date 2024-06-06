@@ -386,6 +386,7 @@ end
 require "statsd/instrument/version"
 require "statsd/instrument/client"
 require "statsd/instrument/datagram"
+require "statsd/instrument/counter_aggregator"
 require "statsd/instrument/dogstatsd_datagram"
 require "statsd/instrument/datagram_builder"
 require "statsd/instrument/statsd_datagram_builder"

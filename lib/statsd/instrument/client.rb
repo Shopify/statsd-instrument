@@ -40,6 +40,7 @@ module StatsD
             implementation: implementation,
             sink: sink,
             datagram_builder_class: datagram_builder_class,
+            enable_aggregation: env.experimental_aggregation_enabled?,
           )
         end
 
@@ -152,7 +153,8 @@ module StatsD
         default_tags: nil,
         implementation: "datadog",
         sink: StatsD::Instrument::NullSink.new,
-        datagram_builder_class: self.class.datagram_builder_class_for_implementation(implementation)
+        datagram_builder_class: self.class.datagram_builder_class_for_implementation(implementation),
+        enable_aggregation: false
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
@@ -162,6 +164,10 @@ module StatsD
         @default_sample_rate = default_sample_rate
 
         @datagram_builder = { false => nil, true => nil }
+        @enable_aggregation = enable_aggregation
+        if @enable_aggregation
+          @counter_agg = CounterAggregator.new(@sink, datagram_builder_class, prefix, default_tags)
+        end
       end
 
       # @!group Metric Methods
@@ -201,6 +207,12 @@ module StatsD
       # @return [void]
       def increment(name, value = 1, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
+
+        if @enable_aggregation
+          @counter_agg.increment(name, value, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+          return StatsD::Instrument::VOID
+        end
+
         if sample_rate.nil? || sample?(sample_rate)
           emit(datagram_builder(no_prefix: no_prefix).c(name, value, sample_rate, tags))
         end
@@ -386,6 +398,18 @@ module StatsD
         ))
       end
 
+      # Forces the client to flush all metrics that are currently buffered, first flushes the aggregation
+      # if enabled.
+      #
+      # @return [void]
+      def force_flush
+        if @enable_aggregation
+          @counter_agg.flush
+        end
+        @sink.flush(blocking: false)
+        StatsD::Instrument::VOID
+      end
+
       NO_CHANGE = Object.new
 
       # Instantiates a new StatsD client that uses the settings of the current client,
@@ -427,6 +451,7 @@ module StatsD
           default_tags: default_tags == NO_CHANGE ? @default_tags : default_tags,
           datagram_builder_class:
             datagram_builder_class == NO_CHANGE ? @datagram_builder_class : datagram_builder_class,
+          enable_aggregation: @enable_aggregation,
         )
       end
 
