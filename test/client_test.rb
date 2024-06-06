@@ -63,6 +63,36 @@ class ClientTest < Minitest::Test
     assert_kind_of(StatsD::Instrument::NullSink, client.sink)
   end
 
+  def test_client_from_env_with_aggregation
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_SAMPLE_RATE" => "0.1",
+      "STATSD_PREFIX" => "foo",
+      "STATSD_DEFAULT_TAGS" => "shard:1,env:production",
+      "STATSD_IMPLEMENTATION" => "statsd",
+      "STATSD_ENABLE_AGGREGATION" => "true",
+      "STATSD_BUFFER_CAPACITY" => "0",
+    )
+    client = StatsD::Instrument::Client.from_env(
+      env,
+      prefix: "bar",
+      implementation: "dogstatsd",
+      sink: StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new),
+    )
+
+    assert_equal(0.1, client.default_sample_rate)
+    assert_equal("bar", client.prefix)
+    assert_equal(["shard:1", "env:production"], client.default_tags)
+    assert_equal(StatsD::Instrument::DogStatsDDatagramBuilder, client.datagram_builder_class)
+
+    client.increment("foo", 1, sample_rate: 0.5, tags: { foo: "bar" })
+    client.increment("foo", 1, sample_rate: 0.5, tags: { foo: "bar" })
+    client.force_flush
+
+    datagram = client.sink.datagrams.first
+    assert_equal("bar.foo", datagram.name)
+    assert_equal(2, datagram.value)
+  end
+
   def test_capture
     inner_datagrams = nil
 
