@@ -7,7 +7,6 @@ end
 ENV["ENV"] = "test"
 
 require "minitest/autorun"
-require "minitest/pride"
 require "mocha/minitest"
 require "statsd-instrument"
 
