@@ -27,9 +27,10 @@ def benchmark_implementation(name, env = {})
     %x(git rev-parse --abbrev-ref HEAD).rstrip
   end
 
-  intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}"
-  log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
-  FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
+  log_dir = "#{Dir.tmpdir}/statsd-instrument-benchmarks"
+  intermediate_results_filename = File.join(log_dir, "#{File.basename($PROGRAM_NAME)}-#{name}")
+  log_filename = File.join(log_dir, "#{File.basename($PROGRAM_NAME)}-#{name}.log")
+  FileUtils.mkdir_p(log_dir)
 
   # Set up an UDP listener to which we can send StatsD packets
   receiver = UDPSocket.new
@@ -69,7 +70,7 @@ def benchmark_implementation(name, env = {})
     File.unlink(intermediate_results_filename)
   end
 
-  log_file.close
+  # log_file.close
   logs = File.read(log_filename)
   unless logs.empty?
     puts
@@ -81,3 +82,4 @@ end
 
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
 benchmark_implementation("UDP batched")
+benchmark_implementation("UDP batched with aggregation", "STATSD_ENABLE_AGGREGATION" => "true")

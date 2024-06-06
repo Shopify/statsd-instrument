@@ -31,7 +31,11 @@ module StatsD
         when :c
           Integer(parsed_datagram[:value])
         when :g, :h, :d, :kv, :ms
-          Float(parsed_datagram[:value])
+          if parsed_datagram[:value].include?(":")
+            parsed_datagram[:value].split(":").map { |v| Float(v) }
+          else
+            Float(parsed_datagram[:value])
+          end
         when :s
           String(parsed_datagram[:value])
         else
@@ -68,7 +72,7 @@ module StatsD
 
       PARSER = %r{
         \A
-        (?<name>[^\:\|\@]+)\:(?<value>[^\:\|\@]+)\|(?<type>c|ms|g|s|h|d)
+        (?<name>[^\:\|\@]+)\:(?<value>(?:[^\:\|\@]+:)*[^\:\|\@]+)\|(?<type>c|ms|g|s|h|d)
         (?:\|\@(?<sample_rate>\d*(?:\.\d*)?))?
         (?:\|\#(?<tags>(?:[^\|,]+(?:,[^\|,]+)*)))?
         \n? # In some implementations, the datagram may include a trailing newline.
