@@ -4,8 +4,8 @@ require "test_helper"
 
 class CounterAggregatorTest < Minitest::Test
   def setup
-    @sink = CaptureSink.new(NullSink.new)
-    @subject = CounterAggregator.new(@sink)
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    @subject = StatsD::Instrument::CounterAggregator.new(@sink)
   end
 
   def teardown
@@ -13,12 +13,13 @@ class CounterAggregatorTest < Minitest::Test
   end
 
   def test_increment
-    @subject.increment("foo")
-    @subject.increment("foo")
+    @subject.increment("foo", 1, sample_rate: 0.5, tags: { foo: "bar" })
+    @subject.increment("foo", 1, sample_rate: 0.5, tags: { foo: "bar" })
     @subject.flush
 
     datagram = @sink.datagrams.first
-    assert_equal "foo", datagram[:name]
-    assert_equal 2, datagram[:value]
+    assert_equal "foo", datagram.name
+    assert_equal 4, datagram.value
+    assert_equal 1.0, datagram.sample_rate
   end
 end
