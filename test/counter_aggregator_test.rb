@@ -5,8 +5,7 @@ require "test_helper"
 class CounterAggregatorTest < Minitest::Test
   def setup
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
-    datagram_builder = StatsD::Instrument::DatagramBuilder.new
-    @subject = StatsD::Instrument::CounterAggregator.new(@sink, datagram_builder)
+    @subject = StatsD::Instrument::CounterAggregator.new(@sink, StatsD::Instrument::DatagramBuilder, nil, [])
   end
 
   def teardown
@@ -58,5 +57,22 @@ class CounterAggregatorTest < Minitest::Test
     @subject.flush
 
     assert_equal(3, @sink.datagrams.first.value)
+  end
+
+  def test_with_prefix
+    aggregator = StatsD::Instrument::CounterAggregator.new(@sink, StatsD::Instrument::DatagramBuilder, "MyApp", [])
+
+    aggregator.increment("foo", 1, sample_rate: 1.0, tags: ["tag1:val1", "tag2:val2"])
+    aggregator.increment("foo", 1, sample_rate: 1.0, tags: ["tag1:val1", "tag2:val2"])
+
+    aggregator.increment("foo", 1, sample_rate: 1.0, tags: ["tag1:val1", "tag2:val2"], no_prefix: true)
+    aggregator.flush
+
+    assert_equal(2, @sink.datagrams.size)
+    assert_equal("MyApp.foo", @sink.datagrams.first.name)
+    assert_equal(2, @sink.datagrams.first.value)
+
+    assert_equal("foo", @sink.datagrams.last.name)
+    assert_equal(1, @sink.datagrams.last.value)
   end
 end
