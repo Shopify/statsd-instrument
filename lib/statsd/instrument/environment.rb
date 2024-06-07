@@ -98,6 +98,10 @@ module StatsD
         Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::BatchedUDPSink::DEFAULT_MAX_PACKET_SIZE))
       end
 
+      def experimental_aggregation_enabled?
+        env.key?("STATSD_ENABLE_AGGREGATION")
+      end
+
       def client
         StatsD::Instrument::Client.from_env(self)
       end
