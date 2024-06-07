@@ -406,7 +406,7 @@ module StatsD
         if @enable_aggregation
           @counter_agg.flush
         end
-        @sink.flush(blocking: true)
+        @sink.flush(blocking: false)
         StatsD::Instrument::VOID
       end
 
