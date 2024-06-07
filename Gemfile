@@ -10,5 +10,5 @@ gem "mocha"
 gem "yard"
 gem "racc"
 gem "rubocop", ">= 1.0"
-gem "rubocop-shopify", ">= 2.15.1", require: false
+gem "rubocop-shopify", require: false
 gem "benchmark-ips"
