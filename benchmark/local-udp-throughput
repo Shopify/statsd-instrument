@@ -21,8 +21,8 @@ EVENTS_PER_ITERATION = 6
 ITERATIONS = 50_000
 def benchmark_implementation(name, env = {})
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
-  log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
-  FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
+  log_filename = "#{intermediate_results_filename}#{File.basename($PROGRAM_NAME)}-#{name}.log"
+  FileUtils.mkdir_p(File.dirname(log_filename))
 
   # Set up an UDP listener to which we can send StatsD packets
   receiver = UDPSocket.new
@@ -55,5 +55,6 @@ def benchmark_implementation(name, env = {})
   udp_client.shutdown if udp_client.respond_to?(:shutdown)
 end
 
-benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
-benchmark_implementation("UDP batched")
+benchmark_implementation("UDP_sync", "STATSD_BUFFER_CAPACITY" => "0")
+benchmark_implementation("UDP_batched")
+benchmark_implementation("Aggregation_Enabled", "STATSD_ENABLE_AGGREGATION" => "true")
