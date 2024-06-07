@@ -55,6 +55,6 @@ def benchmark_implementation(name, env = {})
   udp_client.shutdown if udp_client.respond_to?(:shutdown)
 end
 
-benchmark_implementation("UDP_sync", "STATSD_BUFFER_CAPACITY" => "0")
-benchmark_implementation("UDP_batched")
-benchmark_implementation("Aggregation_Enabled", "STATSD_ENABLE_AGGREGATION" => "true")
+benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
+benchmark_implementation("UDP batched")
+benchmark_implementation("UDP batched with aggregation", "STATSD_ENABLE_AGGREGATION" => "true")
