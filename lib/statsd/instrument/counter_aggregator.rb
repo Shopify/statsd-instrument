@@ -18,7 +18,7 @@ module StatsD
         if sample_rate < 1.0
           value = (value.to_f / sample_rate).round.to_i
         end
-        if @counters.has_key?(key)
+        if @counters.key?(key)
 
           @counters[key][:value] += value
         else
@@ -31,8 +31,8 @@ module StatsD
       end
 
       def flush
-        @counters.each do |key, counter|
-          @sink << @datagram_builder.c( counter[:name], counter[:value], CONST_SAMPLE_RATE, tags: counter[:tags])
+        @counters.each do |_key, counter|
+          @sink << @datagram_builder.c(counter[:name], counter[:value], CONST_SAMPLE_RATE, tags: counter[:tags])
         end
         @counters.clear
       end
@@ -40,12 +40,12 @@ module StatsD
       private
 
       def packet_key(name, tags = [])
-        "#{name}#{tags.join('')}"
+        "#{name}#{tags.join("")}"
       end
 
       def tags_sorted(tags)
         if tags.is_a?(Hash)
-          tags.sort_by { |k, v| k.to_s }
+          tags.sort_by { |k, _v| k.to_s }
           tags.map { |k, v| "#{k}:#{v}" }
         else
           tags.sort
