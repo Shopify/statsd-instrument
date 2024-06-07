@@ -22,6 +22,7 @@ class CounterAggregatorTest < Minitest::Test
     assert_equal("foo", datagram.name)
     assert_equal(4, datagram.value)
     assert_equal(1.0, datagram.sample_rate)
+    assert_equal(["foo:bar"], datagram.tags)
   end
 
   def test_increment_with_tags_in_different_orders
@@ -38,6 +39,8 @@ class CounterAggregatorTest < Minitest::Test
     @subject.flush
 
     assert_equal(2, @sink.datagrams.first.value)
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal(["tag1:val1", "tag2:val2"], @sink.datagrams.first.tags)
   end
 
   def test_increment_with_different_metric_names

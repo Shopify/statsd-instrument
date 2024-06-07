@@ -32,7 +32,7 @@ module StatsD
 
       def flush
         @counters.each do |_key, counter|
-          @sink << @datagram_builder.c(counter[:name], counter[:value], CONST_SAMPLE_RATE, tags: counter[:tags])
+          @sink << @datagram_builder.c(counter[:name], counter[:value], CONST_SAMPLE_RATE, counter[:tags])
         end
         @counters.clear
       end
