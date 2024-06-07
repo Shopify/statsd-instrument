@@ -11,7 +11,6 @@ Rake::TestTask.new("test") do |t|
 end
 
 RuboCop::RakeTask.new(:lint) do |task|
-  # These are the default options. You can change them to fit your needs.
   task.options = ["-D", "-S", "-E"]
 end
 
