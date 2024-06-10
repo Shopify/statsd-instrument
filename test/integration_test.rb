@@ -33,7 +33,7 @@ class IntegrationTest < Minitest::Test
       "STATSD_IMPLEMENTATION" => "dogstatsd",
       "STATSD_ENV" => "production",
       "STATSD_ENABLE_AGGREGATION" => "true",
-      ).client
+    ).client
 
     10.times do
       client.increment("counter", 2)
