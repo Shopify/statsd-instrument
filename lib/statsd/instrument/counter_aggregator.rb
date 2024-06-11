@@ -5,6 +5,35 @@ module StatsD
     class CounterAggregator
       CONST_SAMPLE_RATE = 1.0
 
+      class << self
+        def finalize(counters, sink, datagram_builders, datagram_builder_class)
+          proc do
+            counters.each do |_key, counter|
+              if datagram_builders[counter[:no_prefix]].nil?
+                datagram_builders[counter[:no_prefix]] =
+                  create_datagram_builder(datagram_builder_class, no_prefix: counter[:no_prefix])
+              end
+              sink << datagram_builders[counter[:no_prefix]].c(
+                counter[:name],
+                counter[:value],
+                CONST_SAMPLE_RATE,
+                counter[:tags],
+              )
+            end
+            counters.clear
+          end
+        end
+
+        private
+
+        def create_datagram_builder(builder_class, no_prefix:)
+          builder_class.new(
+            prefix: no_prefix ? nil : @metric_prefix,
+            default_tags: @default_tags,
+          )
+        end
+      end
+
       def initialize(sink, datagram_builder_class, prefix, default_tags)
         @sink = sink
         @datagram_builder_class = datagram_builder_class
@@ -15,6 +44,10 @@ module StatsD
           false: nil,
         }
         @counters = {}
+        ObjectSpace.define_finalizer(
+          self,
+          self.class.finalize(@counters, @sink, @datagram_builders, @datagram_builder_class),
+        )
       end
 
       # Increment a counter by a given value and save it for later flushing.
