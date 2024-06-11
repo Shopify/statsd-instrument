@@ -10,6 +10,10 @@ module StatsD
       initializer "statsd-instrument.use_rails_logger" do
         ::StatsD.logger = Rails.logger
       end
+
+      initializer "statsd-instrument.enable_flushing_middleware" do
+        Rails.application.config.middleware.use(StatsD::Instrument::FlushingMiddleware)
+      end
     end
   end
 end

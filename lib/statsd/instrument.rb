@@ -400,6 +400,7 @@ require "statsd/instrument/environment"
 require "statsd/instrument/helpers"
 require "statsd/instrument/assertions"
 require "statsd/instrument/expectation"
+require "statsd/instrument/flushing_middleware"
 require "statsd/instrument/matchers" if defined?(RSpec)
 require "statsd/instrument/railtie" if defined?(Rails::Railtie)
 require "statsd/instrument/strict" if ENV["STATSD_STRICT_MODE"]
