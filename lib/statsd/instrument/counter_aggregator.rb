@@ -34,7 +34,7 @@ module StatsD
         end
       end
 
-      def initialize(sink, datagram_builder_class, prefix, default_tags)
+      def initialize(sink, datagram_builder_class, prefix, default_tags, flush_interval: 5.0)
         @sink = sink
         @datagram_builder_class = datagram_builder_class
         @metric_prefix = prefix
@@ -43,7 +43,19 @@ module StatsD
           true: nil,
           false: nil,
         }
+
+        # Mutex protects the counters hash from concurrent access
+        @mutex = Mutex.new
         @counters = {}
+
+        Thread.new do
+          Thread.current.abort_on_exception = true
+          loop do
+            sleep(flush_interval)
+            flush
+          end
+        end
+
         ObjectSpace.define_finalizer(
           self,
           self.class.finalize(@counters, @sink, @datagram_builders, @datagram_builder_class),
@@ -60,31 +72,37 @@ module StatsD
       def increment(name, value = 1, sample_rate: 1.0, tags: [], no_prefix: false)
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix)
-        if @counters.key?(key)
-          @counters[key][:value] += value
-        else
-          @counters[key] = {
-            name: name,
-            value: value,
-            tags: tags,
-            no_prefix: no_prefix,
-          }
+
+        mutex.synchronize do
+          unless counters.key?(key)
+            counters[key] = {
+              name: name,
+              value: 0,
+              tags: tags,
+              no_prefix: no_prefix,
+            }
+          end
+          counters[key][:value] += value
         end
       end
 
       def flush
-        @counters.each do |_key, counter|
-          @sink << datagram_builder(no_prefix: counter[:no_prefix]).c(
-            counter[:name],
-            counter[:value],
-            CONST_SAMPLE_RATE,
-            counter[:tags],
-          )
+        mutex.synchronize do
+          counters.each do |_key, counter|
+            sink << datagram_builder(no_prefix: counter[:no_prefix]).c(
+              counter[:name],
+              counter[:value],
+              CONST_SAMPLE_RATE,
+              counter[:tags],
+            )
+          end
+          counters.clear
         end
-        @counters.clear
       end
 
       private
+
+      attr_reader :mutex, :counters, :sink
 
       def tags_sorted(tags)
         return [].freeze if tags.nil? || tags.empty?

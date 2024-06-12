@@ -5,7 +5,9 @@ require "test_helper"
 class CounterAggregatorTest < Minitest::Test
   def setup
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
-    @subject = StatsD::Instrument::CounterAggregator.new(@sink, StatsD::Instrument::DatagramBuilder, nil, [])
+    @subject = StatsD::Instrument::CounterAggregator.new(
+      @sink, StatsD::Instrument::DatagramBuilder, nil, [], flush_interval: 0.1
+    )
   end
 
   def teardown
