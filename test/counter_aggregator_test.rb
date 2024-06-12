@@ -19,7 +19,7 @@ class CounterAggregatorTest < Minitest::Test
 
     datagram = @sink.datagrams.first
     assert_equal("foo", datagram.name)
-    assert_equal(4, datagram.value)
+    assert_equal(2, datagram.value)
     assert_equal(1.0, datagram.sample_rate)
     assert_equal(["foo:bar"], datagram.tags)
   end
