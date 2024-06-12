@@ -65,11 +65,10 @@ module StatsD
       # Increment a counter by a given value and save it for later flushing.
       # @param name [String] The name of the counter.
       # @param value [Integer] The value to increment the counter by.
-      # @param sample_rate [Float] The sample rate to use for sampling.
       # @param tags [Hash{String, Symbol => String},Array<String>] The tags to attach to the counter.
       # @param no_prefix [Boolean] If true, the metric will not be prefixed.
       # @return [void]
-      def increment(name, value = 1, sample_rate: 1.0, tags: [], no_prefix: false)
+      def increment(name, value = 1, tags: [], no_prefix: false)
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix)
 

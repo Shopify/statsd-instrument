@@ -209,7 +209,7 @@ module StatsD
         sample_rate ||= @default_sample_rate
 
         if @enable_aggregation
-          @counter_agg.increment(name, value, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+          @counter_agg.increment(name, value, tags: tags, no_prefix: no_prefix)
           return StatsD::Instrument::VOID
         end
 
