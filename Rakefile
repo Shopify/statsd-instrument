@@ -18,4 +18,6 @@ RuboCop::RakeTask.new(:lint_fix) do |task|
   task.options = ["-a"]
 end
 
+task lf: :lint_fix
+
 task(default: :test)

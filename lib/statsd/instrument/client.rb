@@ -41,6 +41,7 @@ module StatsD
             sink: sink,
             datagram_builder_class: datagram_builder_class,
             enable_aggregation: env.experimental_aggregation_enabled?,
+            aggregation_flush_interval: env.aggregation_interval,
           )
         end
 
@@ -154,7 +155,8 @@ module StatsD
         implementation: "datadog",
         sink: StatsD::Instrument::NullSink.new,
         datagram_builder_class: self.class.datagram_builder_class_for_implementation(implementation),
-        enable_aggregation: false
+        enable_aggregation: false,
+        aggregation_flush_interval: 5.0
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
@@ -165,8 +167,16 @@ module StatsD
 
         @datagram_builder = { false => nil, true => nil }
         @enable_aggregation = enable_aggregation
+        @aggregation_flush_interval = aggregation_flush_interval
         if @enable_aggregation
-          @counter_agg = CounterAggregator.new(@sink, datagram_builder_class, prefix, default_tags)
+          @counter_agg =
+            CounterAggregator.new(
+              @sink,
+              datagram_builder_class,
+              prefix,
+              default_tags,
+              flush_interval: @aggregation_flush_interval,
+            )
         end
       end
 
@@ -209,7 +219,7 @@ module StatsD
         sample_rate ||= @default_sample_rate
 
         if @enable_aggregation
-          @counter_agg.increment(name, value, sample_rate: sample_rate, tags: tags, no_prefix: no_prefix)
+          @counter_agg.increment(name, value, tags: tags, no_prefix: no_prefix)
           return StatsD::Instrument::VOID
         end
 
@@ -452,6 +462,7 @@ module StatsD
           datagram_builder_class:
             datagram_builder_class == NO_CHANGE ? @datagram_builder_class : datagram_builder_class,
           enable_aggregation: @enable_aggregation,
+          aggregation_flush_interval: @aggregation_flush_interval,
         )
       end
 
