@@ -54,6 +54,16 @@ The following environment variables are supported:
   If your network is properly configured to handle larger packets you may try
   to increase this value for better performance, but most network can't handle
   larger packets.
+- `STATSD_BATCH_STATISTICS_INTERVAL`: (default: "0") If non-zero, the `BatchedUDPSink`
+  will track and emit statistics on this interval to the default sink for your environment.
+  The current tracked statistics are:
+
+  - `statsd_instrument.batched_udp_sink.batched_sends`: The number of batches sent, of any size.
+  - `statsd_instrument.batched_udp_sink.synchronous_sends`: The number of times the batched udp sender needed to send a statsd line synchronously, due to the buffer being full.
+  - `statsd_instrument.batched_udp_sink.avg_buffer_length`: The average buffer length, measured at the beginning of each batch.
+  - `statsd_instrument.batched_udp_sink.avg_batched_packet_size`: The average per-batch byte size of the packet sent to the underlying UDPSink.
+  - `statsd_instrument.batched_udp_sink.avg_batch_length`: The average number of statsd lines per batch.
+
 
 ## StatsD keys
 

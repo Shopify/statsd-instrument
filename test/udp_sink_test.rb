@@ -202,10 +202,31 @@ class BatchedUDPSinkTest < Minitest::Test
     assert(buffer.empty?)
   end
 
+  def test_statistics
+    datagrams = StatsD.singleton_client.capture do
+      buffer_size = 2
+      sink = build_sink(@host, @port, buffer_capacity: buffer_size, statistics_interval: 0.1)
+      2.times { |i| sink << "foo:#{i}|c" }
+      sink.flush(blocking: false)
+      sink.instance_variable_get(:@dispatcher).instance_variable_get(:@statistics).maybe_flush!(force: true)
+    end
+
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_udp_sink.avg_batch_length") })
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_udp_sink.avg_batched_packet_size") })
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_udp_sink.avg_buffer_length") })
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_udp_sink.batched_sends") })
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_udp_sink.synchronous_sends") })
+  end
+
   private
 
-  def build_sink(host = @host, port = @port, buffer_capacity: 50)
-    sink = @sink_class.new(host, port, buffer_capacity: buffer_capacity)
+  def build_sink(host = @host, port = @port, buffer_capacity: 50, statistics_interval: 0)
+    sink = @sink_class.new(
+      host,
+      port,
+      buffer_capacity: buffer_capacity,
+      statistics_interval: statistics_interval,
+    )
     @sinks << sink
     sink
   end
