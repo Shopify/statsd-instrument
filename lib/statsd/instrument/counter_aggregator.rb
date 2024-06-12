@@ -60,9 +60,6 @@ module StatsD
       def increment(name, value = 1, sample_rate: 1.0, tags: [], no_prefix: false)
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix)
-        if sample_rate < 1.0
-          value = (value.to_f / sample_rate).round.to_i
-        end
         if @counters.key?(key)
           @counters[key][:value] += value
         else

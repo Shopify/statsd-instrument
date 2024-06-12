@@ -90,7 +90,7 @@ class ClientTest < Minitest::Test
 
     datagram = client.sink.datagrams.first
     assert_equal("bar.foo", datagram.name)
-    assert_equal(4, datagram.value)
+    assert_equal(2, datagram.value)
   end
 
   def test_capture
