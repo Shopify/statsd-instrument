@@ -48,10 +48,13 @@ module StatsD
         @mutex = Mutex.new
         @counters = {}
 
-        Thread.new do
+        @pid = Process.pid
+        @flush_interval = flush_interval
+        @flush_thread = Thread.new do
           Thread.current.abort_on_exception = true
           loop do
-            sleep(flush_interval)
+            sleep(@flush_interval)
+            thread_healthcheck
             flush
           end
         end
@@ -69,6 +72,11 @@ module StatsD
       # @param no_prefix [Boolean] If true, the metric will not be prefixed.
       # @return [void]
       def increment(name, value = 1, tags: [], no_prefix: false)
+        unless thread_healthcheck
+          sink << datagram_builder(no_prefix: no_prefix).c(name, value, CONST_SAMPLE_RATE, tags)
+          return
+        end
+
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix)
 
@@ -124,6 +132,29 @@ module StatsD
           prefix: no_prefix ? nil : @metric_prefix,
           default_tags: @default_tags,
         )
+      end
+
+      def thread_healthcheck
+        unless @flush_thread&.alive?
+          return false unless Thread.main.alive?
+
+          if @pid != Process.pid
+            StatsD.logger.info { "[#{self.class.name}] Restarting the flush thread after fork" }
+            @pid = Process.pid
+            @counters.clear
+          else
+            StatsD.logger.info { "[#{self.class.name}] Restarting the flush thread" }
+          end
+          @flush_thread = Thread.new do
+            Thread.current.abort_on_exception = true
+            loop do
+              sleep(@flush_interval)
+              thread_healthcheck
+              flush
+            end
+          end
+        end
+        true
       end
     end
   end
