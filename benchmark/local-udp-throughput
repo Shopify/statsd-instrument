@@ -72,6 +72,24 @@ EVENTS_PER_ITERATION = 6
 ITERATIONS = Integer(ENV.fetch("ITERATIONS", 10_000))
 SERIES_COUNT = Integer(ENV.fetch("SERIES_COUNT", 0))
 
+module Datadog
+  class Statsd
+    class Telemetry
+      def flush
+        ["bytes", "packets"].each do |kind|
+          ["sent", "dropped", "dropped_queue", "dropped_writer"].each do |measure|
+            var = "#{kind}_#{measure}"
+            puts "#{var}: #{instance_variable_get("@#{var}".to_sym)}"
+          end
+        end
+        puts "-" * 10
+
+        []
+      end
+    end
+  end
+end
+
 def benchmark_implementation(name, env = {})
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
   log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
@@ -122,7 +140,7 @@ def benchmark_implementation(name, env = {})
   puts "events: #{(events_sent / duration).round(1).to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse}/s"
 end
 
-benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
-benchmark_implementation("UDP batched")
-benchmark_implementation("Datadog Client - single thread", single_thread: true, delay_serialization: true)
-benchmark_implementation("Datadog Client - multi-thread", single_thread: false, delay_serialization: true)
+# benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
+# benchmark_implementation("UDP batched")
+# benchmark_implementation("Datadog Client - single thread", single_thread: true, delay_serialization: true, telemetry_flush_interval: 1)
+benchmark_implementation("Datadog Client - multi-thread", single_thread: false, delay_serialization: true, telemetry_flush_interval: 5)
