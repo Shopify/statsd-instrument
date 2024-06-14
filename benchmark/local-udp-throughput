@@ -6,6 +6,45 @@ require "benchmark/ips"
 require "tmpdir"
 require "socket"
 require "statsd-instrument"
+require "datadog/statsd"
+require "forwardable"
+
+class DatadogShim
+  extend Forwardable
+
+  def_delegator :@client, :close
+  # This is a shim to make the Datadog client compatible with the StatsD client
+  # interface. It's not a complete implementation, but it's enough to run the
+  # benchmarks.
+  # @param [Datadog::Statsd] client
+  def initialize(client)
+    @client = client
+  end
+
+  def increment(stat, value = 1, tags: nil)
+    @client.increment(stat, value: value, tags: tags)
+  end
+
+  def measure(stat, value = nil, tags: nil, &block)
+    @client.time(stat, value: value, tags: tags, &block)
+  end
+
+  def gauge(stat, value, tags: nil)
+    @client.gauge(stat, value: value, tags: tags)
+  end
+
+  def set(stat, value, tags: nil)
+    @client.set(stat, value: value, tags: tags)
+  end
+
+  def event(title, text, tags: nil)
+    @client.event(title, text, tags: tags)
+  end
+
+  def service_check(name, status, tags: nil)
+    @client.service_check(name, status, tags: tags)
+  end
+end
 
 def send_metrics(client)
   client.increment("StatsD.increment", 10)
@@ -16,9 +55,23 @@ def send_metrics(client)
   client.service_check("StatsD.service_check", "ok")
 end
 
+def send_metrics_high_cardinality(client)
+  SERIES_COUNT.times do |i|
+    tags = ["series:#{i}", "foo:bar", "baz:quc"]
+    client.increment("StatsD.increment", 10, tags: tags)
+    client.measure("StatsD.measure", tags: tags) { 1 + 1 }
+    client.gauge("StatsD.gauge", 12.0, tags: tags)
+    client.set("StatsD.set", "value", tags: tags)
+    client.event("StasD.event", "12345", tags: tags)
+    client.service_check("StatsD.service_check", "ok", tags: tags)
+  end
+end
+
 THREAD_COUNT = Integer(ENV.fetch("THREAD_COUNT", 5))
 EVENTS_PER_ITERATION = 6
-ITERATIONS = 50_000
+ITERATIONS = Integer(ENV.fetch("ITERATIONS", 10_000))
+SERIES_COUNT = Integer(ENV.fetch("SERIES_COUNT", 0))
+
 def benchmark_implementation(name, env = {})
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
   log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
@@ -37,23 +90,39 @@ def benchmark_implementation(name, env = {})
     "STATSD_ENV" => "production",
   ).merge(env)).client
 
-  puts "===== #{name} throughtput (#{THREAD_COUNT} threads) ====="
+  if name.start_with?("Datadog Client")
+    statsd = Datadog::Statsd.new(receiver.addr[2], receiver.addr[1], **env)
+    udp_client = DatadogShim.new(statsd)
+  end
+
+  puts "===== #{name} throughput (#{THREAD_COUNT} threads) ====="
   threads = THREAD_COUNT.times.map do
     Thread.new do
       count = ITERATIONS
       while (count -= 1) > 0
-        send_metrics(udp_client)
+        if SERIES_COUNT.zero?
+          send_metrics(udp_client)
+        else
+          send_metrics_high_cardinality(udp_client)
+        end
       end
     end
   end
   start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   threads.each(&:join)
-  duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
-  events_sent = THREAD_COUNT * EVENTS_PER_ITERATION * ITERATIONS
-  puts "events: #{(events_sent / duration).round(1)}/s"
+  if name.start_with?("Datadog Client")
+    udp_client.close
+  end
   receiver.close
   udp_client.shutdown if udp_client.respond_to?(:shutdown)
+
+  duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+  series = SERIES_COUNT.zero? ? 1 : SERIES_COUNT
+  events_sent = THREAD_COUNT * EVENTS_PER_ITERATION * ITERATIONS * series
+  puts "events: #{(events_sent / duration).round(1).to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse}/s"
 end
 
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
 benchmark_implementation("UDP batched")
+benchmark_implementation("Datadog Client - single thread", single_thread: true, delay_serialization: true)
+benchmark_implementation("Datadog Client - multi-thread", single_thread: false, delay_serialization: true)
