@@ -98,6 +98,13 @@ module StatsD
         Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::BatchedUDPSink::DEFAULT_MAX_PACKET_SIZE))
       end
 
+      def statsd_batch_statistics_interval
+        Integer(env.fetch(
+          "STATSD_BATCH_STATISTICS_INTERVAL",
+          StatsD::Instrument::BatchedUDPSink::DEFAULT_STATISTICS_INTERVAL,
+        ))
+      end
+
       def client
         StatsD::Instrument::Client.from_env(self)
       end
@@ -110,6 +117,7 @@ module StatsD
               statsd_addr,
               buffer_capacity: statsd_buffer_capacity,
               max_packet_size: statsd_max_packet_size,
+              statistics_interval: statsd_batch_statistics_interval,
             )
           else
             StatsD::Instrument::UDPSink.for_addr(statsd_addr)
