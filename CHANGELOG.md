@@ -6,6 +6,13 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.8.0
+
+- UDP batching will now track statistics about its own batching performance, and
+  emit those statistics to the default sink when `STATSD_BATCH_STATISTICS_INTERVAL`
+  is set to any non-zero value. The default value is zero; additional information
+  on statistics tracked is available in the README.
+
 ## Version 3.7.0
 
 - Add public `.flush` method to sink classes.
