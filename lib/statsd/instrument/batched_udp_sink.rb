@@ -15,8 +15,8 @@ module StatsD
 
       class << self
         def for_addr(addr, **kwargs)
-          host, port_as_string = addr.split(":", 2)
-          new(host, Integer(port_as_string), **kwargs)
+          # host, port_as_string = addr.split(":", 2)
+          new(addr, 8125, **kwargs)
         end
 
         def finalize(dispatcher)
