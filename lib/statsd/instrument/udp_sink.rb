@@ -7,8 +7,8 @@ module StatsD
     class UDPSink
       class << self
         def for_addr(addr)
-          host, port_as_string = addr.split(":", 2)
-          new(host, Integer(port_as_string))
+          # host, port_as_string = addr.split(":", 2)
+          new(addr, 8125)
         end
       end
 
@@ -24,7 +24,7 @@ module StatsD
 
       def initialize(host, port)
         ObjectSpace.define_finalizer(self, FINALIZER)
-        @host = host
+        @socket_path = host
         @port = port
       end
 
@@ -35,7 +35,7 @@ module StatsD
       def <<(datagram)
         retried = false
         begin
-          socket.send(datagram, 0)
+          socket.sendmsg_nonblock(datagram)
         rescue SocketError, IOError, SystemCallError => error
           StatsD.logger.debug do
             "[StatsD::Instrument::UDPSink] Resetting connection because of #{error.class}: #{error.message}"
@@ -66,8 +66,8 @@ module StatsD
 
       def socket
         thread_store[object_id] ||= begin
-          socket = UDPSocket.new
-          socket.connect(@host, @port)
+          socket = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
+          socket.connect(Socket.pack_sockaddr_un(@socket_path))
           socket
         end
       end
