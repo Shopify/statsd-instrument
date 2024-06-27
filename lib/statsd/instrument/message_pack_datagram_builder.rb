@@ -34,35 +34,35 @@ module StatsD
         MessagePack::DefaultFactory.register_type(
           0x06,
           MsgPackDatagram,
-          packer: -> (datagram, packer) {
-            packer.write datagram.name
-            packer.write datagram.values
+          packer: ->(datagram, packer) {
+            packer.write(datagram.name)
+            packer.write(datagram.values)
 
             case datagram.metric_type
             when :g
-              packer.write 0
+              packer.write(0)
             when :c
-              packer.write 1
+              packer.write(1)
             when :d
-              packer.write 2
+              packer.write(2)
             when :h
-              packer.write 3
+              packer.write(3)
             when :ms
-              packer.write 4
+              packer.write(4)
             when :s
-              packer.write 5
+              packer.write(5)
             when :e
-              packer.write 6
+              packer.write(6)
             when :sc
-              packer.write 7
+              packer.write(7)
             when :kv
-              packer.write 8
+              packer.write(8)
             end
 
-            packer.write datagram.sample_rate
-            packer.write datagram.labels
+            packer.write(datagram.sample_rate)
+            packer.write(datagram.labels)
           },
-          unpacker: -> (unpacker) {
+          unpacker: ->(_unpacker) {
             datagram = MsgPackDatagram.new(
               name: packer.read,
               values: packer.read,
@@ -92,7 +92,7 @@ module StatsD
             datagram.sample_rate = packer.read
             datagram.labels = packer.read
           },
-          recursive: true
+          recursive: true,
         )
 
         super
@@ -103,21 +103,19 @@ module StatsD
       end
 
       def generate_generic_datagram(name, value, type, sample_rate, tags)
-        tag_string = "".b
+        tag_string = "" + ""
         unless @default_tags.nil?
-          tag_string << @default_tags << ","
+          tag_string << @default_tags.to_s << ","
         end
         compile_tags(tags, tag_string) unless tags.nil?
 
-        MessagePack::DefaultFactory.dump(
-          MsgPackDatagram.new(
-            name: name,
-            values: [value],
-            metric_type: type.to_sym,
-            sample_rate: sample_rate,
-            labels: tag_string,
-          )
-        )
+        MessagePack.pack({
+          name: name,
+          values: [Float(value, exception: false)||0.0],
+          metric_type: type.to_sym,
+          sample_rate: sample_rate,
+          labels: tag_string.to_s,
+        })
       end
 
       # Constructs an event datagram.
