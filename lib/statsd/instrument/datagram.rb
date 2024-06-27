@@ -31,7 +31,11 @@ module StatsD
         when :c
           Integer(parsed_datagram[:value])
         when :g, :h, :d, :kv, :ms
-          Float(parsed_datagram[:value])
+          if parsed_datagram[:value].include?(",")
+            parsed_datagram[:value].split(",").map { |v| Float(v) }
+          else
+            Float(parsed_datagram[:value])
+          end
         when :s
           String(parsed_datagram[:value])
         else
