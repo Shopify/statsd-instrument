@@ -17,7 +17,7 @@ class DogStatsDDatagramBuilderTest < Minitest::Test
     parsed_datagram = StatsD::Instrument::DogStatsDDatagramBuilder.datagram_class.new(datagram)
     assert_equal(:_sc, parsed_datagram.type)
     assert_equal("service", parsed_datagram.name)
-    assert_equal(0, parsed_datagram.value)
+    assert_equal([0], parsed_datagram.value)
   end
 
   def test_complex_service_check
@@ -34,7 +34,7 @@ class DogStatsDDatagramBuilderTest < Minitest::Test
     parsed_datagram = StatsD::Instrument::DogStatsDDatagramBuilder.datagram_class.new(datagram)
     assert_equal(:_sc, parsed_datagram.type)
     assert_equal("service", parsed_datagram.name)
-    assert_equal(1, parsed_datagram.value)
+    assert_equal([1], parsed_datagram.value)
     assert_equal("localhost", parsed_datagram.hostname)
     assert_equal(Time.parse("2019-09-30T04:22:12Z"), parsed_datagram.timestamp)
     assert_equal(["foo:barbaz"], parsed_datagram.tags)
@@ -80,5 +80,13 @@ class DogStatsDDatagramBuilderTest < Minitest::Test
     assert_equal("low", parsed_datagram.priority)
     assert_equal("source", parsed_datagram.source_type_name)
     assert_equal("success", parsed_datagram.alert_type)
+  end
+
+  def test_value_packing
+    datagram = @datagram_builder.d("testing", [1, 2, 3], 1.0, nil)
+    assert_equal("testing:1,2,3|d", datagram)
+
+    parsed_datagram = StatsD::Instrument::DogStatsDDatagramBuilder.datagram_class.new(datagram)
+    assert_equal([1, 2, 3], parsed_datagram.value)
   end
 end

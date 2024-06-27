@@ -87,12 +87,12 @@ class MatchersTest < Minitest::Test
   end
 
   def test_statsd_increment_with_value_matched
-    assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", value: 1)
+    assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", value: [1])
       .matches?(lambda { StatsD.increment("counter") }))
   end
 
   def test_statsd_increment_with_value_matched_when_multiple_metrics
-    assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", value: 1).matches?(lambda {
+    assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", value: [1]).matches?(lambda {
       StatsD.increment("counter", 2)
       StatsD.increment("counter", 1)
     }))
@@ -128,7 +128,7 @@ class MatchersTest < Minitest::Test
   end
 
   def test_statsd_increment_with_times_and_value_matched
-    assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", times: 2, value: 1).matches?(lambda {
+    assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", times: 2, value: [1]).matches?(lambda {
       StatsD.increment("counter", 1)
       StatsD.increment("counter", 1)
     }))

@@ -56,7 +56,14 @@ module StatsD
 
       def matches(actual_metric)
         return false if sample_rate && sample_rate != actual_metric.sample_rate
-        return false if value && value != normalized_value_for_type(actual_metric.type, actual_metric.value)
+
+        if value
+          if actual_metric.value.is_a?(Array)
+            return false if actual_metric.value.any? { |v| value != normalized_value_for_type(actual_metric.type, v) }
+          else
+            return false if value != normalized_value_for_type(actual_metric.type, actual_metric.value)
+          end
+        end
 
         if tags
           expected_tags = Set.new(tags)

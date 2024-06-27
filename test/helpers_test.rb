@@ -25,7 +25,7 @@ class HelpersTest < Minitest::Test
     assert_equal(2, metrics.length)
     assert_equal("counter", metrics[0].name)
     assert_equal("gauge", metrics[1].name)
-    assert_equal(12, metrics[1].value)
+    assert_equal(12, metrics[1].value.first)
   end
 
   def test_capture_metrics_with_new_client

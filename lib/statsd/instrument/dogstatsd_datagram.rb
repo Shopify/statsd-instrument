@@ -16,10 +16,17 @@ module StatsD
 
       def value
         @value ||= case type
-        when :_sc then Integer(parsed_datagram[:value])
-        when :_e then parsed_datagram[:value].gsub('\n', "\n")
-        else super
-        end
+          when :c, :_sc
+            parsed_datagram[:value].split(",").map { |v| Integer(v) }
+          when :g, :h, :d, :kv, :ms
+            parsed_datagram[:value].split(",").map { |v| Float(v) }
+          when :s
+            String(parsed_datagram[:value])
+          when :_e
+            parsed_datagram[:value].gsub('\n', "\n")
+          else
+            parsed_datagram[:value]
+          end
       end
 
       def hostname

@@ -70,7 +70,7 @@ module StatsD
         datagram = "".b <<
           @prefix <<
           (/[:|@]/.match?(name) ? name.tr(":|@", "_") : name) <<
-          ":" << value.to_s <<
+          ":" << (value.is_a?(Array) ? value.join(",") : value.to_s) <<
           "|" << type
 
         datagram << "|@" << sample_rate.to_s if sample_rate && sample_rate < 1
