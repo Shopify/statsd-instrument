@@ -158,12 +158,16 @@ module StatsD
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
+        @emitter = StatsD::Instrument::Emitter.new(
+          sink: sink,
+          datagram_builder_class: datagram_builder_class,
+          prefix: prefix,
+          default_tags: default_tags,
+        )
 
         @prefix = prefix
         @default_tags = default_tags
         @default_sample_rate = default_sample_rate
-
-        @datagram_builder = { false => nil, true => nil }
       end
 
       # @!group Metric Methods
@@ -203,8 +207,8 @@ module StatsD
       # @return [void]
       def increment(name, value = 1, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(:c, no_prefix, name, value, tags, sample_rate, nil)
+        if sample_rate.nil? || @emitter.sample?(sample_rate)
+          @emitter.emit(:c, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -222,8 +226,8 @@ module StatsD
         end
 
         sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(:ms, no_prefix, name, value, tags, sample_rate, nil)
+        if sample_rate.nil? || @emitter.sample?(sample_rate)
+          @emitter.emit(:ms, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -243,8 +247,8 @@ module StatsD
       # @return [void]
       def gauge(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(:g, no_prefix, name, value, tags, sample_rate, nil)
+        if sample_rate.nil? || @emitter.sample?(sample_rate)
+          @emitter.emit(:g, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -258,8 +262,8 @@ module StatsD
       # @return [void]
       def set(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(:s, no_prefix, name, value, tags, sample_rate, nil)
+        if sample_rate.nil? || @emitter.sample?(sample_rate)
+          @emitter.emit(:s, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -282,8 +286,8 @@ module StatsD
         end
 
         sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(:d, no_prefix, name, value, tags, sample_rate, nil)
+        if sample_rate.nil? || @emitter.sample?(sample_rate)
+          @emitter.emit(:d, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -301,8 +305,8 @@ module StatsD
       # @return [void]
       def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(:h, no_prefix, name, value, tags, sample_rate, nil)
+        if sample_rate.nil? || @emitter.sample?(sample_rate)
+          @emitter.emit(:h, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -327,10 +331,10 @@ module StatsD
           stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
 
           sample_rate ||= @default_sample_rate
-          if sample_rate.nil? || sample?(sample_rate)
-            metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
+          if sample_rate.nil? || @emitter.sample?(sample_rate)
+            metric_type ||= @emitter.datagram_builder(no_prefix: no_prefix).latency_metric_type
             latency_in_ms = stop - start
-            emit(metric_type, no_prefix, name, latency_in_ms, tags, sample_rate, nil)
+            @emitter.emit(metric_type, no_prefix, name, latency_in_ms, tags, sample_rate, nil)
           end
         end
       end
@@ -348,7 +352,7 @@ module StatsD
       #
       # @note Supported by the Datadog implementation only.
       def service_check(name, status, timestamp: nil, hostname: nil, tags: nil, message: nil, no_prefix: false)
-        emit(
+        @emitter.emit(
           :sc,
           no_prefix,
           name,
@@ -375,7 +379,7 @@ module StatsD
       # @note Supported by the Datadog implementation only.
       def event(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
         source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
-        emit(
+        @emitter.emit(
           :e,
           no_prefix,
           title,
@@ -421,7 +425,7 @@ module StatsD
         datagram_builder_class: NO_CHANGE
       )
         self.class.new(
-          sink: sink == NO_CHANGE ? @sink : sink,
+          sink: sink == NO_CHANGE ? @emitter.sink : sink,
           prefix: prefix == NO_CHANGE ? @prefix : prefix,
           default_sample_rate: default_sample_rate == NO_CHANGE ? @default_sample_rate : default_sample_rate,
           default_tags: default_tags == NO_CHANGE ? @default_tags : default_tags,
@@ -439,9 +443,12 @@ module StatsD
 
       def with_capture_sink(capture_sink)
         @sink = capture_sink
+        @emitter.sink = @sink
+
         yield
       ensure
         @sink = @sink.parent
+        @emitter.sink = @sink
       end
 
       # Captures metrics that were emitted during the provided block.
@@ -453,69 +460,6 @@ module StatsD
         sink = capture_sink
         with_capture_sink(sink, &block)
         sink.datagrams
-      end
-
-      protected
-
-      def datagram_builder(no_prefix:)
-        @datagram_builder[no_prefix] ||= @datagram_builder_class.new(
-          prefix: no_prefix ? nil : prefix,
-          default_tags: default_tags,
-        )
-      end
-
-      def sample?(sample_rate)
-        @sink.sample?(sample_rate)
-      end
-
-      def emit(
-        type,
-        no_prefix,
-        name_or_title,
-        value_or_status_or_text,
-        tags,
-        sample_rate,
-        extra
-      )
-        @sink << case type
-        when :c
-          datagram_builder(no_prefix: no_prefix).c(name_or_title, value_or_status_or_text, sample_rate, tags)
-        when :g
-          datagram_builder(no_prefix: no_prefix).g(name_or_title, value_or_status_or_text, sample_rate, tags)
-        when :h
-          datagram_builder(no_prefix: no_prefix).h(name_or_title, value_or_status_or_text, sample_rate, tags)
-        when :d
-          datagram_builder(no_prefix: no_prefix).d(name_or_title, value_or_status_or_text, sample_rate, tags)
-        when :ms
-          datagram_builder(no_prefix: no_prefix).ms(name_or_title, value_or_status_or_text, sample_rate, tags)
-        when :s
-          datagram_builder(no_prefix: no_prefix).s(name_or_title, value_or_status_or_text, sample_rate, tags)
-        when :sc
-          datagram_builder(no_prefix: no_prefix)._sc(
-            name_or_title,
-            value_or_status_or_text,
-            tags:      tags,
-            timestamp: extra[0],
-            hostname:  extra[1],
-            message:   extra[2],
-          )
-        when :e
-          datagram_builder(no_prefix: no_prefix)._e(
-            name_or_title,
-            value_or_status_or_text,
-            tags:             tags,
-            timestamp:        extra[0],
-            hostname:         extra[1],
-            aggregation_key:  extra[2],
-            priority:         extra[3],
-            source_type_name: extra[4],
-            alert_type:       extra[5],
-          )
-        else
-          datagram_builder(no_prefix: no_prefix).send(type, name_or_title, value_or_status_or_text, sample_rate, tags)
-        end
-
-        StatsD::Instrument::VOID
       end
     end
   end
