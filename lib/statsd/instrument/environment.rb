@@ -105,6 +105,14 @@ module StatsD
         ))
       end
 
+      def experimental_aggregation_enabled?
+        env.key?("STATSD_ENABLE_AGGREGATION")
+      end
+
+      def aggregation_interval
+        Float(env.fetch("STATSD_AGGREGATION_INTERVAL", 5.0))
+      end
+
       def client
         StatsD::Instrument::Client.from_env(self)
       end
