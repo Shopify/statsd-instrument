@@ -18,18 +18,8 @@ module StatsD
       end
 
       def initialize(prefix: nil, default_tags: nil)
-        # @prefix = prefix.nil? ? "" : "#{prefix}.".tr(":|@", "_")
-        # @default_tags = if default_tags.nil? || default_tags.empty?
-        #                   nil
-        #                 elsif default_tags.is_a?(Hash)
-        #                   default_tags
-        #                     .transform_values { |v| /[|,]/.match?(key) ? v.tr("|,", "") : v }
-        #                 else
-        #                   default_tags
-        #                     .map { |t| t.split(":", 2).tr("|,", "") }
-        #                     .reject { |(k, v)| v.nil? }
-        #                     .to_h
-        #                 end
+        @prefix = prefix.nil? ? "" : "#{prefix}.".tr(":|@", "_")
+        @default_tags = default_tags.nil? || default_tags.empty? ? nil : compile_tags(default_tags)
 
         MessagePack::DefaultFactory.register_type(
           0x06,
@@ -110,8 +100,8 @@ module StatsD
         compile_tags(tags, tag_string) unless tags.nil?
 
         MessagePack.pack({
-          name: name,
-          values: [Float(value, exception: false)||0.0],
+          name: @prefix + name,
+          values: [Float(value, exception: false) || 0.0],
           metric_type: type.to_sym,
           sample_rate: sample_rate,
           labels: tag_string.to_s,
