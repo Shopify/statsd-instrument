@@ -169,8 +169,8 @@ module StatsD
         @enable_aggregation = enable_aggregation
         @aggregation_flush_interval = aggregation_flush_interval
         if @enable_aggregation
-          @counter_agg =
-            CounterAggregator.new(
+          @aggregator =
+            Aggregator.new(
               @sink,
               datagram_builder_class,
               prefix,
@@ -219,7 +219,7 @@ module StatsD
         sample_rate ||= @default_sample_rate
 
         if @enable_aggregation
-          @counter_agg.increment(name, value, tags: tags, no_prefix: no_prefix)
+          @aggregator.increment(name, value, tags: tags, no_prefix: no_prefix)
           return StatsD::Instrument::VOID
         end
 
@@ -241,6 +241,10 @@ module StatsD
           return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :ms, no_prefix: no_prefix, &block)
         end
 
+        if @enable_aggregation
+          @aggregator.distribution(name, value, tags: tags, no_prefix: no_prefix)
+          return StatsD::Instrument::VOID
+        end
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
           emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
@@ -301,6 +305,11 @@ module StatsD
           return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :d, no_prefix: no_prefix, &block)
         end
 
+        if @enable_aggregation
+          @aggregator.distribution(name, value, tags: tags, no_prefix: no_prefix)
+          return StatsD::Instrument::VOID
+        end
+
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
           emit(datagram_builder(no_prefix: no_prefix).d(name, value, sample_rate, tags))
@@ -346,11 +355,15 @@ module StatsD
         ensure
           stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
 
-          sample_rate ||= @default_sample_rate
-          if sample_rate.nil? || sample?(sample_rate)
-            metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
-            latency_in_ms = stop - start
-            emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
+          latency_in_ms = stop - start
+          if @enable_aggregation
+            @aggregator.distribution(name, latency_in_ms, tags: tags, no_prefix: no_prefix)
+          else
+            sample_rate ||= @default_sample_rate
+            if sample_rate.nil? || sample?(sample_rate)
+              metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
+              emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
+            end
           end
         end
       end
@@ -393,7 +406,7 @@ module StatsD
       #
       # @note Supported by the Datadog implementation only.
       def event(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
-        source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
+                source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
 
         emit(datagram_builder(no_prefix: no_prefix)._e(
           title,
@@ -414,7 +427,7 @@ module StatsD
       # @return [void]
       def force_flush
         if @enable_aggregation
-          @counter_agg.flush
+          @aggregator.flush
         end
         @sink.flush(blocking: false)
         StatsD::Instrument::VOID

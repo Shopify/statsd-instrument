@@ -25,31 +25,35 @@ module StatsD
       end
 
       def c(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, "c", sample_rate, tags)
+        generate_generic_datagram(name, [value], "c", sample_rate, tags)
       end
 
       def g(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, "g", sample_rate, tags)
+        generate_generic_datagram(name, [value], "g", sample_rate, tags)
       end
 
       def ms(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, "ms", sample_rate, tags)
+        generate_generic_datagram(name, [value], "ms", sample_rate, tags)
       end
 
       def s(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, "s", sample_rate, tags)
+        generate_generic_datagram(name, [value], "s", sample_rate, tags)
       end
 
       def h(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, "h", sample_rate, tags)
+        generate_generic_datagram(name, [value], "h", sample_rate, tags)
       end
 
       def d(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, "d", sample_rate, tags)
+        generate_generic_datagram(name, [value], "d", sample_rate, tags)
+      end
+
+      def d_multi(name, values, sample_rate, tags)
+        generate_generic_datagram(name, values, "d", sample_rate, tags)
       end
 
       def kv(name, value, sample_rate, tags)
-        generate_generic_datagram(name, value, "kv", sample_rate, tags)
+        generate_generic_datagram(name, [value], "kv", sample_rate, tags)
       end
 
       def latency_metric_type
@@ -66,11 +70,11 @@ module StatsD
         name.tr(":|@", "_")
       end
 
-      def generate_generic_datagram(name, value, type, sample_rate, tags)
+      def generate_generic_datagram(name, values, type, sample_rate, tags)
         datagram = "".b <<
           @prefix <<
           (/[:|@]/.match?(name) ? name.tr(":|@", "_") : name) <<
-          ":" << value.to_s <<
+          ":" << values.join(",") <<
           "|" << type
 
         datagram << "|@" << sample_rate.to_s if sample_rate && sample_rate < 1
