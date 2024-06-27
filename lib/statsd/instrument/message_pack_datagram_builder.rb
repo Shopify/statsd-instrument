@@ -84,8 +84,6 @@ module StatsD
           },
           recursive: true,
         )
-
-        super
       end
 
       def latency_metric_type
