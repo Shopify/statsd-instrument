@@ -93,9 +93,9 @@ module StatsD
       def generate_generic_datagram(name, value, type, sample_rate, tags)
         tag_string = "" + ""
         unless @default_tags.nil?
-          tag_string << @default_tags.to_s << ","
+          tag_string << @default_tags << ","
         end
-        compile_tags(tags, tag_string) unless tags.nil?
+        tag_string = compile_tags(tags, tag_string) unless tags.nil?
 
         MessagePack.pack({
           name: @prefix + name,
