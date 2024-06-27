@@ -5,7 +5,7 @@ require "test_helper"
 class CounterAggregatorTest < Minitest::Test
   def setup
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
-    @subject = StatsD::Instrument::CounterAggregator.new(
+    @subject = StatsD::Instrument::Aggregator.new(
       @sink, StatsD::Instrument::DatagramBuilder, nil, [], flush_interval: 0.1
     )
   end
@@ -24,6 +24,17 @@ class CounterAggregatorTest < Minitest::Test
     assert_equal(2, datagram.value)
     assert_equal(1.0, datagram.sample_rate)
     assert_equal(["foo:bar"], datagram.tags)
+  end
+
+  def test_distribution_simple
+    @subject.distribution("foo", 1, tags: { foo: "bar" })
+    @subject.distribution("foo", 100, tags: { foo: "bar" })
+    @subject.flush
+
+    datagram = @sink.datagrams.first
+    assert_equal("foo", datagram.name)
+    assert_equal(2, datagram.value.size)
+    assert_equal([1.0, 100.0], datagram.value)
   end
 
   def test_increment_with_tags_in_different_orders
@@ -62,7 +73,7 @@ class CounterAggregatorTest < Minitest::Test
   end
 
   def test_with_prefix
-    aggregator = StatsD::Instrument::CounterAggregator.new(@sink, StatsD::Instrument::DatagramBuilder, "MyApp", [])
+    aggregator = StatsD::Instrument::Aggregator.new(@sink, StatsD::Instrument::DatagramBuilder, "MyApp", [])
 
     aggregator.increment("foo", 1, tags: ["tag1:val1", "tag2:val2"])
     aggregator.increment("foo", 1, tags: ["tag1:val1", "tag2:val2"])
