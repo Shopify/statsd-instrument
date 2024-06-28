@@ -100,7 +100,7 @@ module StatsD
         MessagePack.pack({
           name: @prefix + name,
           values: [Float(value, exception: false) || 0.0],
-          metric_type: type.to_sym,
+          metric_type: type.to_s,
           sample_rate: sample_rate,
           labels: tag_string.to_s,
         })
