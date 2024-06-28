@@ -266,6 +266,11 @@ module StatsD
       # @param tags (see #increment)
       # @return [void]
       def gauge(name, value, sample_rate: nil, tags: nil, no_prefix: false)
+        if @enable_aggregation
+          @aggregator.gauge(name, value, tags: tags, no_prefix: no_prefix)
+          return StatsD::Instrument::VOID
+        end
+
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
           emit(datagram_builder(no_prefix: no_prefix).g(name, value, sample_rate, tags))
@@ -406,7 +411,7 @@ module StatsD
       #
       # @note Supported by the Datadog implementation only.
       def event(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
-                source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
+        source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
 
         emit(datagram_builder(no_prefix: no_prefix)._e(
           title,

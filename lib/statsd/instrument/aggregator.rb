@@ -6,6 +6,7 @@ module StatsD
       CONST_SAMPLE_RATE = 1.0
       COUNT = :count
       DISTRIBUTION = :distribution
+      GAUGE = :gauge
 
       class << self
         def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class)
@@ -113,7 +114,7 @@ module StatsD
         key = packet_key(name, tags, no_prefix, DISTRIBUTION)
 
         mutex.synchronize do
-          if aggregation_state.key?(key) && aggregation_state[key][:value].size+1 >= @max_values
+          if aggregation_state.key?(key) && aggregation_state[key][:value].size + 1 >= @max_values
             do_flush
           end
           unless aggregation_state.key?(key)
@@ -126,6 +127,30 @@ module StatsD
             }
           end
           aggregation_state[key][:value] << value
+        end
+      end
+
+      def gauge(name, value, tags: [], no_prefix: false)
+        unless thread_healthcheck
+          sink << datagram_builder(no_prefix: no_prefix).g(name, value, CONST_SAMPLE_RATE, tags)
+          return
+        end
+
+        tags = tags_sorted(tags)
+        key = packet_key(name, tags, no_prefix, COUNT)
+
+        mutex.synchronize do
+          unless aggregation_state.key?(key)
+            aggregation_state[key] = {
+              type: GAUGE,
+              name: name,
+              value: value,
+              tags: tags,
+              no_prefix: no_prefix,
+            }
+          end
+          # keep the last value
+          aggregation_state[key][:value] = value
         end
       end
 
@@ -147,6 +172,13 @@ module StatsD
             )
           when DISTRIBUTION
             sink << datagram_builder(no_prefix: agg[:no_prefix]).d_multi(
+              agg[:name],
+              agg[:value],
+              CONST_SAMPLE_RATE,
+              agg[:tags],
+            )
+          when GAUGE
+            sink << datagram_builder(no_prefix: agg[:no_prefix]).g(
               agg[:name],
               agg[:value],
               CONST_SAMPLE_RATE,
@@ -174,7 +206,7 @@ module StatsD
       end
 
       def packet_key(name, tags = [], no_prefix = false, type = COUNT)
-        "#{name}#{tags.join}#{no_prefix}#{type.to_s}".b
+        "#{name}#{tags.join}#{no_prefix}#{type}".b
       end
 
       def datagram_builder(no_prefix:)
