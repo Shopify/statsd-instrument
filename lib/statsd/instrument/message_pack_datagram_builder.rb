@@ -20,77 +20,18 @@ module StatsD
       def initialize(prefix: nil, default_tags: nil)
         @prefix = prefix.nil? ? "" : "#{prefix}.".tr(":|@", "_")
         @default_tags = default_tags.nil? || default_tags.empty? ? nil : compile_tags(default_tags)
-
-        MessagePack::DefaultFactory.register_type(
-          0x06,
-          MsgPackDatagram,
-          packer: ->(datagram, packer) {
-            packer.write(datagram.name)
-            packer.write(datagram.values)
-
-            case datagram.metric_type
-            when :g
-              packer.write(0)
-            when :c
-              packer.write(1)
-            when :d
-              packer.write(2)
-            when :h
-              packer.write(3)
-            when :ms
-              packer.write(4)
-            when :s
-              packer.write(5)
-            when :e
-              packer.write(6)
-            when :sc
-              packer.write(7)
-            when :kv
-              packer.write(8)
-            end
-
-            packer.write(datagram.sample_rate)
-            packer.write(datagram.labels)
-          },
-          unpacker: ->(_unpacker) {
-            datagram = MsgPackDatagram.new(
-              name: packer.read,
-              values: packer.read,
-            )
-
-            case packer.read
-            when 0
-              datagram.metric_type = :g
-            when 1
-              datagram.metric_type = :c
-            when 2
-              datagram.metric_type = :d
-            when 3
-              datagram.metric_type = :h
-            when 4
-              datagram.metric_type = :ms
-            when 5
-              datagram.metric_type = :s
-            when 6
-              datagram.metric_type = :e
-            when 7
-              datagram.metric_type = :sc
-            when 8
-              datagram.metric_type = :kv
-            end
-
-            datagram.sample_rate = packer.read
-            datagram.labels = packer.read
-          },
-          recursive: true,
-        )
       end
 
       def latency_metric_type
         :d
       end
 
-      def generate_generic_datagram(name, value, type, sample_rate, tags)
+      def generate_generic_datagram(name, values, type, sample_rate, tags)
+        if values.is_a?(Array)
+          values = values.map(&:to_f)
+        else
+          values = [Float(value, exception: false) || 0.0]
+        end
         tag_string = "" + ""
         unless @default_tags.nil?
           tag_string << @default_tags << ","
@@ -99,7 +40,7 @@ module StatsD
 
         MessagePack.pack({
           name: @prefix + name,
-          values: [Float(value, exception: false) || 0.0],
+          values: values,
           metric_type: type.to_s,
           sample_rate: sample_rate,
           labels: tag_string.to_s,
