@@ -37,6 +37,16 @@ class CounterAggregatorTest < Minitest::Test
     assert_equal([1.0, 100.0], datagram.value)
   end
 
+  def test_gauge_simple
+    @subject.gauge("foo", 1, tags: { foo: "bar" })
+    @subject.gauge("foo", 100, tags: { foo: "bar" })
+    @subject.flush
+
+    datagram = @sink.datagrams.first
+    assert_equal("foo", datagram.name)
+    assert_equal(100, datagram.value)
+  end
+
   def test_increment_with_tags_in_different_orders
     @subject.increment("foo", 1, tags: ["tag1:val1", "tag2:val2"])
     @subject.increment("foo", 1, tags: ["tag2:val2", "tag1:val1"])
