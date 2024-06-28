@@ -59,6 +59,8 @@ module StatsD
             StatsD::Instrument::StatsDDatagramBuilder
           when "datadog", "dogstatsd"
             StatsD::Instrument::DogStatsDDatagramBuilder
+          when "datadog-msgpack", "datadog-messagepack"
+            StatsD::Instrument::MessagePackDatagramBuilder
           else
             raise NotImplementedError, "Implementation named #{implementation} could not be found"
           end
@@ -224,7 +226,7 @@ module StatsD
         end
 
         if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).c(name, value, sample_rate, tags))
+          emit(:c, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -247,7 +249,7 @@ module StatsD
         end
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
+          emit(:ms, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -268,7 +270,7 @@ module StatsD
       def gauge(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).g(name, value, sample_rate, tags))
+          emit(:g, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -283,7 +285,7 @@ module StatsD
       def set(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).s(name, value, sample_rate, tags))
+          emit(:s, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -312,7 +314,7 @@ module StatsD
 
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).d(name, value, sample_rate, tags))
+          emit(:d, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -331,7 +333,7 @@ module StatsD
       def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).h(name, value, sample_rate, tags))
+          emit(:h, no_prefix, name, value, tags, sample_rate, nil)
         end
         StatsD::Instrument::VOID
       end
@@ -362,7 +364,7 @@ module StatsD
             sample_rate ||= @default_sample_rate
             if sample_rate.nil? || sample?(sample_rate)
               metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
-              emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
+              emit(metric_type, no_prefix, name, latency_in_ms, tags, sample_rate, nil)
             end
           end
         end
@@ -381,14 +383,15 @@ module StatsD
       #
       # @note Supported by the Datadog implementation only.
       def service_check(name, status, timestamp: nil, hostname: nil, tags: nil, message: nil, no_prefix: false)
-        emit(datagram_builder(no_prefix: no_prefix)._sc(
+        emit(
+          :sc,
+          no_prefix,
           name,
           status,
-          timestamp: timestamp,
-          hostname: hostname,
-          tags: tags,
-          message: message,
-        ))
+          tags,
+          nil,
+          [timestamp, hostname, message],
+        )
       end
 
       # Emits an event. An event represents any record of activity noteworthy for engineers.
@@ -406,19 +409,16 @@ module StatsD
       #
       # @note Supported by the Datadog implementation only.
       def event(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
-                source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
-
-        emit(datagram_builder(no_prefix: no_prefix)._e(
+        source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
+        emit(
+          :e,
+          no_prefix,
           title,
           text,
-          timestamp: timestamp,
-          hostname: hostname,
-          tags: tags,
-          aggregation_key: aggregation_key,
-          priority: priority,
-          source_type_name: source_type_name,
-          alert_type: alert_type,
-        ))
+          tags,
+          nil,
+          [timestamp, hostname, aggregation_key, priority, source_type_name, alert_type],
+        )
       end
 
       # Forces the client to flush all metrics that are currently buffered, first flushes the aggregation
@@ -517,8 +517,53 @@ module StatsD
         @sink.sample?(sample_rate)
       end
 
-      def emit(datagram)
-        @sink << datagram
+      def emit(
+        type,
+        no_prefix,
+        name_or_title,
+        value_or_status_or_text,
+        tags,
+        sample_rate,
+        extra
+      )
+        @sink << case type
+        when :c
+          datagram_builder(no_prefix: no_prefix).c(name_or_title, value_or_status_or_text, sample_rate, tags)
+        when :g
+          datagram_builder(no_prefix: no_prefix).g(name_or_title, value_or_status_or_text, sample_rate, tags)
+        when :h
+          datagram_builder(no_prefix: no_prefix).h(name_or_title, value_or_status_or_text, sample_rate, tags)
+        when :d
+          datagram_builder(no_prefix: no_prefix).d(name_or_title, value_or_status_or_text, sample_rate, tags)
+        when :ms
+          datagram_builder(no_prefix: no_prefix).ms(name_or_title, value_or_status_or_text, sample_rate, tags)
+        when :s
+          datagram_builder(no_prefix: no_prefix).s(name_or_title, value_or_status_or_text, sample_rate, tags)
+        when :sc
+          datagram_builder(no_prefix: no_prefix)._sc(
+            name_or_title,
+            value_or_status_or_text,
+            tags:      tags,
+            timestamp: extra[0],
+            hostname:  extra[1],
+            message:   extra[2],
+          )
+        when :e
+          datagram_builder(no_prefix: no_prefix)._e(
+            name_or_title,
+            value_or_status_or_text,
+            tags:             tags,
+            timestamp:        extra[0],
+            hostname:         extra[1],
+            aggregation_key:  extra[2],
+            priority:         extra[3],
+            source_type_name: extra[4],
+            alert_type:       extra[5],
+          )
+        else
+          datagram_builder(no_prefix: no_prefix).send(type, name_or_title, value_or_status_or_text, sample_rate, tags)
+        end
+
         StatsD::Instrument::VOID
       end
     end

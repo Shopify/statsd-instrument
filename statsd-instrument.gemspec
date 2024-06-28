@@ -23,4 +23,6 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 2.6.0"
 
   spec.metadata['allowed_push_host'] = "https://rubygems.org"
+
+  spec.add_runtime_dependency "msgpack", ">= 1.7"
 end
