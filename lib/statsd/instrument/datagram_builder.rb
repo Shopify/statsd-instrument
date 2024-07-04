@@ -48,8 +48,8 @@ module StatsD
         generate_generic_datagram(name, [value], "d", sample_rate, tags)
       end
 
-      def d_multi(name, values, sample_rate, tags)
-        generate_generic_datagram(name, values, "d", sample_rate, tags)
+      def distribution_value_packed(name, type, values, sample_rate, tags)
+        generate_generic_datagram(name, values, type, sample_rate, tags)
       end
 
       def kv(name, value, sample_rate, tags)

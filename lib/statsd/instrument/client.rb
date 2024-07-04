@@ -242,7 +242,7 @@ module StatsD
         end
 
         if @enable_aggregation
-          @aggregator.distribution(name, value, tags: tags, no_prefix: no_prefix)
+          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :ms)
           return StatsD::Instrument::VOID
         end
         sample_rate ||= @default_sample_rate
@@ -311,7 +311,7 @@ module StatsD
         end
 
         if @enable_aggregation
-          @aggregator.distribution(name, value, tags: tags, no_prefix: no_prefix)
+          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :d)
           return StatsD::Instrument::VOID
         end
 
@@ -362,7 +362,7 @@ module StatsD
 
           latency_in_ms = stop - start
           if @enable_aggregation
-            @aggregator.distribution(name, latency_in_ms, tags: tags, no_prefix: no_prefix)
+            @aggregator.aggregate_timing(name, latency_in_ms, tags: tags, no_prefix: no_prefix)
           else
             sample_rate ||= @default_sample_rate
             if sample_rate.nil? || sample?(sample_rate)

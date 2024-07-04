@@ -4,9 +4,11 @@ module StatsD
   module Instrument
     class Aggregator
       CONST_SAMPLE_RATE = 1.0
-      COUNT = :count
-      DISTRIBUTION = :distribution
-      GAUGE = :gauge
+      COUNT = :c
+      DISTRIBUTION = :d
+      MEASURE = :ms
+      HISTOGRAM = :h
+      GAUGE = :g
 
       class << self
         def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class)
@@ -104,14 +106,14 @@ module StatsD
         end
       end
 
-      def distribution(name, value, tags: [], no_prefix: false)
+      def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION)
         unless thread_healthcheck
           sink << datagram_builder(no_prefix: no_prefix).d(name, value, CONST_SAMPLE_RATE, tags)
           return
         end
 
         tags = tags_sorted(tags)
-        key = packet_key(name, tags, no_prefix, DISTRIBUTION)
+        key = packet_key(name, tags, no_prefix, type)
 
         mutex.synchronize do
           if aggregation_state.key?(key) && aggregation_state[key][:value].size + 1 >= @max_values
@@ -119,7 +121,7 @@ module StatsD
           end
           unless aggregation_state.key?(key)
             aggregation_state[key] = {
-              type: DISTRIBUTION,
+              type: type,
               name: name,
               value: [],
               tags: tags,
@@ -170,9 +172,10 @@ module StatsD
               CONST_SAMPLE_RATE,
               agg[:tags],
             )
-          when DISTRIBUTION
-            sink << datagram_builder(no_prefix: agg[:no_prefix]).d_multi(
+          when DISTRIBUTION, MEASURE, HISTOGRAM
+            sink << datagram_builder(no_prefix: agg[:no_prefix]).distribution_value_packed(
               agg[:name],
+              agg[:type].to_s,
               agg[:value],
               CONST_SAMPLE_RATE,
               agg[:tags],

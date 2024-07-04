@@ -27,14 +27,30 @@ class CounterAggregatorTest < Minitest::Test
   end
 
   def test_distribution_simple
-    @subject.distribution("foo", 1, tags: { foo: "bar" })
-    @subject.distribution("foo", 100, tags: { foo: "bar" })
+    @subject.aggregate_timing("foo", 1, tags: { foo: "bar" })
+    @subject.aggregate_timing("foo", 100, tags: { foo: "bar" })
     @subject.flush
 
     datagram = @sink.datagrams.first
     assert_equal("foo", datagram.name)
     assert_equal(2, datagram.value.size)
     assert_equal([1.0, 100.0], datagram.value)
+  end
+
+  def test_mixed_type_timings
+    @subject.aggregate_timing("foo_ms", 1, tags: { foo: "bar" }, type: :ms)
+    @subject.aggregate_timing("foo_ms", 100, tags: { foo: "bar" }, type: :ms)
+
+    @subject.aggregate_timing("foo_d", 100, tags: { foo: "bar" }, type: :d)
+    @subject.aggregate_timing("foo_d", 120, tags: { foo: "bar" }, type: :d)
+
+    @subject.flush
+
+    assert_equal(2, @sink.datagrams.size)
+    assert_equal(1, @sink.datagrams.filter { |d| d.name == "foo_ms" }.size)
+    assert_equal(1, @sink.datagrams.filter { |d| d.name == "foo_d" }.size)
+    assert_equal("ms", @sink.datagrams.find { |d| d.name == "foo_ms" }.type.to_s)
+    assert_equal("d", @sink.datagrams.find { |d| d.name == "foo_d" }.type.to_s)
   end
 
   def test_gauge_simple
