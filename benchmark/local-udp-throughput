@@ -76,6 +76,7 @@ def benchmark_implementation(name, env = {})
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
   log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
   FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
+  FileUtils.mkdir_p(File.dirname(log_filename))
 
   # Set up an UDP listener to which we can send StatsD packets
   receiver = UDPSocket.new
