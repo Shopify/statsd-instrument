@@ -86,11 +86,16 @@ class ClientTest < Minitest::Test
 
     client.increment("foo", 1, sample_rate: 0.5, tags: { foo: "bar" })
     client.increment("foo", 1, sample_rate: 0.5, tags: { foo: "bar" })
+
+    client.measure("block_duration_example") { 1 + 1 }
     client.force_flush
 
     datagram = client.sink.datagrams.first
     assert_equal("bar.foo", datagram.name)
     assert_equal(2, datagram.value)
+
+    datagram = client.sink.datagrams.last
+    assert_equal("bar.block_duration_example", datagram.name)
   end
 
   def test_capture

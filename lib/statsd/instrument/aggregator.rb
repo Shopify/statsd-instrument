@@ -2,6 +2,23 @@
 
 module StatsD
   module Instrument
+    class AggregationValue
+      attr_accessor :value
+
+      attr_reader :name, :type, :tags, :no_prefix
+
+      # @param name [String] The name of the metric.
+      # @param type [Symbol] The type of the metric.
+      # @param value [Integer, Array<Float>] The value of the metric.
+      def initialize(name, type, value, tags, no_prefix)
+        @name = name
+        @type = type
+        @value = value
+        @tags = tags
+        @no_prefix = no_prefix
+      end
+    end
+
     class Aggregator
       CONST_SAMPLE_RATE = 1.0
       COUNT = :c
@@ -13,17 +30,38 @@ module StatsD
       class << self
         def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class)
           proc do
-            aggregation_state.each do |_key, counter|
-              if datagram_builders[counter[:no_prefix]].nil?
-                datagram_builders[counter[:no_prefix]] =
-                  create_datagram_builder(datagram_builder_class, no_prefix: counter[:no_prefix])
+            aggregation_state.each do |_key, agg_value|
+              no_prefix = agg_value.no_prefix
+              if datagram_builders[no_prefix].nil?
+                datagram_builders[no_prefix] =
+                  create_datagram_builder(datagram_builder_class, no_prefix: no_prefix)
               end
-              sink << datagram_builders[counter[:no_prefix]].c(
-                counter[:name],
-                counter[:value],
-                CONST_SAMPLE_RATE,
-                counter[:tags],
-              )
+              case agg_value.type
+              when COUNT
+                sink << datagram_builders[no_prefix].c(
+                  agg_value.name,
+                  agg_value.value,
+                  CONST_SAMPLE_RATE,
+                  agg_value.tags,
+                )
+              when DISTRIBUTION, MEASURE, HISTOGRAM
+                sink << datagram_builders[no_prefix].distribution_value_packed(
+                  agg_value.name,
+                  agg_value.type.to_s,
+                  agg_value.value,
+                  CONST_SAMPLE_RATE,
+                  agg_value.tags,
+                )
+              when GAUGE
+                sink << datagram_builders[no_prefix].g(
+                  agg_value.name,
+                  agg_value.value,
+                  CONST_SAMPLE_RATE,
+                  agg_value.tags,
+                )
+              else
+                StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{agg_value.type}" }
+              end
             end
             aggregation_state.clear
           end
@@ -56,7 +94,7 @@ module StatsD
         }
         @max_values = max_values
 
-        # Mutex protects the aggregation_state hash from concurrent access
+        # Mutex protects the aggregation_state and flush_thread from concurrent access
         @mutex = Mutex.new
         @aggregation_state = {}
 
@@ -94,15 +132,9 @@ module StatsD
 
         mutex.synchronize do
           unless aggregation_state.key?(key)
-            aggregation_state[key] = {
-              type: COUNT,
-              name: name,
-              value: 0,
-              tags: tags,
-              no_prefix: no_prefix,
-            }
+            aggregation_state[key] = AggregationValue.new(name, COUNT, 0, tags, no_prefix)
           end
-          aggregation_state[key][:value] += value
+          aggregation_state[key].value += value
         end
       end
 
@@ -116,19 +148,14 @@ module StatsD
         key = packet_key(name, tags, no_prefix, type)
 
         mutex.synchronize do
-          if aggregation_state.key?(key) && aggregation_state[key][:value].size + 1 >= @max_values
+          if aggregation_state.key?(key) && aggregation_state[key].value.size + 1 >= @max_values
             do_flush
           end
-          unless aggregation_state.key?(key)
-            aggregation_state[key] = {
-              type: type,
-              name: name,
-              value: [],
-              tags: tags,
-              no_prefix: no_prefix,
-            }
+          if aggregation_state.key?(key)
+            aggregation_state[key].value << value
+          else
+            aggregation_state[key] = AggregationValue.new(name, type, [value], tags, no_prefix)
           end
-          aggregation_state[key][:value] << value
         end
       end
 
@@ -143,55 +170,49 @@ module StatsD
 
         mutex.synchronize do
           unless aggregation_state.key?(key)
-            aggregation_state[key] = {
-              type: GAUGE,
-              name: name,
-              value: value,
-              tags: tags,
-              no_prefix: no_prefix,
-            }
+            aggregation_state[key] = AggregationValue.new(name, GAUGE, value, tags, no_prefix)
           end
           # keep the last value
-          aggregation_state[key][:value] = value
+          aggregation_state[key].value = value
         end
       end
 
       def flush
-        mutex.synchronize(&method(:do_flush))
+        mutex.synchronize { do_flush }
       end
 
       private
 
       def do_flush
-        aggregation_state.each do |_key, agg|
-          case agg[:type]
+        @aggregation_state.each do |_key, agg|
+          case agg.type
           when COUNT
-            sink << datagram_builder(no_prefix: agg[:no_prefix]).c(
-              agg[:name],
-              agg[:value],
+            @sink << datagram_builder(no_prefix: agg.no_prefix).c(
+              agg.name,
+              agg.value,
               CONST_SAMPLE_RATE,
-              agg[:tags],
+              agg.tags,
             )
           when DISTRIBUTION, MEASURE, HISTOGRAM
-            sink << datagram_builder(no_prefix: agg[:no_prefix]).distribution_value_packed(
-              agg[:name],
-              agg[:type].to_s,
-              agg[:value],
+            @sink << datagram_builder(no_prefix: agg.no_prefix).distribution_value_packed(
+              agg.name,
+              agg.type.to_s,
+              agg.value,
               CONST_SAMPLE_RATE,
-              agg[:tags],
+              agg.tags,
             )
           when GAUGE
-            sink << datagram_builder(no_prefix: agg[:no_prefix]).g(
-              agg[:name],
-              agg[:value],
+            @sink << datagram_builder(no_prefix: agg.no_prefix).g(
+              agg.name,
+              agg.value,
               CONST_SAMPLE_RATE,
-              agg[:tags],
+              agg.tags,
             )
           else
-            StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{agg[:type]}" }
+            StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{agg.type}" }
           end
         end
-        aggregation_state.clear
+        @aggregation_state.clear
       end
 
       attr_reader :mutex, :aggregation_state, :sink
@@ -220,26 +241,28 @@ module StatsD
       end
 
       def thread_healthcheck
-        unless @flush_thread&.alive?
-          return false unless Thread.main.alive?
+        @mutex.synchronize do
+          unless @flush_thread&.alive?
+            return false unless Thread.main.alive?
 
-          if @pid != Process.pid
-            StatsD.logger.info { "[#{self.class.name}] Restarting the flush thread after fork" }
-            @pid = Process.pid
-            @aggregation_state.clear
-          else
-            StatsD.logger.info { "[#{self.class.name}] Restarting the flush thread" }
-          end
-          @flush_thread = Thread.new do
-            Thread.current.abort_on_exception = true
-            loop do
-              sleep(@flush_interval)
-              thread_healthcheck
-              flush
+            if @pid != Process.pid
+              StatsD.logger.info { "[#{self.class.name}] Restarting the flush thread after fork" }
+              @pid = Process.pid
+              @aggregation_state.clear
+            else
+              StatsD.logger.info { "[#{self.class.name}] Restarting the flush thread" }
+            end
+            @flush_thread = Thread.new do
+              Thread.current.abort_on_exception = true
+              loop do
+                sleep(@flush_interval)
+                thread_healthcheck
+                flush
+              end
             end
           end
+          true
         end
-        true
       end
     end
   end
