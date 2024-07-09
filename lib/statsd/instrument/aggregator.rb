@@ -121,11 +121,11 @@ module StatsD
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix, COUNT)
 
-        mutex.synchronize do
-          unless aggregation_state.key?(key)
-            aggregation_state[key] = AggregationValue.new(name, COUNT, 0, tags, no_prefix)
+        @mutex.synchronize do
+          unless @aggregation_state.key?(key)
+            @aggregation_state[key] = AggregationValue.new(name, COUNT, 0, tags, no_prefix)
           end
-          aggregation_state[key].value += value
+          @aggregation_state[key].value += value
         end
       end
 
@@ -138,14 +138,14 @@ module StatsD
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix, type)
 
-        mutex.synchronize do
-          if aggregation_state.key?(key) && aggregation_state[key].value.size + 1 >= @max_values
+        @mutex.synchronize do
+          if @aggregation_state.key?(key) && @aggregation_state[key].value.size + 1 >= @max_values
             do_flush
           end
-          if aggregation_state.key?(key)
-            aggregation_state[key].value << value
+          if @aggregation_state.key?(key)
+            @aggregation_state[key].value << value
           else
-            aggregation_state[key] = AggregationValue.new(name, type, [value], tags, no_prefix)
+            @aggregation_state[key] = AggregationValue.new(name, type, [value], tags, no_prefix)
           end
         end
       end
@@ -159,14 +159,14 @@ module StatsD
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix, COUNT)
 
-        mutex.synchronize do
-          aggregation_state[key] ||= AggregationValue.new(name, GAUGE, value, tags, no_prefix)
-          aggregation_state[key].value = value
+        @mutex.synchronize do
+          @aggregation_state[key] ||= AggregationValue.new(name, GAUGE, value, tags, no_prefix)
+          @aggregation_state[key].value = value
         end
       end
 
       def flush
-        mutex.synchronize { do_flush }
+        @mutex.synchronize { do_flush }
       end
 
       private
@@ -206,8 +206,6 @@ module StatsD
         end
         @aggregation_state.clear
       end
-
-      attr_reader :mutex, :aggregation_state, :sink
 
       def tags_sorted(tags)
         return EMPTY_ARRAY if tags.nil? || tags.empty?
