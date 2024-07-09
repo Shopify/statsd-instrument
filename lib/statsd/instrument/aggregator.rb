@@ -64,7 +64,6 @@ module StatsD
                 StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{agg_value.type}" }
               end
             end
-            aggregation_state.clear
           end
         end
       end
