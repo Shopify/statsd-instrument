@@ -171,6 +171,10 @@ module StatsD
 
       private
 
+      # @return Array<String>
+      EMPTY_ARRAY = [].freeze
+
+
       def do_flush
         @aggregation_state.each do |_key, agg|
           case agg.type
@@ -205,9 +209,8 @@ module StatsD
 
       attr_reader :mutex, :aggregation_state, :sink
 
-      # @return Array<String>
       def tags_sorted(tags)
-        return [].freeze if tags.nil? || tags.empty?
+        return EMPTY_ARRAY if tags.nil? || tags.empty?
 
         if tags.is_a?(Hash)
           tags = tags.sort_by { |k, _v| k.to_s }.map! { |k, v| "#{k}:#{v}" }
