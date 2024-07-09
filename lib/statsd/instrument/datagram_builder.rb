@@ -17,6 +17,40 @@ module StatsD
         def datagram_class
           StatsD::Instrument::Datagram
         end
+
+        def normalize_tags(tags, buffer = "".b)
+          if tags.is_a?(String)
+            tags = normalize_string(tags) if /[|,]/.match?(tags)
+            buffer << tags
+            return buffer
+          end
+          if tags.is_a?(Hash)
+            first = true
+            tags.each do |key, value|
+              if first
+                first = false
+              else
+                buffer << ","
+              end
+              key = key.to_s
+              key = key.tr("|,", "") if /[|,]/.match?(key)
+              value = value.to_s
+              value = value.tr("|,", "") if /[|,]/.match?(value)
+              buffer << key << ":" << value
+            end
+          else
+            if tags.any? { |tag| /[|,]/.match?(tag) }
+              tags = tags.map { |tag| tag.tr("|,", "") }
+            end
+            buffer << tags.join(",")
+          end
+          buffer
+        end
+
+        def normalize_string(string)
+          string = string.tr("|", "_") if string.include?("|")
+          string
+        end
       end
 
       def initialize(prefix: nil, default_tags: nil)
@@ -92,27 +126,7 @@ module StatsD
       end
 
       def compile_tags(tags, buffer = "".b)
-        if tags.is_a?(Hash)
-          first = true
-          tags.each do |key, value|
-            if first
-              first = false
-            else
-              buffer << ","
-            end
-            key = key.to_s
-            key = key.tr("|,", "") if /[|,]/.match?(key)
-            value = value.to_s
-            value = value.tr("|,", "") if /[|,]/.match?(value)
-            buffer << key << ":" << value
-          end
-        else
-          if tags.any? { |tag| /[|,]/.match?(tag) }
-            tags = tags.map { |tag| tag.tr("|,", "") }
-          end
-          buffer << tags.join(",")
-        end
-        buffer
+        DatagramBuilder.normalize_tags(tags, buffer)
       end
     end
   end

@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class CounterAggregatorTest < Minitest::Test
+class Aggre < Minitest::Test
   def setup
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     @subject = StatsD::Instrument::Aggregator.new(
@@ -71,13 +71,15 @@ class CounterAggregatorTest < Minitest::Test
     assert_equal(2, @sink.datagrams.first.value)
   end
 
-  def test_increment_with_tags_as_arrays_and_hashes
+  def test_increment_with_different_tag_values
     @subject.increment("foo", 1, tags: ["tag1:val1", "tag2:val2"])
     @subject.increment("foo", 1, tags: { tag1: "val1", tag2: "val2" })
+
+    @subject.increment("bar")
     @subject.flush
 
     assert_equal(2, @sink.datagrams.first.value)
-    assert_equal(1, @sink.datagrams.size)
+    assert_equal(2, @sink.datagrams.size)
     assert_equal(["tag1:val1", "tag2:val2"], @sink.datagrams.first.tags)
   end
 

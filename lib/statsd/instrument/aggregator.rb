@@ -5,7 +5,7 @@ module StatsD
     class AggregationValue
       attr_accessor :value
 
-      attr_reader :name, :type, :tags, :no_prefix
+      attr_reader :name, :type, :no_prefix
 
       # @param name [String] The name of the metric.
       # @param type [Symbol] The type of the metric.
@@ -16,6 +16,11 @@ module StatsD
         @value = value
         @tags = tags
         @no_prefix = no_prefix
+      end
+
+      def tags
+        "" if @tags.nil? || @tags.empty?
+        @tags
       end
     end
 
@@ -174,7 +179,6 @@ module StatsD
       # @return Array<String>
       EMPTY_ARRAY = [].freeze
 
-
       def do_flush
         @aggregation_state.each do |_key, agg|
           case agg.type
@@ -215,11 +219,11 @@ module StatsD
         else
           tags.sort!
         end
-        tags
+        DatagramBuilder.normalize_tags(tags)
       end
 
-      def packet_key(name, tags = [], no_prefix = false, type = COUNT)
-        "#{name}#{tags.join}#{no_prefix}#{type}".b
+      def packet_key(name, tags = "".b, no_prefix = false, type = COUNT)
+        "#{DatagramBuilder.normalize_string(name)}|#{tags}|#{no_prefix}|#{type}".b
       end
 
       def datagram_builder(no_prefix:)
