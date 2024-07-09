@@ -360,13 +360,13 @@ module StatsD
         ensure
           stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
 
+          metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
           latency_in_ms = stop - start
           if @enable_aggregation
-            @aggregator.aggregate_timing(name, latency_in_ms, tags: tags, no_prefix: no_prefix)
+            @aggregator.aggregate_timing(name, latency_in_ms, tags: tags, no_prefix: no_prefix, type: metric_type)
           else
             sample_rate ||= @default_sample_rate
             if sample_rate.nil? || sample?(sample_rate)
-              metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
               emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
             end
           end
