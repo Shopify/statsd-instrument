@@ -28,14 +28,15 @@ module StatsD
       GAUGE = :g
 
       class << self
-        def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class)
+        def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class, default_tags)
           proc do
             aggregation_state.each do |_key, agg_value|
               no_prefix = agg_value.no_prefix
-              if datagram_builders[no_prefix].nil?
-                datagram_builders[no_prefix] =
-                  create_datagram_builder(datagram_builder_class, no_prefix: no_prefix)
-              end
+              datagram_builders[no_prefix] ||= datagram_builder_class.new(
+                datagram_builder_class,
+                no_prefix: no_prefix,
+                default_tags: default_tags,
+              )
               case agg_value.type
               when COUNT
                 sink << datagram_builders[no_prefix].c(
@@ -65,15 +66,6 @@ module StatsD
             end
             aggregation_state.clear
           end
-        end
-
-        private
-
-        def create_datagram_builder(builder_class, no_prefix:)
-          builder_class.new(
-            prefix: no_prefix ? nil : @metric_prefix,
-            default_tags: @default_tags,
-          )
         end
       end
 
@@ -111,7 +103,7 @@ module StatsD
 
         ObjectSpace.define_finalizer(
           self,
-          self.class.finalize(@aggregation_state, @sink, @datagram_builders, @datagram_builder_class),
+          self.class.finalize(@aggregation_state, @sink, @datagram_builders, @datagram_builder_class, @default_tags),
         )
       end
 
