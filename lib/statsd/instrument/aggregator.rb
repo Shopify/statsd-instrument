@@ -209,12 +209,12 @@ module StatsD
 
       attr_reader :mutex, :aggregation_state, :sink
 
+      # @return Array<String>
       def tags_sorted(tags)
         return [].freeze if tags.nil? || tags.empty?
 
         if tags.is_a?(Hash)
-          sorted = tags.sort_by { |k, _v| k.to_s }
-          tags = sorted.map! { |k, v| "#{k}:#{v}" }
+          tags = tags.sort_by { |k, _v| k.to_s }.map! { |k, v| "#{k}:#{v}" }
         else
           tags.sort!
         end
