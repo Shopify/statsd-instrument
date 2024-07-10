@@ -72,7 +72,7 @@ EVENTS_PER_ITERATION = 6
 ITERATIONS = Integer(ENV.fetch("ITERATIONS", 10_000))
 SERIES_COUNT = Integer(ENV.fetch("SERIES_COUNT", 0))
 
-def benchmark_implementation(name, env = {})
+def benchmark_implementation(name, env = {}, datadog_client = false)
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
   log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
   FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
@@ -91,7 +91,7 @@ def benchmark_implementation(name, env = {})
     "STATSD_ENV" => "production",
   ).merge(env)).client
 
-  if name.start_with?("Datadog Client")
+  if datadog_client
     statsd = Datadog::Statsd.new(receiver.addr[2], receiver.addr[1], **env)
     udp_client = DatadogShim.new(statsd)
   end
@@ -111,7 +111,7 @@ def benchmark_implementation(name, env = {})
   end
   start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   threads.each(&:join)
-  if name.start_with?("Datadog Client")
+  if datadog_client
     udp_client.close
   end
   receiver.close
@@ -125,5 +125,5 @@ end
 
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
 benchmark_implementation("UDP batched")
-benchmark_implementation("Datadog Client - single thread", single_thread: true, delay_serialization: true)
-benchmark_implementation("Datadog Client - multi-thread", single_thread: false, delay_serialization: true)
+benchmark_implementation("Datadog Client - single thread", {single_thread: true, delay_serialization: true}, true)
+benchmark_implementation("Datadog Client - multi-thread", {single_thread: false, delay_serialization: true}, true)
