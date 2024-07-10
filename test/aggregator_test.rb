@@ -61,6 +61,7 @@ class Aggre < Minitest::Test
     datagram = @sink.datagrams.first
     assert_equal("foo", datagram.name)
     assert_equal(100, datagram.value)
+    assert_equal(:g, datagram.type)
   end
 
   def test_increment_with_tags_in_different_orders
@@ -98,6 +99,28 @@ class Aggre < Minitest::Test
     @subject.flush
 
     assert_equal(3, @sink.datagrams.first.value)
+  end
+
+  def test_send_mixed_types_will_pass_through
+    @subject.increment("test_counter", 1, tags: ["tag1:val1", "tag2:val2"])
+    @subject.aggregate_timing("test_counter", 100, tags: ["tag1:val1", "tag2:val2"])
+
+    @subject.gauge("test_gauge", 100, tags: ["tag1:val1", "tag2:val2"])
+    @subject.increment("test_gauge", 1, tags: ["tag1:val1", "tag2:val2"])
+
+    @subject.aggregate_timing("test_timing", 100, tags: ["tag1:val1", "tag2:val2"])
+    @subject.gauge("test_timing", 100, tags: ["tag1:val1", "tag2:val2"])
+    @subject.flush
+
+    assert_equal(6, @sink.datagrams.size)
+
+    assert_equal(2, @sink.datagrams.filter { |d| d.name == "test_counter" }.size)
+    assert_equal(2, @sink.datagrams.filter { |d| d.name == "test_gauge" }.size)
+    assert_equal(2, @sink.datagrams.filter { |d| d.name == "test_timing" }.size)
+
+    assert_equal(:d, @sink.datagrams.find { |d| d.name == "test_timing" }.type)
+    assert_equal(:g, @sink.datagrams.find { |d| d.name == "test_gauge" }.type)
+    assert_equal(:c, @sink.datagrams.find { |d| d.name == "test_counter" }.type)
   end
 
   def test_with_prefix

@@ -7,7 +7,6 @@ module StatsD
       attr_reader :type, :no_prefix
 
       EMPTY = "".b.freeze
-      TIMING_TYPES = [:d, :ms, :h].freeze
 
       # @param type [Symbol] The type of the metric.
       # @param value [Integer, Array<Float>] The value of the metric.
@@ -15,18 +14,6 @@ module StatsD
         @type = type
         @value = value
         @no_prefix = no_prefix
-      end
-
-      def timing?
-        TIMING_TYPES.include?(@type.to_s)
-      end
-
-      def counter?
-        @type == Aggregator::COUNT
-      end
-
-      def gauge?
-        @type == Aggregator::GAUGE
       end
     end
 
@@ -171,7 +158,7 @@ module StatsD
         end
 
         tags = tags_sorted(tags)
-        key = packet_key(name, tags, no_prefix, COUNT)
+        key = packet_key(name, tags, no_prefix, GAUGE)
 
         @mutex.synchronize do
           @aggregation_state[key] ||= AggregationValue.new(GAUGE, value, no_prefix)
