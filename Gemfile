@@ -11,7 +11,4 @@ gem "yard"
 gem "rubocop", ">= 1.0"
 gem "rubocop-shopify", require: false
 gem "benchmark-ips"
-
-group :development do
-  gem "dogstatsd-ruby", "~> 5.0", require: false
-end
+gem "dogstatsd-ruby", "~> 5.0", require: false
