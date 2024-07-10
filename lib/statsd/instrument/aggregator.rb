@@ -16,13 +16,14 @@ module StatsD
         [@name, @tags, @no_prefix, @type].hash
       end
 
-      def eql?(other)
+      def ==(other)
         other.is_a?(self.class) &&
           @name == other.name &&
           @tags == other.tags &&
           @no_prefix == other.no_prefix &&
           @type == other.type
       end
+      alias_method :eql?, :==
     end
 
     class Aggregator
