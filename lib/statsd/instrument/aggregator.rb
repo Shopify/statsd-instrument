@@ -2,18 +2,26 @@
 
 module StatsD
   module Instrument
-    class AggregationValue
-      attr_accessor :value
-      attr_reader :type, :no_prefix
+    class AggregationKey
+      attr_reader :name, :tags, :no_prefix, :type
 
-      EMPTY = "".b.freeze
-
-      # @param type [Symbol] The type of the metric.
-      # @param value [Integer, Array<Float>] The value of the metric.
-      def initialize(type, value, no_prefix)
-        @type = type
-        @value = value
+      def initialize(name, tags, no_prefix, type)
+        @name = name
+        @tags = tags
         @no_prefix = no_prefix
+        @type = type
+      end
+
+      def hash
+        [@name, @tags, @no_prefix, @type].hash
+      end
+
+      def eql?(other)
+        other.is_a?(self.class) &&
+          @name == other.name &&
+          @tags == other.tags &&
+          @no_prefix == other.no_prefix &&
+          @type == other.type
       end
     end
 
@@ -29,42 +37,39 @@ module StatsD
         def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class, default_tags)
           proc do
             aggregation_state.each do |key, agg_value|
-              key_parts = key.split("|".b)
-              name = key_parts[0]
-              tags = key_parts[1].empty? ? EMPTY_ARRAY : key_parts[1]
-              no_prefix = agg_value.no_prefix
+              no_prefix = key.no_prefix
               datagram_builders[no_prefix] ||= datagram_builder_class.new(
-                datagram_builder_class,
-                no_prefix: no_prefix,
+                prefix: no_prefix ? nil : @metric_prefix,
                 default_tags: default_tags,
               )
-              case agg_value.type
+              case key.type
               when COUNT
                 sink << datagram_builders[no_prefix].c(
-                  name,
-                  agg_value.value,
+                  key.name,
+                  agg_value,
                   CONST_SAMPLE_RATE,
-                  tags,
+                  key.tags,
                 )
               when DISTRIBUTION, MEASURE, HISTOGRAM
                 sink << datagram_builders[no_prefix].distribution_value_packed(
-                  name,
-                  agg_value.type.to_s,
-                  agg_value.value,
+                  key.name,
+                  key.type.to_s,
+                  agg_value,
                   CONST_SAMPLE_RATE,
-                  tags,
+                  key.tags,
                 )
               when GAUGE
                 sink << datagram_builders[no_prefix].g(
-                  name,
-                  agg_value.value,
+                  key.name,
+                  agg_value,
                   CONST_SAMPLE_RATE,
-                  tags,
+                  key.tags,
                 )
               else
-                StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{agg_value.type}" }
+                StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
               end
             end
+            aggregation_state.clear
           end
         end
       end
@@ -126,8 +131,8 @@ module StatsD
         key = packet_key(name, tags, no_prefix, COUNT)
 
         @mutex.synchronize do
-          aggregation = @aggregation_state[key] ||= AggregationValue.new(COUNT, 0, no_prefix)
-          aggregation.value += value
+          @aggregation_state[key] ||= 0
+          @aggregation_state[key] += value
         end
       end
 
@@ -141,14 +146,11 @@ module StatsD
         key = packet_key(name, tags, no_prefix, type)
 
         @mutex.synchronize do
-          if @aggregation_state.key?(key) && @aggregation_state[key].value.size + 1 >= @max_values
+          if @aggregation_state.key?(key) && @aggregation_state[key].size + 1 >= @max_values
             do_flush
           end
-          if @aggregation_state.key?(key)
-            @aggregation_state[key].value << value
-          else
-            @aggregation_state[key] = AggregationValue.new(type, [value], no_prefix)
-          end
+          @aggregation_state[key] ||= []
+          @aggregation_state[key] << value
         end
       end
 
@@ -162,8 +164,7 @@ module StatsD
         key = packet_key(name, tags, no_prefix, GAUGE)
 
         @mutex.synchronize do
-          @aggregation_state[key] ||= AggregationValue.new(GAUGE, value, no_prefix)
-          @aggregation_state[key].value = value
+          @aggregation_state[key] = value
         end
       end
 
@@ -177,36 +178,32 @@ module StatsD
       EMPTY_ARRAY = [].freeze
 
       def do_flush
-        @aggregation_state.each do |key, agg|
-          key_parts = key.split("|".b)
-          name = key_parts[0]
-          tags = key_parts[1]
-          tags = tags.empty? ? EMPTY_ARRAY : tags.split(",".b)
-          case agg.type
+        @aggregation_state.each do |key, value|
+          case key.type
           when COUNT
-            @sink << datagram_builder(no_prefix: agg.no_prefix).c(
-              name,
-              agg.value,
+            @sink << datagram_builder(no_prefix: key.no_prefix).c(
+              key.name,
+              value,
               CONST_SAMPLE_RATE,
-              tags,
+              key.tags,
             )
           when DISTRIBUTION, MEASURE, HISTOGRAM
-            @sink << datagram_builder(no_prefix: agg.no_prefix).distribution_value_packed(
-              name,
-              agg.type.to_s,
-              agg.value,
+            @sink << datagram_builder(no_prefix: key.no_prefix).distribution_value_packed(
+              key.name,
+              key.type.to_s,
+              value,
               CONST_SAMPLE_RATE,
-              tags,
+              key.tags,
             )
           when GAUGE
-            @sink << datagram_builder(no_prefix: agg.no_prefix).g(
-              name,
-              agg.value,
+            @sink << datagram_builder(no_prefix: key.no_prefix).g(
+              key.name,
+              value,
               CONST_SAMPLE_RATE,
-              tags,
+              key.tags,
             )
           else
-            StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{agg.type}" }
+            StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
           end
         end
         @aggregation_state.clear
@@ -224,7 +221,7 @@ module StatsD
       end
 
       def packet_key(name, tags = "".b, no_prefix = false, type = COUNT)
-        "#{DatagramBuilder.normalize_string(name)}|#{tags}|#{no_prefix}|#{type}".b
+        AggregationKey.new(DatagramBuilder.normalize_string(name), tags, no_prefix, type)
       end
 
       def datagram_builder(no_prefix:)
