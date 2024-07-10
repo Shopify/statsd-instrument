@@ -125,5 +125,6 @@ end
 
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
 benchmark_implementation("UDP batched")
+benchmark_implementation("UDP batched with aggregation", "STATSD_ENABLE_AGGREGATION" => "true")
 benchmark_implementation("Datadog Client - single thread", { single_thread: true, delay_serialization: true }, true)
 benchmark_implementation("Datadog Client - multi-thread", { single_thread: false, delay_serialization: true }, true)
