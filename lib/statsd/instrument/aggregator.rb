@@ -126,10 +126,8 @@ module StatsD
         key = packet_key(name, tags, no_prefix, COUNT)
 
         @mutex.synchronize do
-          unless @aggregation_state.key?(key)
-            @aggregation_state[key] = AggregationValue.new(COUNT, 0, no_prefix)
-          end
-          @aggregation_state[key].value += value
+          aggregation = @aggregation_state[key] ||= AggregationValue.new(COUNT, 0, no_prefix)
+          aggregation.value += value
         end
       end
 
