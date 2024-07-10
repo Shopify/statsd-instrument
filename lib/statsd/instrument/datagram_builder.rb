@@ -48,7 +48,7 @@ module StatsD
         end
 
         def normalize_string(string)
-          string = string.tr("|", "_") if string.include?("|")
+          string = string.tr("|#", "_") if /[|#]/.match?(string)
           string
         end
       end
