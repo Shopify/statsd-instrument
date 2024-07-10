@@ -98,6 +98,9 @@ module StatsD
             sleep(@flush_interval)
             thread_healthcheck
             flush
+          rescue => e
+            StatsD.logger.error { "[#{self.class.name}] Error in flush thread: #{e}" }
+            raise e
           end
         end
 
