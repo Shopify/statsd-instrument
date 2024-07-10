@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class Aggre < Minitest::Test
+class AggregatorTest < Minitest::Test
   def setup
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     @subject = StatsD::Instrument::Aggregator.new(
