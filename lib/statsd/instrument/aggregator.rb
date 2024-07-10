@@ -221,7 +221,7 @@ module StatsD
       end
 
       def packet_key(name, tags = "".b, no_prefix = false, type = COUNT)
-        AggregationKey.new(DatagramBuilder.normalize_string(name), tags, no_prefix, type)
+        AggregationKey.new(DatagramBuilder.normalize_string(name), tags, no_prefix, type).freeze
       end
 
       def datagram_builder(no_prefix:)
