@@ -96,7 +96,9 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
     udp_client = DatadogShim.new(statsd)
   end
 
-  puts "===== #{name} throughput (#{THREAD_COUNT} threads) ====="
+  series = SERIES_COUNT.zero? ? 1 : SERIES_COUNT
+  events_sent = THREAD_COUNT * EVENTS_PER_ITERATION * ITERATIONS * series
+  puts "===== #{name} throughput (#{THREAD_COUNT} threads) - total events: #{events_sent} ====="
   threads = THREAD_COUNT.times.map do
     Thread.new do
       count = ITERATIONS
@@ -118,13 +120,19 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
   udp_client.shutdown if udp_client.respond_to?(:shutdown)
 
   duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
-  series = SERIES_COUNT.zero? ? 1 : SERIES_COUNT
-  events_sent = THREAD_COUNT * EVENTS_PER_ITERATION * ITERATIONS * series
-  puts "events: #{(events_sent / duration).round(1).to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse}/s"
+  puts "events: #{(events_sent / duration).round(1).to_s.reverse.gsub(
+    /(\d{3})(?=\d)/,
+    '\\1,',
+  ).reverse}/s. Total time: #{duration.round(2)}s"
 end
 
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
 benchmark_implementation("UDP batched")
 benchmark_implementation("UDP batched with aggregation", "STATSD_ENABLE_AGGREGATION" => "true")
+benchmark_implementation(
+  "UDP batched with aggregation and 5 second interval",
+  "STATSD_ENABLE_AGGREGATION" => "true",
+  "STATSD_AGGREGATION_FLUSH_INTERVAL" => "5",
+)
 benchmark_implementation("Datadog Client - single thread", { single_thread: true, delay_serialization: true }, true)
 benchmark_implementation("Datadog Client - multi-thread", { single_thread: false, delay_serialization: true }, true)

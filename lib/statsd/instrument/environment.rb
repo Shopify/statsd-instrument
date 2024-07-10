@@ -110,7 +110,7 @@ module StatsD
       end
 
       def aggregation_interval
-        Float(env.fetch("STATSD_AGGREGATION_INTERVAL", 5.0))
+        Float(env.fetch("STATSD_AGGREGATION_INTERVAL", 2.0))
       end
 
       def client
