@@ -3,17 +3,14 @@
 module StatsD
   module Instrument
     class AggregationKey
-      attr_reader :name, :tags, :no_prefix, :type
+      attr_reader :name, :tags, :no_prefix, :type, :hash
 
       def initialize(name, tags, no_prefix, type)
         @name = name
         @tags = tags
         @no_prefix = no_prefix
         @type = type
-      end
-
-      def hash
-        [@name, @tags, @no_prefix, @type].hash
+        @hash = [@name, @tags, @no_prefix, @type].hash
       end
 
       def ==(other)
