@@ -65,6 +65,23 @@ The following environment variables are supported:
   - `statsd_instrument.batched_udp_sink.avg_batch_length`: The average number of statsd lines per batch.
 
 
+### Experimental aggregation feature
+
+The aggregation feature is currently experimental and aims to improve the efficiency of metrics reporting by aggregating
+multiple metric events into a single sample. This reduces the number of network requests and can significantly decrease the overhead 
+associated with high-frequency metric reporting.
+
+#### Enabling Aggregation
+
+To enable metric aggregation, set the following environment variables:
+
+- `STATSD_ENABLE_AGGREGATION`: Set this to `true` to enable the experimental aggregation feature. Aggregation is disabled by default.
+- `STATSD_AGGREGATION_INTERVAL`: Specifies the interval (in seconds) at which aggregated metrics are flushed and sent to the StatsD server. 
+For example, setting this to `2` will aggregate and send metrics every 2 seconds. Two seconds is also the default value if this environment variable is not set.
+
+Please note that since aggregation is an experimental feature, it should be used with caution in production environments.
+
+
 ## StatsD keys
 
 StatsD keys look like 'admin.logins.api.success'. Dots are used as namespace separators.
