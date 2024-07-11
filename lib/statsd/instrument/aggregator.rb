@@ -172,7 +172,6 @@ module StatsD
 
       private
 
-      # @return Array<String>
       EMPTY_ARRAY = [].freeze
 
       def do_flush
