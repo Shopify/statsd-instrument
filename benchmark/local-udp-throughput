@@ -8,6 +8,7 @@ require "socket"
 require "statsd-instrument"
 require "datadog/statsd"
 require "forwardable"
+require "vernier"
 
 class DatadogShim
   extend Forwardable
@@ -71,6 +72,7 @@ THREAD_COUNT = Integer(ENV.fetch("THREAD_COUNT", 5))
 EVENTS_PER_ITERATION = 6
 ITERATIONS = Integer(ENV.fetch("ITERATIONS", 10_000))
 SERIES_COUNT = Integer(ENV.fetch("SERIES_COUNT", 0))
+ENABLE_PROFILING = ENV.key?("ENABLE_PROFILING")
 
 def benchmark_implementation(name, env = {}, datadog_client = false)
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
@@ -126,13 +128,47 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
   ).reverse}/s. Total time: #{duration.round(2)}s"
 end
 
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_udp_sync.json")
+end
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
+
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_udp_async.json")
+end
 benchmark_implementation("UDP batched")
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
+
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_udp_async_aggregated.json")
+end
 benchmark_implementation("UDP batched with aggregation", "STATSD_ENABLE_AGGREGATION" => "true")
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
+
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_udp_async_aggregated_long_interval.json")
+end
 benchmark_implementation(
   "UDP batched with aggregation and 5 second interval",
   "STATSD_ENABLE_AGGREGATION" => "true",
   "STATSD_AGGREGATION_FLUSH_INTERVAL" => "5",
 )
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
+
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_datadog.json")
+end
 benchmark_implementation("Datadog Client - single thread", { single_thread: true, delay_serialization: true }, true)
 benchmark_implementation("Datadog Client - multi-thread", { single_thread: false, delay_serialization: true }, true)
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
