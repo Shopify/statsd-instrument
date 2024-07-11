@@ -30,6 +30,10 @@ class DatadogShim
     @client.time(stat, value: value, tags: tags, &block)
   end
 
+  def histogram(stat, value = nil, tags: nil, &block)
+    @client.histogram(stat, value: value, tags: tags, &block)
+  end
+
   def gauge(stat, value, tags: nil)
     @client.gauge(stat, value: value, tags: tags)
   end
@@ -51,9 +55,6 @@ def send_metrics(client)
   client.increment("StatsD.increment", 10)
   client.measure("StatsD.measure") { 1 + 1 }
   client.gauge("StatsD.gauge", 12.0, tags: ["foo:bar", "quc"])
-  client.set("StatsD.set", "value", tags: { foo: "bar", baz: "quc" })
-  client.event("StasD.event", "12345")
-  client.service_check("StatsD.service_check", "ok")
 end
 
 def send_metrics_high_cardinality(client)
@@ -62,14 +63,11 @@ def send_metrics_high_cardinality(client)
     client.increment("StatsD.increment", 10, tags: tags)
     client.measure("StatsD.measure", tags: tags) { 1 + 1 }
     client.gauge("StatsD.gauge", 12.0, tags: tags)
-    client.set("StatsD.set", "value", tags: tags)
-    client.event("StasD.event", "12345", tags: tags)
-    client.service_check("StatsD.service_check", "ok", tags: tags)
   end
 end
 
 THREAD_COUNT = Integer(ENV.fetch("THREAD_COUNT", 5))
-EVENTS_PER_ITERATION = 6
+EVENTS_PER_ITERATION = 3
 ITERATIONS = Integer(ENV.fetch("ITERATIONS", 10_000))
 SERIES_COUNT = Integer(ENV.fetch("SERIES_COUNT", 0))
 ENABLE_PROFILING = ENV.key?("ENABLE_PROFILING")
