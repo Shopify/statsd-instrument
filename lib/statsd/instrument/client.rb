@@ -334,6 +334,10 @@ module StatsD
       # @param tags (see #increment)
       # @return [void]
       def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
+        if @enable_aggregation
+          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :h)
+        end
+
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
           emit(datagram_builder(no_prefix: no_prefix).h(name, value, sample_rate, tags))
