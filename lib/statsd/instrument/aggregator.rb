@@ -49,7 +49,7 @@ module StatsD
                   key.tags,
                 )
               when DISTRIBUTION, MEASURE, HISTOGRAM
-                sink << datagram_builders[no_prefix].distribution_value_packed(
+                sink << datagram_builders[no_prefix].timing_value_packed(
                   key.name,
                   key.type.to_s,
                   agg_value,
@@ -185,7 +185,7 @@ module StatsD
               key.tags,
             )
           when DISTRIBUTION, MEASURE, HISTOGRAM
-            @sink << datagram_builder(no_prefix: key.no_prefix).distribution_value_packed(
+            @sink << datagram_builder(no_prefix: key.no_prefix).timing_value_packed(
               key.name,
               key.type.to_s,
               value,

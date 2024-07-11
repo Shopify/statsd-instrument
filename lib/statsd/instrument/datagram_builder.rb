@@ -82,7 +82,7 @@ module StatsD
         generate_generic_datagram(name, [value], "d", sample_rate, tags)
       end
 
-      def distribution_value_packed(name, type, values, sample_rate, tags)
+      def timing_value_packed(name, type, values, sample_rate, tags)
         generate_generic_datagram(name, values, type, sample_rate, tags)
       end
 
