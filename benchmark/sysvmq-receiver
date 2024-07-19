@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require "sysvmq"
+
+# n_recv = 0
+mq = SysVMQ.new(0xDEADBEEF, 1024 * 1024, SysVMQ::IPC_CREAT | 0777)
+puts "My PID is: #{Process.pid}"
+
+loop do
+  _ = mq.receive
+
+  # n_recv += 1
+  #
+  # if n_recv % 10000 == 0
+  #   puts "Received: #{n_recv}"
+  # end
+end

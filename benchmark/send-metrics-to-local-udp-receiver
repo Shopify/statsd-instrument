@@ -28,26 +28,33 @@ def benchmark_implementation(name, env = {})
   end
 
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}"
-  log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
+  # log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
   FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
 
   # Set up an UDP listener to which we can send StatsD packets
   receiver = UDPSocket.new
   receiver.bind("localhost", 0)
 
-  log_file = File.open(log_filename, "w+", level: Logger::WARN)
-  StatsD.logger = Logger.new(log_file)
+  # log_file = File.open(log_filename, "w+", level: Logger::WARN)
+  # StatsD.logger = Logger.new(log_file)
+  StatsD.logger = Logger.new(File::NULL)
 
-  udp_client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
+  client = StatsD::Instrument::Environment.new(ENV.to_h.merge(
     "STATSD_ADDR" => "#{receiver.addr[2]}:#{receiver.addr[1]}",
     "STATSD_IMPLEMENTATION" => "dogstatsd",
     "STATSD_ENV" => "production",
   ).merge(env)).client
 
+  if name == "SysVMQ"
+    client = client.clone_with_options(sink: StatsD::Instrument::SysVMQSink.new(0xDEADBEEF))
+  elsif name == "SysVMQ batched"
+    client = client.clone_with_options(sink: StatsD::Instrument::BatchedSysVMQSink.new(0xDEADBEEF))
+  end
+
   puts "===== #{name} ====="
   report = Benchmark.ips do |bench|
     bench.report("#{name} (branch: #{branch}, sha: #{revision[0, 7]})") do
-      send_metrics(udp_client)
+      send_metrics(client)
     end
 
     # Store the results in between runs
@@ -56,7 +63,7 @@ def benchmark_implementation(name, env = {})
   end
 
   receiver.close
-  udp_client.shutdown if udp_client.respond_to?(:shutdown)
+  client.shutdown if client.respond_to?(:shutdown)
 
   if report.entries.length == 1
     puts
@@ -69,15 +76,17 @@ def benchmark_implementation(name, env = {})
     File.unlink(intermediate_results_filename)
   end
 
-  log_file.close
-  logs = File.read(log_filename)
-  unless logs.empty?
-    puts
-    puts "==== logs ===="
-    puts logs
-  end
+  # log_file.close
+  # logs = File.read(log_filename)
+  # unless logs.empty?
+  #   puts
+  #   puts "==== logs ===="
+  #   puts logs
+  # end
   puts "================"
 end
 
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
 benchmark_implementation("UDP batched")
+benchmark_implementation("SysVMQ")
+benchmark_implementation("SysVMQ batched")
