@@ -45,10 +45,12 @@ def benchmark_implementation(name, env = {})
     "STATSD_ENV" => "production",
   ).merge(env)).client
 
-  if name == "SysVMQ"
-    client = client.clone_with_options(sink: StatsD::Instrument::SysVMQSink.new(0xDEADBEEF))
-  elsif name == "SysVMQ batched"
-    client = client.clone_with_options(sink: StatsD::Instrument::BatchedSysVMQSink.new(0xDEADBEEF))
+  if name.start_with? "SysVMQ batched"
+    non_blocking = name.include? "non-blocking"
+    client = client.clone_with_options(sink: StatsD::Instrument::BatchedSysVMQSink.new(0xDEADBEEF, sysv_mq_blocking: !non_blocking))
+  elsif name.start_with? "SysVMQ"
+    non_blocking = name.include? "non-blocking"
+    client = client.clone_with_options(sink: StatsD::Instrument::SysVMQSink.new(0xDEADBEEF, blocking: !non_blocking))
   end
 
   puts "===== #{name} ====="
@@ -89,4 +91,6 @@ end
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
 benchmark_implementation("UDP batched")
 benchmark_implementation("SysVMQ")
+benchmark_implementation("SysVMQ non-blocking")
 benchmark_implementation("SysVMQ batched")
+benchmark_implementation("SysVMQ batched non-blocking")

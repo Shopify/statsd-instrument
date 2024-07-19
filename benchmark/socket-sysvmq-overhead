@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "benchmark"
+require "socket"
+require "sysvmq"
+
+test_string = "There were piles of meat and cheese. It was paradise!".freeze
+
+udp_receiver = UDPSocket.new
+udp_receiver.bind("localhost", 0)
+
+udp_sender = UDPSocket.new
+udp_sender.connect(udp_receiver.addr[2], udp_receiver.addr[1])
+
+uds_sender = UNIXSocket.new("/tmp/uds-receiver")
+
+mq = SysVMQ.new(0xDEADBEEF, 1024*1024, SysVMQ::IPC_CREAT | 0777)
+# mq.destroy
+# exit 0
+
+n = 100_000
+
+Benchmark.bmbm do |x|
+  x.report("udp") { n.times { udp_sender.send(test_string, 0) } }
+  x.report("sysv") { n.times { mq.send(test_string) } }
+  x.report("sysv non-block throw-it-away") { n.times { mq.send(test_string, 1, SysVMQ::IPC_NOWAIT) } }
+  x.report("uds") { n.times { uds_sender.send(test_string, 0) } }
+end

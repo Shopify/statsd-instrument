@@ -8,7 +8,8 @@ module StatsD
       DEFAULT_BUFFER_SIZE = 1024 * 1024
       DEFAULT_FLAGS = SysVMQ::IPC_CREAT | 0777
 
-      def initialize(key, buffer_size: DEFAULT_BUFFER_SIZE, flags: DEFAULT_FLAGS)
+      def initialize(key, buffer_size: DEFAULT_BUFFER_SIZE, flags: DEFAULT_FLAGS, blocking: true)
+        @blocking = blocking
         @mq = SysVMQ.new(key, buffer_size, flags)
       end
 
@@ -17,8 +18,11 @@ module StatsD
       end
 
       def <<(datagram)
-        # TODO: Try non-blocking send: @mq.send(datagram, 1, SysVMQ::IPC_NOWAIT)
-        @mq.send(datagram, 1)
+        if @blocking
+          @mq.send(datagram, 1)
+        else
+          @mq.send(datagram, 1, SysVMQ::IPC_NOWAIT)
+        end
         self
       end
 
@@ -46,6 +50,7 @@ module StatsD
         key,
         sysv_mq_buffer_size: SysVMQSink::DEFAULT_BUFFER_SIZE,
         sysv_mq_flags: SysVMQSink::DEFAULT_FLAGS,
+        sysv_mq_blocking: true,
         thread_priority: DEFAULT_THREAD_PRIORITY,
         buffer_capacity: DEFAULT_BUFFER_CAPACITY,
         max_packet_size: DEFAULT_MAX_PACKET_SIZE,
@@ -55,6 +60,7 @@ module StatsD
           key,
           sysv_mq_buffer_size,
           sysv_mq_flags,
+          sysv_mq_blocking,
           buffer_capacity,
           thread_priority,
           max_packet_size,
@@ -165,12 +171,13 @@ module StatsD
           key,
           sysv_mq_buffer_size,
           sysv_mq_flags,
+          sysv_mq_blocking,
           buffer_capacity,
           thread_priority,
           max_packet_size,
           statistics_interval
         )
-          @sysv_sink = SysVMQSink.new(key, buffer_size: sysv_mq_buffer_size, flags: sysv_mq_flags)
+          @sysv_sink = SysVMQSink.new(key, buffer_size: sysv_mq_buffer_size, flags: sysv_mq_flags, blocking: sysv_mq_blocking)
           @interrupted = false
           @thread_priority = thread_priority
           @max_packet_size = max_packet_size
