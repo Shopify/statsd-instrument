@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require "bundler/setup"
 require "socket"
 Socket.unix_server_loop("/tmp/uds-receiver") do |sock, _client|
   sock.read

@@ -19,7 +19,8 @@ mq = SysVMQ.new(0xDEADBEEF, 1024*1024, SysVMQ::IPC_CREAT | 0777)
 # mq.destroy
 # exit 0
 
-n = 100_000
+n = 2_000_000
+GC.disable
 
 Benchmark.bmbm do |x|
   x.report("udp") { n.times { udp_sender.send(test_string, 0) } }
