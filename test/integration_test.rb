@@ -36,13 +36,18 @@ class IntegrationTest < Minitest::Test
       "STATSD_AGGREGATION_INTERVAL" => "5.0",
     ).client
 
-    10.times do
+    10.times do |i|
       client.increment("counter", 2)
+      client.distribution("test_distribution", 3 * i)
+      client.gauge("test_gauge", 3 * i)
     end
 
     client.force_flush
 
-    assert_equal("counter:20|c", @server.recvfrom(100).first)
+    packets = @server.recvfrom(200).first.split("\n")
+    assert_equal("counter:20|c", packets.first)
+    assert_equal("test_distribution:0:3:6:9:12:15:18:21:24:27|d", packets[1])
+    assert_equal("test_gauge:27|g", packets[2])
   end
 
   def test_live_local_udp_socket_with_aggregation_periodic_flush
