@@ -5,7 +5,7 @@ require "benchmark"
 require "socket"
 require "sysvmq"
 
-test_string = "There were piles of meat and cheese. It was paradise!".freeze
+test_strings = (1..10).map { |i| ("There were piles of meat and cheese. It was paradise!" * i).freeze }
 
 udp_receiver = UDPSocket.new
 udp_receiver.bind("localhost", 0)
@@ -22,9 +22,11 @@ mq = SysVMQ.new(0xDEADBEEF, 1024*1024, SysVMQ::IPC_CREAT | 0777)
 n = 2_000_000
 GC.disable
 
-Benchmark.bmbm do |x|
-  x.report("udp") { n.times { udp_sender.send(test_string, 0) } }
-  x.report("sysv") { n.times { mq.send(test_string) } }
-  x.report("sysv non-block throw-it-away") { n.times { mq.send(test_string, 1, SysVMQ::IPC_NOWAIT) } }
-  x.report("uds") { n.times { uds_sender.send(test_string, 0) } }
+test_strings.each do |test_string|
+  Benchmark.bmbm do |x|
+    x.report("udp (#{test_string.length})") { n.times { udp_sender.send(test_string, 0) } }
+    x.report("sysv (#{test_string.length})") { n.times { mq.send(test_string) } }
+    x.report("sysv non-block throw-it-away (#{test_string.length})") { n.times { mq.send(test_string, 1, SysVMQ::IPC_NOWAIT) } }
+    x.report("uds (#{test_string.length})") { n.times { uds_sender.send(test_string, 0) } }
+  end
 end
