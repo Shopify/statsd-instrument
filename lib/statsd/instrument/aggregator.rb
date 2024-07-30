@@ -88,6 +88,7 @@ module StatsD
           false: nil,
         }
         @max_values = max_values
+        @tag_cache = {}
 
         # Mutex protects the aggregation_state and flush_thread from concurrent access
         @mutex = Mutex.new
@@ -204,17 +205,26 @@ module StatsD
           end
         end
         @aggregation_state.clear
+        @tag_cache.clear
       end
 
       def tags_sorted(tags)
         return "" if tags.nil? || tags.empty?
+
+        original_key = tags.respond_to?(:hash) ? tags.hash : nil
+        # Cache the normalized tags to avoid re-normalizing the same tags
+        if tags.respond_to?(:hash) && (cached_tags = @tag_cache[tags.hash])
+          return cached_tags
+        end
 
         if tags.is_a?(Hash)
           tags = tags.sort_by { |k, _v| k.to_s }.map! { |k, v| "#{k}:#{v}" }
         else
           tags.sort!
         end
-        DatagramBuilder.normalize_tags(tags)
+        normalized = DatagramBuilder.normalize_tags(tags)
+        @tag_cache[tags.hash] = normalized unless original_key.nil?
+        normalized
       end
 
       def packet_key(name, tags = "".b, no_prefix = false, type = COUNT)
