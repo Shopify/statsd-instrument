@@ -161,6 +161,7 @@ unless ENV.fetch("STATSD_SOCKET_PATH", "").empty?
     "STATSD_ENABLE_AGGREGATION" => "true",
     "STATSD_IMPLEMENTATION" => "datadog",
     "STATSD_SOCKET_PATH" => ENV["STATSD_SOCKET_PATH"],
+    "STATSD_MAX_PACKET_SIZE" => "65536",
     "STATSD_ADDR" => "",
   )
   if ENABLE_PROFILING
