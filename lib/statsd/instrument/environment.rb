@@ -124,12 +124,13 @@ module StatsD
         case environment
         when "production", "staging"
           if statsd_batching?
-            unless statsd_socket_path.empty?
-              StatsD.logger.info do
-                "[StatsD] Using batched UDS sink with buffer capacity #{statsd_buffer_capacity}"
-              end
-
-              return StatsD::Instrument::UdsSink.new(statsd_socket_path)
+            if statsd_uds_send?
+              return StatsD::Instrument::BatchedUDSSink.new(
+                statsd_socket_path,
+                buffer_capacity: statsd_buffer_capacity,
+                max_packet_size: statsd_max_packet_size,
+                statistics_interval: statsd_batch_statistics_interval,
+              )
             end
 
             StatsD::Instrument::BatchedUDPSink.for_addr(
@@ -139,7 +140,11 @@ module StatsD
               statistics_interval: statsd_batch_statistics_interval,
             )
           else
-            StatsD::Instrument::UDPSink.for_addr(statsd_addr)
+            if statsd_uds_send?
+              StatsD::Instrument::UdsSink.new(statsd_socket_path)
+            else
+              StatsD::Instrument::UDPSink.for_addr(statsd_addr)
+            end
           end
         when "test"
           StatsD::Instrument::NullSink.new
