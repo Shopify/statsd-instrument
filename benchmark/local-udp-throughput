@@ -78,6 +78,8 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
   FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
   FileUtils.mkdir_p(File.dirname(log_filename))
 
+  puts "Logs written to #{log_filename}"
+
   # Set up an UDP listener to which we can send StatsD packets
   receiver = UDPSocket.new
   receiver.bind("localhost", 0)
@@ -148,6 +150,22 @@ end
 benchmark_implementation("UDP batched with aggregation", "STATSD_ENABLE_AGGREGATION" => "true")
 if ENABLE_PROFILING
   Vernier.stop_profile
+end
+
+unless ENV.fetch("STATSD_SOCKET_PATH", "").empty?
+  if ENABLE_PROFILING
+    Vernier.start_profile(out: "tmp/benchmark_profile_uds_aggregated.json")
+  end
+  benchmark_implementation(
+    "UDS batched with aggregation",
+    "STATSD_ENABLE_AGGREGATION" => "true",
+    "STATSD_IMPLEMENTATION" => "datadog",
+    "STATSD_SOCKET_PATH" => ENV["STATSD_SOCKET_PATH"],
+    "STATSD_ADDR" => "",
+  )
+  if ENABLE_PROFILING
+    Vernier.stop_profile
+  end
 end
 
 if ENABLE_PROFILING
