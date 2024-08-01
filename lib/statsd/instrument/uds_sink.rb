@@ -14,9 +14,10 @@ module StatsD
         end
       end
 
-      def initialize(socket_path)
+      def initialize(socket_path, max_packet_size: DEFAULT_MAX_PACKET_SIZE)
         ObjectSpace.define_finalizer(self, FINALIZER)
         @socket_path = socket_path
+        @max_packet_size = max_packet_size
       end
 
       def <<(datagram)
@@ -25,12 +26,14 @@ module StatsD
           socket.sendmsg_nonblock(datagram)
         rescue SocketError, IOError, SystemCallError => error
           StatsD.logger.debug do
-            "[StatsD::Instrument::UdsDatadogSink] Resetting connection because of #{error.class}: #{error.message}"
+            "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
           end
           invalidate_socket
           if retried
             StatsD.logger.warn do
-              "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
+              "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}. " \
+                "This is the second time we see this error, consider checking the server. " \
+                "Payload size: #{datagram.bytesize}"
             end
           else
             retried = true
@@ -44,6 +47,10 @@ module StatsD
         # noop
       end
 
+      def sample?(sample_rate)
+        sample_rate == 1.0 || rand < sample_rate
+      end
+
       private
 
       def invalidate_socket
@@ -54,6 +61,7 @@ module StatsD
       def socket
         thread_store[object_id] ||= begin
           socket = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
+          socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_SNDBUF, @max_packet_size.to_i)
           socket.connect(Socket.pack_sockaddr_un(@socket_path))
           socket
         end

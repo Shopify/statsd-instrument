@@ -8,6 +8,7 @@ require "socket"
 require "statsd-instrument"
 require "datadog/statsd"
 require "forwardable"
+require "vernier"
 
 class DatadogShim
   extend Forwardable
@@ -27,6 +28,10 @@ class DatadogShim
 
   def measure(stat, value = nil, tags: nil, &block)
     @client.time(stat, value: value, tags: tags, &block)
+  end
+
+  def histogram(stat, value = nil, tags: nil, &block)
+    @client.histogram(stat, value: value, tags: tags, &block)
   end
 
   def gauge(stat, value, tags: nil)
@@ -50,9 +55,6 @@ def send_metrics(client)
   client.increment("StatsD.increment", 10)
   client.measure("StatsD.measure") { 1 + 1 }
   client.gauge("StatsD.gauge", 12.0, tags: ["foo:bar", "quc"])
-  client.set("StatsD.set", "value", tags: { foo: "bar", baz: "quc" })
-  client.event("StasD.event", "12345")
-  client.service_check("StatsD.service_check", "ok")
 end
 
 def send_metrics_high_cardinality(client)
@@ -61,16 +63,14 @@ def send_metrics_high_cardinality(client)
     client.increment("StatsD.increment", 10, tags: tags)
     client.measure("StatsD.measure", tags: tags) { 1 + 1 }
     client.gauge("StatsD.gauge", 12.0, tags: tags)
-    client.set("StatsD.set", "value", tags: tags)
-    client.event("StasD.event", "12345", tags: tags)
-    client.service_check("StatsD.service_check", "ok", tags: tags)
   end
 end
 
 THREAD_COUNT = Integer(ENV.fetch("THREAD_COUNT", 5))
-EVENTS_PER_ITERATION = 6
+EVENTS_PER_ITERATION = 3
 ITERATIONS = Integer(ENV.fetch("ITERATIONS", 10_000))
 SERIES_COUNT = Integer(ENV.fetch("SERIES_COUNT", 0))
+ENABLE_PROFILING = ENV.key?("ENABLE_PROFILING")
 
 def benchmark_implementation(name, env = {}, datadog_client = false)
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
@@ -96,7 +96,9 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
     udp_client = DatadogShim.new(statsd)
   end
 
-  puts "===== #{name} throughput (#{THREAD_COUNT} threads) ====="
+  series = SERIES_COUNT.zero? ? 1 : SERIES_COUNT
+  events_sent = THREAD_COUNT * EVENTS_PER_ITERATION * ITERATIONS * series
+  puts "===== #{name} throughput (#{THREAD_COUNT} threads) - total events: #{events_sent} ====="
   threads = THREAD_COUNT.times.map do
     Thread.new do
       count = ITERATIONS
@@ -123,7 +125,18 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
   puts "events: #{(events_sent / duration).round(1).to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse}/s"
 end
 
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_udp_sync.json")
+end
 benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
+
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_udp_async.json")
+end
 benchmark_implementation("UDP batched")
-benchmark_implementation("Datadog Client - single thread", { single_thread: true, delay_serialization: true }, true)
-benchmark_implementation("Datadog Client - multi-thread", { single_thread: false, delay_serialization: true }, true)
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end

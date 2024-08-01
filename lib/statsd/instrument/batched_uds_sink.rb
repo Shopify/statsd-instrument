@@ -4,7 +4,7 @@ module StatsD
   module Instrument
     class BatchedUDSSink
       DEFAULT_THREAD_PRIORITY = 100
-      DEFAULT_BUFFER_CAPACITY = 5_000
+      DEFAULT_BUFFER_CAPACITY = 5_00
       DEFAULT_MAX_PACKET_SIZE = 8_192
       DEFAULT_STATISTICS_INTERVAL = 0 # in seconds, and 0 implies disabled-by-default.
 
@@ -123,7 +123,7 @@ module StatsD
 
       class Dispatcher
         def initialize(socket_path, buffer_capacity, thread_priority, max_packet_size, statistics_interval)
-          @uds_sink = UdsSink.new(socket_path)
+          @uds_sink = UdsSink.new(socket_path, max_packet_size: max_packet_size)
           @interrupted = false
           @thread_priority = thread_priority
           @max_packet_size = max_packet_size

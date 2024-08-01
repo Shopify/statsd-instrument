@@ -106,6 +106,7 @@ module StatsD
         if statsd_uds_send?
           return Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdsSink::DEFAULT_MAX_PACKET_SIZE))
         end
+
         Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::BatchedUDPSink::DEFAULT_MAX_PACKET_SIZE))
       end
 
@@ -125,6 +126,10 @@ module StatsD
         when "production", "staging"
           if statsd_batching?
             if statsd_uds_send?
+              StatsD.logger.warn(
+                "Socket path passed, UDS has priority over UDP. " \
+                  "Using UDS with max_packet_size=#{statsd_max_packet_size}",
+              )
               return StatsD::Instrument::BatchedUDSSink.new(
                 statsd_socket_path,
                 buffer_capacity: statsd_buffer_capacity,
@@ -139,12 +144,10 @@ module StatsD
               max_packet_size: statsd_max_packet_size,
               statistics_interval: statsd_batch_statistics_interval,
             )
+          elsif statsd_uds_send?
+            StatsD::Instrument::UdsSink.new(statsd_socket_path)
           else
-            if statsd_uds_send?
-              StatsD::Instrument::UdsSink.new(statsd_socket_path)
-            else
-              StatsD::Instrument::UDPSink.for_addr(statsd_addr)
-            end
+            StatsD::Instrument::UDPSink.for_addr(statsd_addr)
           end
         when "test"
           StatsD::Instrument::NullSink.new
