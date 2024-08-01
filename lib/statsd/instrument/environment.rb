@@ -82,6 +82,10 @@ module StatsD
         env.fetch("STATSD_ADDR", "localhost:8125")
       end
 
+      def statsd_socket_path
+        env.fetch("STATSD_SOCKET_PATH", "")
+      end
+
       def statsd_default_tags
         env.key?("STATSD_DEFAULT_TAGS") ? env.fetch("STATSD_DEFAULT_TAGS").split(",") : nil
       end
@@ -94,7 +98,14 @@ module StatsD
         statsd_buffer_capacity > 0 && Float(env.fetch("STATSD_FLUSH_INTERVAL", 1.0)) > 0.0
       end
 
+      def statsd_uds_send?
+        !statsd_socket_path.empty?
+      end
+
       def statsd_max_packet_size
+        if statsd_uds_send?
+          return Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdsSink::DEFAULT_MAX_PACKET_SIZE))
+        end
         Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::BatchedUDPSink::DEFAULT_MAX_PACKET_SIZE))
       end
 
@@ -121,6 +132,14 @@ module StatsD
         case environment
         when "production", "staging"
           if statsd_batching?
+            unless statsd_socket_path.empty?
+              StatsD.logger.info do
+                "[StatsD] Using batched UDS sink with buffer capacity #{statsd_buffer_capacity}"
+              end
+
+              return StatsD::Instrument::UdsSink.new(statsd_socket_path)
+            end
+
             StatsD::Instrument::BatchedUDPSink.for_addr(
               statsd_addr,
               buffer_capacity: statsd_buffer_capacity,
