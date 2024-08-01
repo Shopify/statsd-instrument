@@ -6,7 +6,7 @@ class DispatcherStatsTest < Minitest::Test
   include StatsD::Instrument::Assertions
 
   def test_maybe_flush
-    stats = StatsD::Instrument::BatchedUDPSink::DispatcherStats.new(0)
+    stats = StatsD::Instrument::BatchedSink::DispatcherStats.new(0, "udp")
 
     stats.increment_synchronous_sends
     stats.increment_batched_sends(1, 1, 1)
@@ -25,13 +25,13 @@ class DispatcherStatsTest < Minitest::Test
     assert_equal(0, stats.instance_variable_get(:@avg_batched_packet_size))
     assert_equal(0, stats.instance_variable_get(:@avg_batch_length))
 
-    stats = StatsD::Instrument::BatchedUDPSink::DispatcherStats.new(1)
+    stats = StatsD::Instrument::BatchedSink::DispatcherStats.new(1, :udp)
     stats.increment_batched_sends(1, 1, 1)
     assert_no_statsd_calls { stats.maybe_flush! }
   end
 
   def test_calculations_are_correct
-    stats = StatsD::Instrument::BatchedUDPSink::DispatcherStats.new(0)
+    stats = StatsD::Instrument::BatchedSink::DispatcherStats.new(0, :udp)
 
     5.times { stats.increment_synchronous_sends }
     assert_equal(5, stats.instance_variable_get(:@synchronous_sends))

@@ -201,7 +201,10 @@ module StatsD
     #
     # @param method (see #statsd_measure)
     # @param name (see #statsd_measure)
-    # @param metric_options (see #statsd_measure)
+    # @param sample_rate
+    # @param tags
+    # @param no_prefix
+    # @param client
     # @return [void]
     def statsd_count(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
       add_to_method(method, name, :count) do
@@ -391,14 +394,16 @@ require "statsd/instrument/datagram_builder"
 require "statsd/instrument/statsd_datagram_builder"
 require "statsd/instrument/dogstatsd_datagram_builder"
 require "statsd/instrument/null_sink"
-require "statsd/instrument/udp_sink"
-require "statsd/instrument/batched_udp_sink"
 require "statsd/instrument/capture_sink"
 require "statsd/instrument/log_sink"
 require "statsd/instrument/environment"
 require "statsd/instrument/helpers"
 require "statsd/instrument/assertions"
 require "statsd/instrument/expectation"
+require "statsd/instrument/uds_connection"
+require "statsd/instrument/udp_connection"
+require "statsd/instrument/sink"
+require "statsd/instrument/batched_sink"
 require "statsd/instrument/matchers" if defined?(RSpec)
 require "statsd/instrument/railtie" if defined?(Rails::Railtie)
 require "statsd/instrument/strict" if ENV["STATSD_STRICT_MODE"]

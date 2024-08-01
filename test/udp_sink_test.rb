@@ -107,7 +107,8 @@ module UDPSinkTests
   private
 
   def build_sink(host = @host, port = @port)
-    @sink_class.new(host, port)
+    connection = StatsD::Instrument::UdpConnection.new(host, port)
+    StatsD::Instrument::Sink.new(connection)
   end
 
   def read_datagrams(count, timeout: ENV["CI"] ? 5 : 1)
@@ -132,7 +133,7 @@ class UDPSinkTest < Minitest::Test
     @receiver.bind("localhost", 0)
     @host = @receiver.addr[2]
     @port = @receiver.addr[1]
-    @sink_class = StatsD::Instrument::UDPSink
+    @sink_class = StatsD::Instrument::Sink
   end
 
   def teardown
@@ -167,7 +168,7 @@ class UDPSinkTest < Minitest::Test
     ensure
       StatsD.logger = previous_logger
       # Make sure our fake socket is closed so that it doesn't interfere with other tests
-      udp_sink&.send(:invalidate_socket)
+      udp_sink&.send(:invalidate_connection)
     end
   end
 end
@@ -180,7 +181,7 @@ class BatchedUDPSinkTest < Minitest::Test
     @receiver.bind("localhost", 0)
     @host = @receiver.addr[2]
     @port = @receiver.addr[1]
-    @sink_class = StatsD::Instrument::BatchedUDPSink
+    @sink_class = StatsD::Instrument::BatchedSink
     @sinks = []
   end
 
@@ -221,9 +222,9 @@ class BatchedUDPSinkTest < Minitest::Test
   private
 
   def build_sink(host = @host, port = @port, buffer_capacity: 50, statistics_interval: 0)
+    sink = StatsD::Instrument::Sink.for_addr("#{host}:#{port}")
     sink = @sink_class.new(
-      host,
-      port,
+      sink,
       buffer_capacity: buffer_capacity,
       statistics_interval: statistics_interval,
     )

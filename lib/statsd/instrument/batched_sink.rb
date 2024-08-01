@@ -1,22 +1,30 @@
 # frozen_string_literal: true
 
+require "forwardable"
+
 module StatsD
   module Instrument
-    # @note This class is part of the new Client implementation that is intended
-    #   to become the new default in the next major release of this library.
-    class BatchedUDPSink
+    class BatchedSink
+      extend Forwardable
+
+      def_delegator :@sink, :host
+      def_delegator :@sink, :port
+
       DEFAULT_THREAD_PRIORITY = 100
       DEFAULT_BUFFER_CAPACITY = 5_000
       # https://docs.datadoghq.com/developers/dogstatsd/high_throughput/?code-lang=ruby#ensure-proper-packet-sizes
       DEFAULT_MAX_PACKET_SIZE = 1472
       DEFAULT_STATISTICS_INTERVAL = 0 # in seconds, and 0 implies disabled-by-default.
 
-      attr_reader :host, :port
-
       class << self
         def for_addr(addr, **kwargs)
-          host, port_as_string = addr.split(":", 2)
-          new(host, Integer(port_as_string), **kwargs)
+          if addr.include?(":")
+            sink = StatsD::Instrument::Sink.for_addr(addr)
+            new(sink, **kwargs)
+          else
+            connection = UdsConnection.new(addr)
+            new(connection, **kwargs)
+          end
         end
 
         def finalize(dispatcher)
@@ -25,18 +33,15 @@ module StatsD
       end
 
       def initialize(
-        host,
-        port,
+        sink,
         thread_priority: DEFAULT_THREAD_PRIORITY,
         buffer_capacity: DEFAULT_BUFFER_CAPACITY,
         max_packet_size: DEFAULT_MAX_PACKET_SIZE,
         statistics_interval: DEFAULT_STATISTICS_INTERVAL
       )
-        @host = host
-        @port = port
+        @sink = sink
         @dispatcher = Dispatcher.new(
-          host,
-          port,
+          @sink,
           buffer_capacity,
           thread_priority,
           max_packet_size,
@@ -62,6 +67,10 @@ module StatsD
         @dispatcher.flush(blocking: blocking)
       end
 
+      def connection
+        @sink.connection
+      end
+
       class Buffer < SizedQueue
         def push_nonblock(item)
           push(item, true)
@@ -81,7 +90,7 @@ module StatsD
       end
 
       class DispatcherStats
-        def initialize(interval)
+        def initialize(interval, type)
           # The number of times the batched udp sender needed to
           # send a statsd line synchronously, due to the buffer
           # being full.
@@ -97,6 +106,12 @@ module StatsD
           @avg_batched_packet_size = 0
           # The average number of statsd lines per batch.
           @avg_batch_length = 0
+
+          @sync_sends_metric = "statsd_instrument.batched_#{type}_sink.synchronous_sends"
+          @batched_sends_metric = "statsd_instrument.batched_#{type}_sink.batched_sends"
+          @avg_buffer_length_metric = "statsd_instrument.batched_#{type}_sink.avg_buffer_length"
+          @avg_batched_packet_size_metric = "statsd_instrument.batched_#{type}_sink.avg_batched_packet_size"
+          @avg_batch_length_metric = "statsd_instrument.batched_#{type}_sink.avg_batch_length"
 
           @mutex = Mutex.new
 
@@ -121,11 +136,11 @@ module StatsD
             @since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           end
 
-          StatsD.increment("statsd_instrument.batched_udp_sink.synchronous_sends", synchronous_sends)
-          StatsD.increment("statsd_instrument.batched_udp_sink.batched_sends", batched_sends)
-          StatsD.gauge("statsd_instrument.batched_udp_sink.avg_buffer_length", avg_buffer_length)
-          StatsD.gauge("statsd_instrument.batched_udp_sink.avg_batched_packet_size", avg_batched_packet_size)
-          StatsD.gauge("statsd_instrument.batched_udp_sink.avg_batch_length", avg_batch_length)
+          StatsD.increment(@sync_sends_metric, synchronous_sends)
+          StatsD.increment(@batched_sends_metric, batched_sends)
+          StatsD.gauge(@avg_buffer_length_metric, avg_buffer_length)
+          StatsD.gauge(@avg_batched_packet_size_metric, avg_batched_packet_size)
+          StatsD.gauge(@avg_batch_length_metric, avg_batch_length)
         end
 
         def increment_synchronous_sends
@@ -143,8 +158,8 @@ module StatsD
       end
 
       class Dispatcher
-        def initialize(host, port, buffer_capacity, thread_priority, max_packet_size, statistics_interval)
-          @udp_sink = UDPSink.new(host, port)
+        def initialize(sink, buffer_capacity, thread_priority, max_packet_size, statistics_interval)
+          @sink = sink
           @interrupted = false
           @thread_priority = thread_priority
           @max_packet_size = max_packet_size
@@ -153,7 +168,8 @@ module StatsD
           @dispatcher_thread = Thread.new { dispatch }
           @pid = Process.pid
           if statistics_interval > 0
-            @statistics = DispatcherStats.new(statistics_interval)
+            type = @sink.connection.type
+            @statistics = DispatcherStats.new(statistics_interval, type)
           end
         end
 
@@ -161,7 +177,7 @@ module StatsD
           if !thread_healthcheck || !@buffer.push_nonblock(datagram)
             # The buffer is full or the thread can't be respawned,
             # we'll send the datagram synchronously
-            @udp_sink << datagram
+            @sink << datagram
 
             @statistics&.increment_synchronous_sends
           end
@@ -206,7 +222,7 @@ module StatsD
             end
 
             packet_size = packet.bytesize
-            @udp_sink << packet
+            @sink << packet
             packet.clear
 
             @statistics&.increment_batched_sends(buffer_len, packet_size, batch_len)

@@ -82,26 +82,38 @@ module StatsD
         env.fetch("STATSD_ADDR", "localhost:8125")
       end
 
+      def statsd_socket_path
+        env.fetch("STATSD_SOCKET_PATH", "")
+      end
+
       def statsd_default_tags
         env.key?("STATSD_DEFAULT_TAGS") ? env.fetch("STATSD_DEFAULT_TAGS").split(",") : nil
       end
 
       def statsd_buffer_capacity
-        Integer(env.fetch("STATSD_BUFFER_CAPACITY", StatsD::Instrument::BatchedUDPSink::DEFAULT_BUFFER_CAPACITY))
+        Integer(env.fetch("STATSD_BUFFER_CAPACITY", StatsD::Instrument::BatchedSink::DEFAULT_BUFFER_CAPACITY))
       end
 
       def statsd_batching?
         statsd_buffer_capacity > 0 && Float(env.fetch("STATSD_FLUSH_INTERVAL", 1.0)) > 0.0
       end
 
+      def statsd_uds_send?
+        !statsd_socket_path.empty?
+      end
+
       def statsd_max_packet_size
-        Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::BatchedUDPSink::DEFAULT_MAX_PACKET_SIZE))
+        if statsd_uds_send?
+          return Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdsConnection::DEFAULT_MAX_PACKET_SIZE))
+        end
+
+        Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdpConnection::DEFAULT_MAX_PACKET_SIZE))
       end
 
       def statsd_batch_statistics_interval
         Integer(env.fetch(
           "STATSD_BATCH_STATISTICS_INTERVAL",
-          StatsD::Instrument::BatchedUDPSink::DEFAULT_STATISTICS_INTERVAL,
+          StatsD::Instrument::BatchedSink::DEFAULT_STATISTICS_INTERVAL,
         ))
       end
 
@@ -112,16 +124,24 @@ module StatsD
       def default_sink_for_environment
         case environment
         when "production", "staging"
+          connection = if statsd_uds_send?
+            StatsD::Instrument::UdsConnection.new(statsd_socket_path)
+          else
+            host, port = statsd_addr.split(":")
+            StatsD::Instrument::UdpConnection.new(host, port.to_i)
+          end
+
+          sink = StatsD::Instrument::Sink.new(connection)
           if statsd_batching?
-            StatsD::Instrument::BatchedUDPSink.for_addr(
-              statsd_addr,
+            # if we are batching, wrap the sink in a batched sink
+            return StatsD::Instrument::BatchedSink.new(
+              sink,
               buffer_capacity: statsd_buffer_capacity,
               max_packet_size: statsd_max_packet_size,
               statistics_interval: statsd_batch_statistics_interval,
             )
-          else
-            StatsD::Instrument::UDPSink.for_addr(statsd_addr)
           end
+          sink
         when "test"
           StatsD::Instrument::NullSink.new
         else
