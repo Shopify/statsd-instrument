@@ -66,21 +66,32 @@ def send_metrics_high_cardinality(client)
   end
 end
 
+SOCKET_PATH = File.join(Dir.pwd, "tmp/metric.sock")
 THREAD_COUNT = Integer(ENV.fetch("THREAD_COUNT", 5))
 EVENTS_PER_ITERATION = 3
 ITERATIONS = Integer(ENV.fetch("ITERATIONS", 10_000))
 SERIES_COUNT = Integer(ENV.fetch("SERIES_COUNT", 0))
 ENABLE_PROFILING = ENV.key?("ENABLE_PROFILING")
 
+LOG_DIR = File.join(Dir.tmpdir, "statsd-instrument-benchmarks")
+FileUtils.mkdir_p(LOG_DIR)
+puts "Logs are stored in #{LOG_DIR}"
+
 def benchmark_implementation(name, env = {}, datadog_client = false)
   intermediate_results_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/"
-  log_filename = "#{Dir.tmpdir}/statsd-instrument-benchmarks/#{File.basename($PROGRAM_NAME)}-#{name}.log"
+  log_filename = File.join(LOG_DIR, "#{File.basename($PROGRAM_NAME)}-#{name}.log".tr(" ", "_"))
   FileUtils.mkdir_p(File.dirname(intermediate_results_filename))
   FileUtils.mkdir_p(File.dirname(log_filename))
 
   # Set up an UDP listener to which we can send StatsD packets
   receiver = UDPSocket.new
   receiver.bind("localhost", 0)
+
+  File.unlink(SOCKET_PATH) if File.exist?(SOCKET_PATH)
+  receiver_uds = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
+  receiver_uds.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
+  receiver_uds.setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVBUF, 1024 * 1024)
+  receiver_uds.bind(Socket.pack_sockaddr_un(SOCKET_PATH))
 
   log_file = File.open(log_filename, "w+", level: Logger::WARN)
   StatsD.logger = Logger.new(log_file)
@@ -91,6 +102,7 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
     "STATSD_ENV" => "production",
   ).merge(env)).client
 
+  puts "Using client with sink: #{udp_client.sink.class.name}"
   if datadog_client
     statsd = Datadog::Statsd.new(receiver.addr[2], receiver.addr[1], **env)
     udp_client = DatadogShim.new(statsd)
@@ -137,6 +149,16 @@ if ENABLE_PROFILING
   Vernier.start_profile(out: "tmp/benchmark_profile_udp_async.json")
 end
 benchmark_implementation("UDP batched")
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
+
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_uds_batched_async.json")
+end
+
+benchmark_implementation("UDS batched", "STATSD_SOCKET_PATH" => SOCKET_PATH, "STATSD_MAX_PACKET_SIZE" => "65536")
+
 if ENABLE_PROFILING
   Vernier.stop_profile
 end
