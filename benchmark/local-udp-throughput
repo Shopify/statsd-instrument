@@ -168,7 +168,11 @@ if ENABLE_PROFILING
   Vernier.start_profile(out: "tmp/benchmark_profile_uds_batched_async.json")
 end
 
-benchmark_implementation("UDS batched with jumbo packet", "STATSD_SOCKET_PATH" => SOCKET_PATH, "STATSD_MAX_PACKET_SIZE" => "16384")
+benchmark_implementation(
+  "UDS batched with jumbo packet",
+  "STATSD_SOCKET_PATH" => SOCKET_PATH,
+  "STATSD_MAX_PACKET_SIZE" => "16384",
+)
 
 if ENABLE_PROFILING
   Vernier.stop_profile
