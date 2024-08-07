@@ -14,5 +14,8 @@ gem "benchmark-ips"
 gem "dogstatsd-ruby", "~> 5.0", require: false
 
 platform :mri do
-  gem "vernier", require: false
+  # only if Ruby is MRI && >= 3.2
+  if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.2")
+    gem "vernier", require: false
+  end
 end
