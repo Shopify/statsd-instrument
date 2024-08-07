@@ -12,4 +12,7 @@ gem "rubocop", ">= 1.0"
 gem "rubocop-shopify", require: false
 gem "benchmark-ips"
 gem "dogstatsd-ruby", "~> 5.0", require: false
-gem "vernier", require: false
+
+platform :mri do
+  gem "vernier", require: false
+end
