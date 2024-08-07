@@ -87,6 +87,7 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
   receiver = UDPSocket.new
   receiver.bind("localhost", 0)
 
+  FileUtils.mkdir_p(File.dirname(SOCKET_PATH))
   File.unlink(SOCKET_PATH) if File.exist?(SOCKET_PATH)
   receiver_uds = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
   receiver_uds.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
