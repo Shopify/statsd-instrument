@@ -7,7 +7,9 @@ end
 ENV["ENV"] = "test"
 
 require "minitest/autorun"
-require "minitest/pride"
+unless ENV.key?("CI")
+  require "minitest/pride"
+end
 require "mocha/minitest"
 require "statsd-instrument"
 
