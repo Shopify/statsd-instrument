@@ -3,6 +3,10 @@
 module StatsD
   module Instrument
     class UdpConnection
+      DEFAULT_MAX_PACKET_SIZE = 1_472
+
+      attr_reader :host, :port
+
       def initialize(host, port)
         @host = host
         @port = port

@@ -4,7 +4,6 @@ module StatsD
   module Instrument
     class UdsConnection
       DEFAULT_MAX_PACKET_SIZE = 8_192
-      private_constant :DEFAULT_MAX_PACKET_SIZE
 
       def initialize(socket_path, max_packet_size: DEFAULT_MAX_PACKET_SIZE)
         if max_packet_size <= 0

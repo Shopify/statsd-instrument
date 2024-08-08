@@ -6,7 +6,7 @@ class DispatcherStatsTest < Minitest::Test
   include StatsD::Instrument::Assertions
 
   def test_maybe_flush
-    stats = StatsD::Instrument::BatchedUDPSink::DispatcherStats.new(0)
+    stats = StatsD::Instrument::BatchedSink::DispatcherStats.new(0, "udp")
 
     stats.increment_synchronous_sends
     stats.increment_batched_sends(1, 1, 1)

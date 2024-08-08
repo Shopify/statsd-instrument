@@ -61,6 +61,22 @@ module StatsD
         @dispatcher.flush(blocking: blocking)
       end
 
+      def host
+        if @connection.respond_to?(:host)
+          @connection.host
+        else
+          ""
+        end
+      end
+
+      def port
+        if @connection.respond_to?(:port)
+          @connection.port
+        else
+          0
+        end
+      end
+
       class Buffer < SizedQueue
         def push_nonblock(item)
           push(item, true)

@@ -91,7 +91,7 @@ module StatsD
       end
 
       def statsd_buffer_capacity
-        Integer(env.fetch("STATSD_BUFFER_CAPACITY", StatsD::Instrument::BatchedUDPSink::DEFAULT_BUFFER_CAPACITY))
+        Integer(env.fetch("STATSD_BUFFER_CAPACITY", StatsD::Instrument::BatchedSink::DEFAULT_BUFFER_CAPACITY))
       end
 
       def statsd_batching?
@@ -104,16 +104,16 @@ module StatsD
 
       def statsd_max_packet_size
         if statsd_uds_send?
-          return Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdsSink::DEFAULT_MAX_PACKET_SIZE))
+          return Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdsConnection::DEFAULT_MAX_PACKET_SIZE))
         end
 
-        Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::BatchedUDPSink::DEFAULT_MAX_PACKET_SIZE))
+        Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdpConnection::DEFAULT_MAX_PACKET_SIZE))
       end
 
       def statsd_batch_statistics_interval
         Integer(env.fetch(
           "STATSD_BATCH_STATISTICS_INTERVAL",
-          StatsD::Instrument::BatchedUDPSink::DEFAULT_STATISTICS_INTERVAL,
+          StatsD::Instrument::BatchedSink::DEFAULT_STATISTICS_INTERVAL,
         ))
       end
 
@@ -124,30 +124,22 @@ module StatsD
       def default_sink_for_environment
         case environment
         when "production", "staging"
-          if statsd_batching?
-            if statsd_uds_send?
-              StatsD.logger.warn(
-                "Socket path passed, UDS has priority over UDP. " \
-                  "Using UDS with max_packet_size=#{statsd_max_packet_size}",
-              )
-              return StatsD::Instrument::BatchedUDSSink.new(
-                statsd_socket_path,
-                buffer_capacity: statsd_buffer_capacity,
-                max_packet_size: statsd_max_packet_size,
-                statistics_interval: statsd_batch_statistics_interval,
-              )
-            end
+          connection = if statsd_uds_send?
+            StatsD::Instrument::UdsConnection.new(statsd_socket_path)
+          else
+            host, port = statsd_addr.split(":")
+            StatsD::Instrument::UdpConnection.new(host, port.to_i)
+          end
 
-            StatsD::Instrument::BatchedUDPSink.for_addr(
-              statsd_addr,
+          if statsd_batching?
+            StatsD::Instrument::BatchedSink.new(
+              connection,
               buffer_capacity: statsd_buffer_capacity,
               max_packet_size: statsd_max_packet_size,
               statistics_interval: statsd_batch_statistics_interval,
             )
-          elsif statsd_uds_send?
-            StatsD::Instrument::UdsSink.new(statsd_socket_path)
           else
-            StatsD::Instrument::UDPSink.for_addr(statsd_addr)
+            StatsD::Instrument::Sink.new(connection)
           end
         when "test"
           StatsD::Instrument::NullSink.new
