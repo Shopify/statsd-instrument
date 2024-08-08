@@ -401,6 +401,10 @@ require "statsd/instrument/assertions"
 require "statsd/instrument/expectation"
 require "statsd/instrument/uds_sink"
 require "statsd/instrument/batched_uds_sink"
+require "statsd/instrument/uds_connection"
+require "statsd/instrument/udp_connection"
+require "statsd/instrument/sink"
+require "statsd/instrument/batched_sink"
 require "statsd/instrument/matchers" if defined?(RSpec)
 require "statsd/instrument/railtie" if defined?(Rails::Railtie)
 require "statsd/instrument/strict" if ENV["STATSD_STRICT_MODE"]
