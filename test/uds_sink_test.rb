@@ -50,7 +50,6 @@ module UdsTestHelper
 end
 
 class UdsSinkTest < Minitest::Test
-
   include UdsTestHelper
 
   def setup
