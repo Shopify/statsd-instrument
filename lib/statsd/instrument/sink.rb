@@ -56,6 +56,10 @@ module StatsD
         self
       end
 
+      def flush(blocking: false)
+        # noop
+      end
+
       private
 
       def invalidate_connection

@@ -80,7 +80,7 @@ module StatsD
       end
 
       class DispatcherStats
-        def initialize(interval)
+        def initialize(interval, type)
           # The number of times the batched udp sender needed to
           # send a statsd line synchronously, due to the buffer
           # being full.
@@ -96,6 +96,12 @@ module StatsD
           @avg_batched_packet_size = 0
           # The average number of statsd lines per batch.
           @avg_batch_length = 0
+
+          @sync_sends_metric = "statsd_instrument.batched_#{type}_sink.synchronous_sends"
+          @batched_sends_metric = "statsd_instrument.batched_#{type}_sink.batched_sends"
+          @avg_buffer_length_metric = "statsd_instrument.batched_#{type}_sink.avg_buffer_length"
+          @avg_batched_packet_size_metric = "statsd_instrument.batched_#{type}_sink.avg_batched_packet_size"
+          @avg_batch_length_metric = "statsd_instrument.batched_#{type}_sink.avg_batch_length"
 
           @mutex = Mutex.new
 
@@ -120,11 +126,11 @@ module StatsD
             @since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           end
 
-          StatsD.increment("statsd_instrument.batched_udp_sink.synchronous_sends", synchronous_sends)
-          StatsD.increment("statsd_instrument.batched_udp_sink.batched_sends", batched_sends)
-          StatsD.gauge("statsd_instrument.batched_udp_sink.avg_buffer_length", avg_buffer_length)
-          StatsD.gauge("statsd_instrument.batched_udp_sink.avg_batched_packet_size", avg_batched_packet_size)
-          StatsD.gauge("statsd_instrument.batched_udp_sink.avg_batch_length", avg_batch_length)
+          StatsD.increment(@sync_sends_metric, synchronous_sends)
+          StatsD.increment(@batched_sends_metric, batched_sends)
+          StatsD.gauge(@avg_buffer_length_metric, avg_buffer_length)
+          StatsD.gauge(@avg_batched_packet_size_metric, avg_batched_packet_size)
+          StatsD.gauge(@avg_batch_length_metric, avg_batch_length)
         end
 
         def increment_synchronous_sends
@@ -152,7 +158,15 @@ module StatsD
           @dispatcher_thread = Thread.new { dispatch }
           @pid = Process.pid
           if statistics_interval > 0
-            @statistics = DispatcherStats.new(statistics_interval)
+            type = case connection
+            when UdsConnection
+              "uds"
+            when UdpConnection
+              "udp"
+            else
+              "unknown"
+            end
+            @statistics = DispatcherStats.new(statistics_interval, type)
           end
         end
 

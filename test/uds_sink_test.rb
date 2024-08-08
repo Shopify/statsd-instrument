@@ -26,7 +26,8 @@ module UdsTestHelper
   end
 
   def build_sink(socket_path)
-    @sink_class.new(socket_path)
+    connection = StatsD::Instrument::UdsConnection.new(socket_path)
+    @sink_class.new(connection)
   end
 
   def sink
@@ -56,7 +57,7 @@ class UdsSinkTest < Minitest::Test
     @socket_path = create_socket_file
     @receiver = create_receiver(@socket_path)
 
-    @sink_class = StatsD::Instrument::UdsSink
+    @sink_class = StatsD::Instrument::Sink
   end
 
   def teardown
@@ -97,7 +98,7 @@ class BatchedUdsSinkTest < Minitest::Test
   def setup
     @socket_path = create_socket_file
     @receiver = create_receiver(@socket_path)
-    @sink_class = StatsD::Instrument::BatchedUDSSink
+    @sink_class = StatsD::Instrument::BatchedSink
     @sinks = []
   end
 
@@ -161,8 +162,9 @@ class BatchedUdsSinkTest < Minitest::Test
   private
 
   def build_sink(socket_path, buffer_capacity: 50, statistics_interval: 0)
+    connection = StatsD::Instrument::UdsConnection.new(socket_path)
     sink = @sink_class.new(
-      socket_path,
+      connection,
       buffer_capacity: buffer_capacity,
       statistics_interval: statistics_interval,
     )
