@@ -121,4 +121,9 @@ class DatagramBuilderTest < Minitest::Test
     datagram = datagram_builder.c("bar", 1, nil, nil)
     assert_equal("bar:1|c|#foo", datagram)
   end
+
+  def test_timing_with_multiple_values
+    dt = @datagram_builder.timing_value_packed("test_distribution", "d", [0, 3, 6, 9, 12, 15, 18, 21, 24, 27], 1, nil)
+    assert_equal("test_distribution:0:3:6:9:12:15:18:21:24:27|d", dt)
+  end
 end
