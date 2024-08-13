@@ -59,6 +59,10 @@ module StatsD
         # noop
       end
 
+      def connection_type
+        connection.class.name
+      end
+
       private
 
       def invalidate_connection

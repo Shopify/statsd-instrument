@@ -112,7 +112,7 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
     "STATSD_ENV" => "production",
   ).merge(env)).client
 
-  puts "Using client with sink: #{udp_client.sink.class.name}"
+  puts "Using client with sink: #{udp_client.sink.connection_type}"
   if datadog_client
     statsd = Datadog::Statsd.new(receiver.addr[2], receiver.addr[1], **env)
     udp_client = DatadogShim.new(statsd)
@@ -132,18 +132,20 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
           send_metrics_high_cardinality(udp_client)
         end
       end
-      udp_client.sink.flush(blocking: false)
     end
   end
 
   threads.each(&:join)
+  udp_client.shutdown if udp_client.respond_to?(:shutdown)
   if datadog_client
     udp_client.close
   end
-  receiver.close
-  udp_client.shutdown if udp_client.respond_to?(:shutdown)
 
   duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+
+  receiver.close
+  receiver_uds.close
+
   series = SERIES_COUNT.zero? ? 1 : SERIES_COUNT
   events_sent = THREAD_COUNT * EVENTS_PER_ITERATION * ITERATIONS * series
   puts "events: #{(events_sent / duration).round(1).to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse}/s"
@@ -165,15 +167,15 @@ if ENABLE_PROFILING
   Vernier.stop_profile
 end
 
-# if ENABLE_PROFILING
-#   Vernier.start_profile(out: "tmp/benchmark_profile_uds_small_packet.json")
-# end
-#
-# benchmark_implementation("UDS batched with small packet", "STATSD_SOCKET_PATH" => SOCKET_PATH)
-#
-# if ENABLE_PROFILING
-#   Vernier.stop_profile
-# end
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_profile_uds_small_packet.json")
+end
+
+benchmark_implementation("UDS batched with small packet", "STATSD_SOCKET_PATH" => SOCKET_PATH)
+
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
 
 if ENABLE_PROFILING
   Vernier.start_profile(out: "tmp/benchmark_profile_uds_batched_async.json")
@@ -182,7 +184,7 @@ end
 benchmark_implementation(
   "UDS batched with jumbo packet",
   "STATSD_SOCKET_PATH" => SOCKET_PATH,
-  "STATSD_MAX_PACKET_SIZE" => "8288",
+  "STATSD_MAX_PACKET_SIZE" => "32768",
 )
 
 if ENABLE_PROFILING

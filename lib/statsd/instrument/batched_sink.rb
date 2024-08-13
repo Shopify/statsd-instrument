@@ -77,6 +77,10 @@ module StatsD
         end
       end
 
+      def connection_type
+        @connection.class.name
+      end
+
       class Buffer < SizedQueue
         def push_nonblock(item)
           push(item, true)
