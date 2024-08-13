@@ -34,6 +34,10 @@ module UdsTestHelper
     @sink ||= build_sink(@socket_path)
   end
 
+  def skip_on_jruby(message = "JRuby does not support UNIX domain sockets")
+    skip(message) if RUBY_PLATFORM == "java"
+  end
+
   def read_datagrams(count, timeout: ENV["CI"] ? 5 : 1)
     datagrams = []
     count.times do
@@ -66,6 +70,7 @@ class UdsSinkTest < Minitest::Test
   end
 
   def test_send_metric_with_tags
+    skip_on_jruby
     metric = "test.metric"
     value = 42
     tags = { region: "us-west", environment: "production" }
@@ -77,6 +82,7 @@ class UdsSinkTest < Minitest::Test
   end
 
   def test_send_metric_with_sample_rate
+    skip_on_jruby
     metric = "test.metric"
     value = 42
     sample_rate = 0.5
@@ -86,6 +92,7 @@ class UdsSinkTest < Minitest::Test
   end
 
   def test_flush_with_empty_batch
+    skip_on_jruby
     sink.flush
     datagrams = read_datagrams(1, timeout: 0.1)
     assert_empty(datagrams)
@@ -109,6 +116,7 @@ class BatchedUdsSinkTest < Minitest::Test
   end
 
   def test_send_metric_with_tags
+    skip_on_jruby
     metric = "test.metric"
     value = 42
     tags = { region: "us-west", environment: "production" }
@@ -118,6 +126,7 @@ class BatchedUdsSinkTest < Minitest::Test
   end
 
   def test_send_metric_with_sample_rate
+    skip_on_jruby
     metric = "test.metric"
     value = 42
     sample_rate = 0.5
@@ -127,6 +136,7 @@ class BatchedUdsSinkTest < Minitest::Test
   end
 
   def test_flush_with_empty_batch
+    skip_on_jruby
     sink.flush(blocking: false)
     datagrams = read_datagrams(1, timeout: 0.1)
     assert_empty(datagrams)
@@ -144,6 +154,7 @@ class BatchedUdsSinkTest < Minitest::Test
   end
 
   def test_statistics
+    skip_on_jruby
     datagrams = StatsD.singleton_client.capture do
       buffer_size = 2
       sink = build_sink(@socket_path, buffer_capacity: buffer_size, statistics_interval: 0.1)
