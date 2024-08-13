@@ -133,7 +133,7 @@ class UDPSinkTest < Minitest::Test
     @receiver.bind("localhost", 0)
     @host = @receiver.addr[2]
     @port = @receiver.addr[1]
-    @sink_class = StatsD::Instrument::UDPSink
+    @sink_class = StatsD::Instrument::Sink
   end
 
   def teardown

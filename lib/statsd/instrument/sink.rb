@@ -41,7 +41,7 @@ module StatsD
           connection.send_datagram(datagram)
         rescue SocketError, IOError, SystemCallError => error
           StatsD.logger.debug do
-            "[StatsD::Instrument::UDPSink] Resetting connection because of #{error.class}: #{error.message}"
+            "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
           end
           invalidate_connection
           if retried
