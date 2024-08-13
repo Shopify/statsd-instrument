@@ -1,8 +1,15 @@
 # frozen_string_literal: true
 
+require 'forwardable'
+
 module StatsD
   module Instrument
     class BatchedSink
+      extend Forwardable
+
+      def_delegator :@sink, :host
+      def_delegator :@sink, :port
+
       DEFAULT_THREAD_PRIORITY = 100
       DEFAULT_BUFFER_CAPACITY = 5_000
       # https://docs.datadoghq.com/developers/dogstatsd/high_throughput/?code-lang=ruby#ensure-proper-packet-sizes
@@ -12,9 +19,8 @@ module StatsD
       class << self
         def for_addr(addr, **kwargs)
           if addr.include?(":")
-            host, port_as_string = addr.split(":", 2)
-            connection = UdpConnection.new(host, Integer(port_as_string))
-            new(connection, **kwargs)
+            sink = StatsD::Instrument::Sink.for_addr(addr)
+            new(sink, **kwargs)
           else
             connection = UdsConnection.new(addr)
             new(connection, **kwargs)
@@ -27,15 +33,15 @@ module StatsD
       end
 
       def initialize(
-        connection,
+        sink,
         thread_priority: DEFAULT_THREAD_PRIORITY,
         buffer_capacity: DEFAULT_BUFFER_CAPACITY,
         max_packet_size: DEFAULT_MAX_PACKET_SIZE,
         statistics_interval: DEFAULT_STATISTICS_INTERVAL
       )
-        @connection = connection
+        @sink = sink
         @dispatcher = Dispatcher.new(
-          connection,
+          @sink,
           buffer_capacity,
           thread_priority,
           max_packet_size,
@@ -59,22 +65,6 @@ module StatsD
 
       def flush(blocking:)
         @dispatcher.flush(blocking: blocking)
-      end
-
-      def host
-        if @connection.respond_to?(:host)
-          @connection.host
-        else
-          ""
-        end
-      end
-
-      def port
-        if @connection.respond_to?(:port)
-          @connection.port
-        else
-          0
-        end
       end
 
       def connection_type
@@ -168,8 +158,8 @@ module StatsD
       end
 
       class Dispatcher
-        def initialize(connection, buffer_capacity, thread_priority, max_packet_size, statistics_interval)
-          @connection = connection
+        def initialize(sink, buffer_capacity, thread_priority, max_packet_size, statistics_interval)
+          @sink = sink
           @interrupted = false
           @thread_priority = thread_priority
           @max_packet_size = max_packet_size
@@ -178,7 +168,7 @@ module StatsD
           @dispatcher_thread = Thread.new { dispatch }
           @pid = Process.pid
           if statistics_interval > 0
-            type = case connection
+            type = case @sink.connection
             when UdsConnection
               "uds"
             when UdpConnection
@@ -194,7 +184,7 @@ module StatsD
           if !thread_healthcheck || !@buffer.push_nonblock(datagram)
             # The buffer is full or the thread can't be respawned,
             # we'll send the datagram synchronously
-            @connection.send_datagram(datagram)
+            @sink << datagram
 
             @statistics&.increment_synchronous_sends
           end
@@ -239,7 +229,7 @@ module StatsD
             end
 
             packet_size = packet.bytesize
-            @connection.send_datagram(packet)
+            @sink << packet
             packet.clear
 
             @statistics&.increment_batched_sends(buffer_len, packet_size, batch_len)

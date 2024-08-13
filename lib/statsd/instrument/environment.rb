@@ -131,16 +131,17 @@ module StatsD
             StatsD::Instrument::UdpConnection.new(host, port.to_i)
           end
 
+          sink = StatsD::Instrument::Sink.new(connection)
           if statsd_batching?
-            StatsD::Instrument::BatchedSink.new(
-              connection,
+            # if we are batching, wrap the sink in a batched sink
+            return StatsD::Instrument::BatchedSink.new(
+              sink,
               buffer_capacity: statsd_buffer_capacity,
               max_packet_size: statsd_max_packet_size,
               statistics_interval: statsd_batch_statistics_interval,
             )
-          else
-            StatsD::Instrument::Sink.new(connection)
           end
+          sink
         when "test"
           StatsD::Instrument::NullSink.new
         else

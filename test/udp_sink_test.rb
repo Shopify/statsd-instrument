@@ -222,9 +222,9 @@ class BatchedUDPSinkTest < Minitest::Test
   private
 
   def build_sink(host = @host, port = @port, buffer_capacity: 50, statistics_interval: 0)
-    connection = StatsD::Instrument::UdpConnection.new(host, port)
+    sink = StatsD::Instrument::Sink.for_addr("#{host}:#{port}")
     sink = @sink_class.new(
-      connection,
+      sink,
       buffer_capacity: buffer_capacity,
       statistics_interval: statistics_interval,
     )

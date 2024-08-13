@@ -162,9 +162,9 @@ class BatchedUdsSinkTest < Minitest::Test
   private
 
   def build_sink(socket_path, buffer_capacity: 50, statistics_interval: 0)
-    connection = StatsD::Instrument::UdsConnection.new(socket_path)
+    sink = StatsD::Instrument::Sink.for_addr(socket_path)
     sink = @sink_class.new(
-      connection,
+      sink,
       buffer_capacity: buffer_capacity,
       statistics_interval: statistics_interval,
     )

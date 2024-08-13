@@ -63,14 +63,30 @@ module StatsD
         connection.class.name
       end
 
+      def connection
+        thread_store[object_id] ||= @connection
+      end
+
+      def host
+        if connection.respond_to?(:host)
+          connection.host
+        else
+          ""
+        end
+      end
+
+      def port
+        if connection.respond_to?(:port)
+          connection.port
+        else
+          0
+        end
+      end
+
       private
 
       def invalidate_connection
         connection&.close
-      end
-
-      def connection
-        thread_store[object_id] ||= @connection
       end
 
       def thread_store
