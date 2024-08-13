@@ -3,7 +3,6 @@
 module StatsD
   module Instrument
     class Sink
-
       class << self
         def for_addr(addr)
           # if addr is host:port
