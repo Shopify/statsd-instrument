@@ -17,6 +17,7 @@ module UdsTestHelper
   end
 
   def create_receiver(socket_path)
+    FileUtils.rm_f(socket_path)
     receiver = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
     receiver.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
     receiver.setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVBUF, (2 * MAX_READ_BYTES).to_i)
@@ -58,23 +59,21 @@ class UdsSinkTest < Minitest::Test
   include UdsTestHelper
 
   def setup
-    if RUBY_PLATFORM == "java"
-      return
-    end
-
-    @socket_path = create_socket_file
-    @receiver = create_receiver(@socket_path)
-
     @sink_class = StatsD::Instrument::Sink
+    @socket_path = create_socket_file
+    skip_on_jruby
+
+    @receiver = create_receiver(@socket_path)
   end
 
   def teardown
+    return if RUBY_PLATFORM == "java"
+
     @receiver.close
-    FileUtils.remove_entry(@socket_path)
+    FileUtils.rm_f(@socket_path)
   end
 
   def test_send_metric_with_tags
-    skip_on_jruby
     metric = "test.metric"
     value = 42
     tags = { region: "us-west", environment: "production" }
@@ -86,7 +85,6 @@ class UdsSinkTest < Minitest::Test
   end
 
   def test_send_metric_with_sample_rate
-    skip_on_jruby
     metric = "test.metric"
     value = 42
     sample_rate = 0.5
@@ -96,7 +94,6 @@ class UdsSinkTest < Minitest::Test
   end
 
   def test_flush_with_empty_batch
-    skip_on_jruby
     sink.flush
     datagrams = read_datagrams(1, timeout: 0.1)
     assert_empty(datagrams)
@@ -107,24 +104,24 @@ class BatchedUdsSinkTest < Minitest::Test
   include UdsTestHelper
 
   def setup
-    if RUBY_PLATFORM == "java"
-      return
-    end
-
     @socket_path = create_socket_file
-    @receiver = create_receiver(@socket_path)
     @sink_class = StatsD::Instrument::BatchedSink
     @sinks = []
+
+    skip_on_jruby
+
+    @receiver = create_receiver(@socket_path)
   end
 
   def teardown
+    return if RUBY_PLATFORM == "java"
+
     @receiver.close
     FileUtils.remove_entry(@socket_path)
     @sinks.each(&:shutdown)
   end
 
   def test_send_metric_with_tags
-    skip_on_jruby
     metric = "test.metric"
     value = 42
     tags = { region: "us-west", environment: "production" }
@@ -134,7 +131,6 @@ class BatchedUdsSinkTest < Minitest::Test
   end
 
   def test_send_metric_with_sample_rate
-    skip_on_jruby
     metric = "test.metric"
     value = 42
     sample_rate = 0.5
@@ -144,7 +140,6 @@ class BatchedUdsSinkTest < Minitest::Test
   end
 
   def test_flush_with_empty_batch
-    skip_on_jruby
     sink.flush(blocking: false)
     datagrams = read_datagrams(1, timeout: 0.1)
     assert_empty(datagrams)
@@ -162,7 +157,6 @@ class BatchedUdsSinkTest < Minitest::Test
   end
 
   def test_statistics
-    skip_on_jruby
     datagrams = StatsD.singleton_client.capture do
       buffer_size = 2
       sink = build_sink(@socket_path, buffer_capacity: buffer_size, statistics_interval: 0.1)
