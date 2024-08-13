@@ -58,6 +58,10 @@ class UdsSinkTest < Minitest::Test
   include UdsTestHelper
 
   def setup
+    if RUBY_PLATFORM == "java"
+      return
+    end
+
     @socket_path = create_socket_file
     @receiver = create_receiver(@socket_path)
 
@@ -103,6 +107,10 @@ class BatchedUdsSinkTest < Minitest::Test
   include UdsTestHelper
 
   def setup
+    if RUBY_PLATFORM == "java"
+      return
+    end
+
     @socket_path = create_socket_file
     @receiver = create_receiver(@socket_path)
     @sink_class = StatsD::Instrument::BatchedSink
