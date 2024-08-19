@@ -81,6 +81,7 @@ EVENTS_PER_ITERATION = 3
 ITERATIONS = Integer(ENV.fetch("ITERATIONS", 10_000))
 SERIES_COUNT = Integer(ENV.fetch("SERIES_COUNT", 0))
 ENABLE_PROFILING = ENV.key?("ENABLE_PROFILING")
+UDS_MAX_SEND_SIZE = 32_768
 
 LOG_DIR = File.join(Dir.tmpdir, "statsd-instrument-benchmarks")
 FileUtils.mkdir_p(LOG_DIR)
@@ -100,7 +101,7 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
   FileUtils.rm_f(SOCKET_PATH)
   receiver_uds = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
   receiver_uds.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
-  receiver_uds.setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVBUF, 32768 * THREAD_COUNT)
+  receiver_uds.setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVBUF, UDS_MAX_SEND_SIZE * THREAD_COUNT)
   receiver_uds.bind(Socket.pack_sockaddr_un(SOCKET_PATH))
   # with UDS we have to take data out of the socket, otherwise it will fill up
   # and we will block writing to it (which is what we are testing)
@@ -179,9 +180,7 @@ end
 if ENABLE_PROFILING
   Vernier.start_profile(out: "tmp/benchmark_profile_uds_small_packet.json")
 end
-
 benchmark_implementation("UDS batched with small packet", "STATSD_SOCKET_PATH" => SOCKET_PATH)
-
 if ENABLE_PROFILING
   Vernier.stop_profile
 end
@@ -189,13 +188,37 @@ end
 if ENABLE_PROFILING
   Vernier.start_profile(out: "tmp/benchmark_profile_uds_batched_async.json")
 end
-
 benchmark_implementation(
   "UDS batched with jumbo packet",
   "STATSD_SOCKET_PATH" => SOCKET_PATH,
-  "STATSD_MAX_PACKET_SIZE" => "32768",
+  "STATSD_MAX_PACKET_SIZE" => UDS_MAX_SEND_SIZE.to_s,
 )
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
 
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_udp_batched_with_aggregation.json")
+end
+benchmark_implementation(
+  "UDP batched with aggregation and 5 second interval",
+  "STATSD_ENABLE_AGGREGATION" => "true",
+  "STATSD_AGGREGATION_FLUSH_INTERVAL" => "5",
+)
+if ENABLE_PROFILING
+  Vernier.stop_profile
+end
+
+if ENABLE_PROFILING
+  Vernier.start_profile(out: "tmp/benchmark_uds_with_aggregation.json")
+end
+benchmark_implementation(
+  "UDS batched with aggregation and 5 second interval",
+  "STATSD_ENABLE_AGGREGATION" => "true",
+  "STATSD_AGGREGATION_FLUSH_INTERVAL" => "5",
+  "STATSD_SOCKET_PATH" => SOCKET_PATH,
+  "STATSD_MAX_PACKET_SIZE" => UDS_MAX_SEND_SIZE.to_s,
+)
 if ENABLE_PROFILING
   Vernier.stop_profile
 end

@@ -5,6 +5,7 @@ module StatsD
     # @note This class is part of the new Client implementation that is intended
     #   to become the new default in the next major release of this library.
     class DatagramBuilder
+      extend Forwardable
       class << self
         def unsupported_datagram_types(*types)
           types.each do |type|
@@ -16,6 +17,11 @@ module StatsD
 
         def datagram_class
           StatsD::Instrument::Datagram
+        end
+
+        def normalize_string(string)
+          string = string.tr("|#", "_") if /[|#]/.match?(string)
+          string
         end
       end
 
@@ -48,12 +54,22 @@ module StatsD
         generate_generic_datagram(name, value, "d", sample_rate, tags)
       end
 
+      def timing_value_packed(name, type, values, sample_rate, tags)
+        # here values is an array
+        values = values.join(":")
+        generate_generic_datagram(name, values, type, sample_rate, tags)
+      end
+
       def kv(name, value, sample_rate, tags)
         generate_generic_datagram(name, value, "kv", sample_rate, tags)
       end
 
       def latency_metric_type
         :ms
+      end
+
+      def normalize_tags(tags, buffer = "".b)
+        compile_tags(tags, buffer)
       end
 
       protected
@@ -88,6 +104,11 @@ module StatsD
       end
 
       def compile_tags(tags, buffer = "".b)
+        if tags.is_a?(String)
+          tags = self.class.normalize_string(tags) if /[|,]/.match?(tags)
+          buffer << tags
+          return buffer
+        end
         if tags.is_a?(Hash)
           first = true
           tags.each do |key, value|

@@ -6,6 +6,9 @@ end
 
 ENV["ENV"] = "test"
 
+unless ENV.key?("CI")
+  require "minitest/pride"
+end
 require "minitest/autorun"
 unless ENV.key?("CI")
   require "minitest/pride"
