@@ -82,7 +82,7 @@ module StatsD
       # Generally, you should use an instance of one of the following classes that
       # ship with this library:
       #
-      # - {StatsD::Instrument::UDPSink} A sink that will actually emit the provided
+      # - {StatsD::Instrument::Sink} A sink that will actually emit the provided
       #   datagrams over UDP.
       # - {StatsD::Instrument::NullSink} A sink that will simply swallow every
       #   datagram. This sink is for use when testing your application.
