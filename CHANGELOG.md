@@ -6,6 +6,18 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.0
+
+- Introduced an experimental aggregation feature to improve the efficiency of metrics reporting by aggregating 
+multiple metric events into a single sample. This reduces the number of network requests and can significantly 
+decrease the overhead associated with high-frequency metric reporting. To enable metric aggregation, set the 
+`STATSD_ENABLE_AGGREGATION` environment variable to true. More information on this feature is available in the README.
+- Added support for sending StatsD via Unix domain sockets. This feature is enabled by
+setting the `STATSD_SOCKET` environment variable to the path of the Unix domain socket.
+  - :warning: **Possible breaking change**: We removed/renamed some classes and now Sinks are generic, so the classes `UDPSink` and `UDPBatchedSink` are now called
+`StatsD::Instrument::Sink` and `StatsD::Instrument::Sink` respectively.
+If you used those internal classes, you will need to update your code to use the new classes.
+
 ## Version 3.8.0
 
 - UDP batching will now track statistics about its own batching performance, and
