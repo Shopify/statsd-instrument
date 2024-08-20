@@ -15,7 +15,7 @@ decrease the overhead associated with high-frequency metric reporting. To enable
 - Added support for sending StatsD via Unix domain sockets. This feature is enabled by
 setting the `STATSD_SOCKET` environment variable to the path of the Unix domain socket.
   - :warning: **Possible breaking change**: We removed/renamed some classes and now Sinks are generic, so the classes `UDPSink` and `UDPBatchedSink` are now called
-`StatsD::Instrument::Sink` and `StatsD::Instrument::Sink` respectively.
+`StatsD::Instrument::Sink` and `StatsD::Instrument::BatchedSink` respectively.
 If you used those internal classes, you will need to update your code to use the new classes.
 
 ## Version 3.8.0
