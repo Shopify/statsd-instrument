@@ -177,6 +177,13 @@ module StatsD
       EMPTY_ARRAY = [].freeze
 
       def do_flush
+        StatsD.gauge(
+          "statsd_instrument.aggregator.context_size",
+          @aggregation_state.size,
+          tags: ["container_id:#{Socket.gethostname}", "pid:#{Process.pid}"],
+        )
+        total_timings = 0
+        timings_values_count = 0
         @aggregation_state.each do |key, value|
           case key.type
           when COUNT
@@ -187,6 +194,8 @@ module StatsD
               key.tags,
             )
           when DISTRIBUTION, MEASURE, HISTOGRAM
+            total_timings += 1
+            timings_values_count += value.is_a?(Array) ? value.size : 1
             @sink << datagram_builder(no_prefix: key.no_prefix).timing_value_packed(
               key.name,
               key.type.to_s,
@@ -205,6 +214,10 @@ module StatsD
             StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
           end
         end
+        StatsD.gauge(
+          "statsd_instrument.aggregator.avg_timing_observations",
+          (timings_values_count / total_timings).ceil,
+        )
         @aggregation_state.clear
       end
 

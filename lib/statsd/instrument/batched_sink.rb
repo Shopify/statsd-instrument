@@ -136,11 +136,14 @@ module StatsD
             @since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           end
 
+          tags = ["container_id:#{Socket.gethostname}"]
           StatsD.increment(@sync_sends_metric, synchronous_sends)
           StatsD.increment(@batched_sends_metric, batched_sends)
-          StatsD.gauge(@avg_buffer_length_metric, avg_buffer_length)
-          StatsD.gauge(@avg_batched_packet_size_metric, avg_batched_packet_size)
-          StatsD.gauge(@avg_batch_length_metric, avg_batch_length)
+          # If aggregation is enabled, either on the client or the server, we might lose important information.
+          # Tagging with container_id gives us a chance to correlate the data.
+          StatsD.gauge(@avg_buffer_length_metric, avg_buffer_length, tags: tags)
+          StatsD.gauge(@avg_batched_packet_size_metric, avg_batched_packet_size, tags: tags)
+          StatsD.gauge(@avg_batch_length_metric, avg_batch_length, tags: tags)
         end
 
         def increment_synchronous_sends
