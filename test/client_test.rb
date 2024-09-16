@@ -248,7 +248,7 @@ class ClientTest < Minitest::Test
   def test_sampling_with_aggregation
     mock_sink = mock("sink")
     mock_sink.stubs(:sample?).returns(false, true, false, false, true)
-    # since we are aggregating, we only expect a single datagram
+    # Since we are aggregating, we only expect a single datagram.
     mock_sink.expects(:<<).with("metric:60:60|d").once
     mock_sink.expects(:flush).once
 
