@@ -156,7 +156,8 @@ module StatsD
         sink: StatsD::Instrument::NullSink.new,
         datagram_builder_class: self.class.datagram_builder_class_for_implementation(implementation),
         enable_aggregation: false,
-        aggregation_flush_interval: 2.0
+        aggregation_flush_interval: 2.0,
+        aggregation_max_context_size: StatsD::Instrument::Aggregator::DEFAULT_MAX_CONTEXT_SIZE
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
@@ -176,6 +177,7 @@ module StatsD
               prefix,
               default_tags,
               flush_interval: @aggregation_flush_interval,
+              max_values: aggregation_max_context_size,
             )
         end
       end
@@ -237,6 +239,19 @@ module StatsD
       # @param tags (see #increment)
       # @return [void]
       def measure(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
+        sample_rate ||= @default_sample_rate
+        if sample_rate && !sample?(sample_rate)
+          # For all timing metrics, we have to use the sampling logic.
+          # Not doing so would impact performance and CPU usage.
+          # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
+
+          if block_given?
+            return yield
+          end
+
+          return StatsD::Instrument::VOID
+        end
+
         if block_given?
           return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :ms, no_prefix: no_prefix, &block)
         end
@@ -245,10 +260,7 @@ module StatsD
           @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :ms)
           return StatsD::Instrument::VOID
         end
-        sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
-        end
+        emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
         StatsD::Instrument::VOID
       end
 
@@ -306,6 +318,19 @@ module StatsD
       # @param tags (see #increment)
       # @return [void]
       def distribution(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
+        sample_rate ||= @default_sample_rate
+        if sample_rate && !sample?(sample_rate)
+          # For all timing metrics, we have to use the sampling logic.
+          # Not doing so would impact performance and CPU usage.
+          # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
+
+          if block_given?
+            return yield
+          end
+
+          return StatsD::Instrument::VOID
+        end
+
         if block_given?
           return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :d, no_prefix: no_prefix, &block)
         end
@@ -315,10 +340,7 @@ module StatsD
           return StatsD::Instrument::VOID
         end
 
-        sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).d(name, value, sample_rate, tags))
-        end
+        emit(datagram_builder(no_prefix: no_prefix).d(name, value, sample_rate, tags))
         StatsD::Instrument::VOID
       end
 
@@ -334,14 +356,20 @@ module StatsD
       # @param tags (see #increment)
       # @return [void]
       def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
-        if @enable_aggregation
-          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :h)
+        sample_rate ||= @default_sample_rate
+        if sample_rate && !sample?(sample_rate)
+          # For all timing metrics, we have to use the sampling logic.
+          # Not doing so would impact performance and CPU usage.
+          # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
+          return StatsD::Instrument::VOID
         end
 
-        sample_rate ||= @default_sample_rate
-        if sample_rate.nil? || sample?(sample_rate)
-          emit(datagram_builder(no_prefix: no_prefix).h(name, value, sample_rate, tags))
+        if @enable_aggregation
+          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :h)
+          return StatsD::Instrument::VOID
         end
+
+        emit(datagram_builder(no_prefix: no_prefix).h(name, value, sample_rate, tags))
         StatsD::Instrument::VOID
       end
 

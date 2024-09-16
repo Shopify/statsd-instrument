@@ -24,12 +24,15 @@ module StatsD
     end
 
     class Aggregator
+      DEFAULT_MAX_CONTEXT_SIZE = 250
+
       CONST_SAMPLE_RATE = 1.0
       COUNT = :c
       DISTRIBUTION = :d
       MEASURE = :ms
       HISTOGRAM = :h
       GAUGE = :g
+      private_constant :COUNT, :DISTRIBUTION, :MEASURE, :HISTOGRAM, :GAUGE, :CONST_SAMPLE_RATE
 
       class << self
         def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class, default_tags)
@@ -78,7 +81,14 @@ module StatsD
       # @param default_tags [Array<String>] The tags to add to all metrics.
       # @param flush_interval [Float] The interval at which to flush the aggregated metrics.
       # @param max_values [Integer] The maximum number of values to aggregate before flushing.
-      def initialize(sink, datagram_builder_class, prefix, default_tags, flush_interval: 5.0, max_values: 100)
+      def initialize(
+        sink,
+        datagram_builder_class,
+        prefix,
+        default_tags,
+        flush_interval: 5.0,
+        max_values: DEFAULT_MAX_CONTEXT_SIZE
+      )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
         @metric_prefix = prefix

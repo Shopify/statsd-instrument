@@ -125,6 +125,13 @@ module StatsD
         Float(env.fetch("STATSD_AGGREGATION_INTERVAL", 2.0))
       end
 
+      def aggregation_max_context_size
+        Integer(env.fetch(
+          "STATSD_AGGREGATION_MAX_CONTEXT_SIZE",
+          StatsD::Instrument::Aggregator::DEFAULT_MAX_CONTEXT_SIZE,
+        ))
+      end
+
       def client
         StatsD::Instrument::Client.from_env(self)
       end
