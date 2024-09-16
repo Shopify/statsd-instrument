@@ -156,7 +156,8 @@ module StatsD
         sink: StatsD::Instrument::NullSink.new,
         datagram_builder_class: self.class.datagram_builder_class_for_implementation(implementation),
         enable_aggregation: false,
-        aggregation_flush_interval: 2.0
+        aggregation_flush_interval: 2.0,
+        aggregation_max_context_size: 250
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
@@ -176,6 +177,7 @@ module StatsD
               prefix,
               default_tags,
               flush_interval: @aggregation_flush_interval,
+              max_values: aggregation_max_context_size,
             )
         end
       end
@@ -238,7 +240,7 @@ module StatsD
       # @return [void]
       def measure(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
         sample_rate ||= @default_sample_rate
-        unless sample_rate.nil? && sample?(sample_rate)
+        if sample_rate && !sample?(sample_rate)
           # For all timing metrics, we have to use the sampling logic, not doing so would
           # impact performance and CPU usage.
           # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
@@ -317,7 +319,7 @@ module StatsD
       # @return [void]
       def distribution(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
         sample_rate ||= @default_sample_rate
-        unless sample_rate.nil? && sample?(sample_rate)
+        if sample_rate && !sample?(sample_rate)
           # For all timing metrics, we have to use the sampling logic, not doing so would
           # impact performance and CPU usage.
           # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
@@ -355,7 +357,7 @@ module StatsD
       # @return [void]
       def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
-        unless sample_rate.nil? && sample?(sample_rate)
+        if sample_rate && !sample?(sample_rate)
           # For all timing metrics, we have to use the sampling logic, not doing so would
           # impact performance and CPU usage.
           # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283

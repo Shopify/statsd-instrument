@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+- [#378](https://github.com/Shopify/statsd-instrument/pull/378) Respect sampling rate when aggregation is enabled, just for timing metrics.
+  Not respecting sampling rate, incurs in a performance penalty, as we will send more metrics than expected.
+  Moreover, it overloads the StatsD server, which has to send out and process more metrics than expected.
+
 ## Version 3.9.0
 
 - Introduced an experimental aggregation feature to improve the efficiency of metrics reporting by aggregating 

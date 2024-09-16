@@ -245,6 +245,18 @@ class ClientTest < Minitest::Test
     5.times { client.increment("metric") }
   end
 
+  def test_sampling_with_aggregation
+    mock_sink = mock("sink")
+    mock_sink.stubs(:sample?).returns(false, true, false, false, true)
+    # since we are aggregating, we only expect a single datagram
+    mock_sink.expects(:<<).with("metric:60:60|d").once
+    mock_sink.expects(:flush).once
+
+    client = StatsD::Instrument::Client.new(sink: mock_sink, default_sample_rate: 0.5, enable_aggregation: true)
+    5.times { client.distribution("metric", 60) }
+    client.force_flush
+  end
+
   def test_clone_with_prefix_option
     # Both clients will use the same sink.
     mock_sink = mock("sink")
