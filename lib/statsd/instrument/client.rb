@@ -241,8 +241,8 @@ module StatsD
       def measure(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
         sample_rate ||= @default_sample_rate
         if sample_rate && !sample?(sample_rate)
-          # For all timing metrics, we have to use the sampling logic, not doing so would
-          # impact performance and CPU usage.
+          # For all timing metrics, we have to use the sampling logic.
+          # Not doing so would impact performance and CPU usage.
           # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
 
           if block_given?
@@ -320,8 +320,8 @@ module StatsD
       def distribution(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
         sample_rate ||= @default_sample_rate
         if sample_rate && !sample?(sample_rate)
-          # For all timing metrics, we have to use the sampling logic, not doing so would
-          # impact performance and CPU usage.
+          # For all timing metrics, we have to use the sampling logic.
+          # Not doing so would impact performance and CPU usage.
           # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
 
           if block_given?
@@ -358,8 +358,8 @@ module StatsD
       def histogram(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
         if sample_rate && !sample?(sample_rate)
-          # For all timing metrics, we have to use the sampling logic, not doing so would
-          # impact performance and CPU usage.
+          # For all timing metrics, we have to use the sampling logic.
+          # Not doing so would impact performance and CPU usage.
           # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
           return StatsD::Instrument::VOID
         end
