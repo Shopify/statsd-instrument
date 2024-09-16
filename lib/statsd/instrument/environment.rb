@@ -126,7 +126,10 @@ module StatsD
       end
 
       def aggregation_max_context_size
-        Integer(env.fetch("STATSD_AGGREGATION_MAX_CONTEXT_SIZE", 250))
+        Integer(env.fetch(
+          "STATSD_AGGREGATION_MAX_CONTEXT_SIZE",
+          StatsD::Instrument::Aggregator::DEFAULT_MAX_CONTEXT_SIZE,
+        ))
       end
 
       def client

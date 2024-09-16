@@ -157,7 +157,7 @@ module StatsD
         datagram_builder_class: self.class.datagram_builder_class_for_implementation(implementation),
         enable_aggregation: false,
         aggregation_flush_interval: 2.0,
-        aggregation_max_context_size: 250
+        aggregation_max_context_size: Aggregator::DEFAULT_MAX_CONTEXT_SIZE
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
