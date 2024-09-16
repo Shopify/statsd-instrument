@@ -2,8 +2,6 @@
 
 module StatsD
   module Instrument
-    DEFAULT_MAX_CONTEXT_SIZE = 250
-
     class AggregationKey
       attr_reader :name, :tags, :no_prefix, :type, :hash
 
@@ -26,12 +24,15 @@ module StatsD
     end
 
     class Aggregator
+      DEFAULT_MAX_CONTEXT_SIZE = 250
+
       CONST_SAMPLE_RATE = 1.0
       COUNT = :c
       DISTRIBUTION = :d
       MEASURE = :ms
       HISTOGRAM = :h
       GAUGE = :g
+      private_constant :COUNT, :DISTRIBUTION, :MEASURE, :HISTOGRAM, :GAUGE, :CONST_SAMPLE_RATE
 
       class << self
         def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class, default_tags)
