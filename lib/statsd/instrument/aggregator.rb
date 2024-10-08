@@ -246,11 +246,11 @@ module StatsD
             return false unless Thread.main.alive?
 
             if @pid != Process.pid
-              StatsD.logger.info { "[#{self.class.name}] Restarting the flush thread after fork" }
+              StatsD.logger.debug { "[#{self.class.name}] Restarting the flush thread after fork" }
               @pid = Process.pid
               @aggregation_state.clear
             else
-              StatsD.logger.info { "[#{self.class.name}] Restarting the flush thread" }
+              StatsD.logger.debug { "[#{self.class.name}] Restarting the flush thread" }
             end
             @flush_thread = Thread.new do
               Thread.current.abort_on_exception = true
