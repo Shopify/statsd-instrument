@@ -6,6 +6,11 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.2
+
+- [#381](https://github.com/Shopify/statsd-instrument/pull/381) - Reduce log level of some messages inside new Aggregator
+to avoid contention and verbosity.
+
 ## Version 3.9.1
 
 - [#378](https://github.com/Shopify/statsd-instrument/pull/378) - Respect sampling rate when aggregation is enabled, just for timing metrics.
