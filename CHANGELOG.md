@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.3
+
+- [#384](https://github.com/Shopify/statsd-instrument/pull/382) - Fix warnings in Rubocop cops.
+
 ## Version 3.9.2
 
 - [#381](https://github.com/Shopify/statsd-instrument/pull/381) - Reduce log level of some messages inside new Aggregator
