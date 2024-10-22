@@ -15,7 +15,7 @@ module RuboCop
       #       --only StatsD/MeasureAsDistArgument
       #
       # This cop will not autocorrect offenses.
-      class MeasureAsDistArgument < Cop
+      class MeasureAsDistArgument < Base
         include RuboCop::Cop::StatsD
 
         MSG = <<~MSG

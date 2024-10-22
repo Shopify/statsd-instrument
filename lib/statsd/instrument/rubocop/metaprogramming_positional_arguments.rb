@@ -16,7 +16,7 @@ module RuboCop
       #
       #
       # This cop will not autocorrect the offenses it finds, but generally the fixes are easy to fix
-      class MetaprogrammingPositionalArguments < Cop
+      class MetaprogrammingPositionalArguments < Base
         include RuboCop::Cop::StatsD
 
         MSG = "Use keyword arguments for StatsD metaprogramming macros"

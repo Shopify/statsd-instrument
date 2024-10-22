@@ -13,7 +13,7 @@ module RuboCop
       #      --only StatsD/SplatArguments
       #
       # This cop will not autocorrect offenses.
-      class SplatArguments < Cop
+      class SplatArguments < Base
         include RuboCop::Cop::StatsD
 
         MSG = "Do not use splat arguments in StatsD metric calls"
