@@ -25,7 +25,7 @@ module RuboCop
       #   same options.
       # - If you have to, you can call the old methods on `StatsD.legacy_singleton_client`. Note
       #   that this option will go away in the next major version.
-      class SingletonConfiguration < Cop
+      class SingletonConfiguration < Base
         include RuboCop::Cop::StatsD
 
         MSG = <<~MESSAGE

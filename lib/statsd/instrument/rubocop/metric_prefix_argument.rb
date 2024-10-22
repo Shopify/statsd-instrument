@@ -12,7 +12,7 @@ module RuboCop
       #       --only StatsD/MetricPrefixArgument
       #
       # This cop will not autocorrect offenses.
-      class MetricPrefixArgument < Cop
+      class MetricPrefixArgument < Base
         include RuboCop::Cop::StatsD
 
         MSG = <<~MSG

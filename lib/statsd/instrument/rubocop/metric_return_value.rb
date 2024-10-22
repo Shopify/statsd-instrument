@@ -14,7 +14,7 @@ module RuboCop
       # This cop cannot autocorrect offenses. In production code, StatsD should be used in a fire-and-forget
       # fashion. This means that you shouldn't rely on the return value. If you really need to access the
       # emitted metrics, you can look into `capture_statsd_calls`
-      class MetricReturnValue < Cop
+      class MetricReturnValue < Base
         include RuboCop::Cop::StatsD
 
         MSG = "Do not use the return value of StatsD metric methods"
