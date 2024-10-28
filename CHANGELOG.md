@@ -6,9 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.4
+
 - [#384](https://github.com/Shopify/statsd-instrument/pull/384) - Aggregation: fixing bug when sending metrics synchronously
 e.g. when the main thread is killed and we are forced to flush the metrics.
-
 
 ## Version 3.9.3
 
