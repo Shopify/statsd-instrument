@@ -131,7 +131,7 @@ module StatsD
       # @return [void]
       def increment(name, value = 1, tags: [], no_prefix: false)
         unless thread_healthcheck
-          sink << datagram_builder(no_prefix: no_prefix).c(name, value, CONST_SAMPLE_RATE, tags)
+          @sink << datagram_builder(no_prefix: no_prefix).c(name, value, CONST_SAMPLE_RATE, tags)
           return
         end
 
@@ -146,8 +146,8 @@ module StatsD
 
       def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION)
         unless thread_healthcheck
-          sink << datagram_builder(no_prefix: no_prefix).timing_value_packed(
-            name, type, [value], CONST_SAMPLE_RATE, tags
+          @sink << datagram_builder(no_prefix: no_prefix).timing_value_packed(
+            name, type.to_s, [value], CONST_SAMPLE_RATE, tags
           )
           return
         end
@@ -166,7 +166,7 @@ module StatsD
 
       def gauge(name, value, tags: [], no_prefix: false)
         unless thread_healthcheck
-          sink << datagram_builder(no_prefix: no_prefix).g(name, value, CONST_SAMPLE_RATE, tags)
+          @sink << datagram_builder(no_prefix: no_prefix).g(name, value, CONST_SAMPLE_RATE, tags)
           return
         end
 
@@ -243,15 +243,21 @@ module StatsD
       def thread_healthcheck
         @mutex.synchronize do
           unless @flush_thread&.alive?
+            # The main thread is dead, fallback to direct writes
             return false unless Thread.main.alive?
 
+            # The main thread forked, reset the aggregator state
             if @pid != Process.pid
               StatsD.logger.debug { "[#{self.class.name}] Restarting the flush thread after fork" }
+              # Try one last flush to ensure all metrics are sent
+              do_flush
               @pid = Process.pid
+              # Clear the aggregation state to avoid memory leak
               @aggregation_state.clear
             else
               StatsD.logger.debug { "[#{self.class.name}] Restarting the flush thread" }
             end
+            # Restart the flush thread
             @flush_thread = Thread.new do
               Thread.current.abort_on_exception = true
               loop do

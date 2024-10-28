@@ -6,9 +6,13 @@ section below.
 
 ## Unreleased changes
 
+- [#384](https://github.com/Shopify/statsd-instrument/pull/384) - Aggregation: fixing bug when sending metrics synchronously
+e.g. when the main thread is killed and we are forced to flush the metrics.
+
+
 ## Version 3.9.3
 
-- [#384](https://github.com/Shopify/statsd-instrument/pull/382) - Fix warnings in Rubocop cops.
+- [#382](https://github.com/Shopify/statsd-instrument/pull/382) - Fix warnings in Rubocop cops.
 
 ## Version 3.9.2
 
