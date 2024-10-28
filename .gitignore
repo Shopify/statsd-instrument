@@ -6,3 +6,4 @@ Gemfile.lock
 pkg/*
 vendor/
 tmp/*
+coverage/*
