@@ -105,17 +105,7 @@ module StatsD
 
         @pid = Process.pid
         @flush_interval = flush_interval
-        @flush_thread = Thread.new do
-          Thread.current.abort_on_exception = true
-          loop do
-            sleep(@flush_interval)
-            thread_healthcheck
-            flush
-          rescue => e
-            StatsD.logger.error { "[#{self.class.name}] Error in flush thread: #{e}" }
-            raise e
-          end
-        end
+        start_flush_thread
 
         ObjectSpace.define_finalizer(
           self,
@@ -240,32 +230,39 @@ module StatsD
         )
       end
 
+      def start_flush_thread
+        @flush_thread = Thread.new do
+          Thread.current.abort_on_exception = true
+          loop do
+            sleep(@flush_interval)
+            thread_healthcheck
+            flush
+          end
+        rescue => e
+          StatsD.logger.error { "[#{self.class.name}] Error in flush thread: #{e}" }
+          raise e
+        end
+      end
+
       def thread_healthcheck
         @mutex.synchronize do
           unless @flush_thread&.alive?
             # The main thread is dead, fallback to direct writes
             return false unless Thread.main.alive?
 
-            # The main thread forked, reset the aggregator state
+            # If the PID changed, the process forked, reset the aggregator state
             if @pid != Process.pid
-              StatsD.logger.debug { "[#{self.class.name}] Restarting the flush thread after fork" }
-              # Try one last flush to ensure all metrics are sent
-              do_flush
+              StatsD.logger.debug do
+                "[#{self.class.name}] Restarting the flush thread after fork. State size: #{@aggregation_state.size}"
+              end
               @pid = Process.pid
-              # Clear the aggregation state to avoid memory leak
+              # Clear the aggregation state to avoid duplicate metrics
               @aggregation_state.clear
             else
               StatsD.logger.debug { "[#{self.class.name}] Restarting the flush thread" }
             end
             # Restart the flush thread
-            @flush_thread = Thread.new do
-              Thread.current.abort_on_exception = true
-              loop do
-                sleep(@flush_interval)
-                thread_healthcheck
-                flush
-              end
-            end
+            start_flush_thread
           end
           true
         end

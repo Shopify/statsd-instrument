@@ -23,6 +23,7 @@ class AggregatorTest < Minitest::Test
     @logger = CaptureLogger.new
     @old_logger = StatsD.logger
     StatsD.logger = @logger
+
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     @subject = StatsD::Instrument::Aggregator.new(
       @sink, StatsD::Instrument::DatagramBuilder, nil, [], flush_interval: 0.1
@@ -164,6 +165,11 @@ class AggregatorTest < Minitest::Test
     # Force thread_healthcheck to return false
     @subject.stubs(:thread_healthcheck).returns(false)
 
+    # Stub methods on @aggregation_state to ensure they are not called
+    aggregation_state = @subject.instance_variable_get(:@aggregation_state)
+    aggregation_state.stubs(:[]=).never
+    aggregation_state.stubs(:clear).never
+
     @subject.increment("foo", 1, tags: { foo: "bar" })
     @subject.aggregate_timing("bar", 100, tags: { foo: "bar" })
     @subject.gauge("baz", 100, tags: { foo: "bar" })
@@ -203,7 +209,7 @@ class AggregatorTest < Minitest::Test
   end
 
   def test_recreate_thread_after_fork
-    skip("Not supported in non MRI platforms") unless RUBY_PLATFORM == "ruby"
+    skip("#{RUBY_ENGINE} not supported for this test. Reason: fork()") if RUBY_ENGINE != "ruby"
     # Record initial metrics
     @subject.increment("foo", 1, tags: { foo: "bar" })
     @subject.aggregate_timing("bar", 100, tags: { foo: "bar" })
@@ -217,11 +223,10 @@ class AggregatorTest < Minitest::Test
       @subject.increment("foo", 2, tags: { foo: "bar" })
       @subject.aggregate_timing("bar", 200, tags: { foo: "bar" })
       @subject.flush
-      assert_equal(4, @sink.datagrams.size)
+
+      assert_equal(2, @sink.datagrams.size)
       exit!
     end
-
-    @logger.messages.each { |m| $stdout.puts m[:message] }
 
     # Wait for forked process to complete
     Process.wait(pid)
@@ -243,5 +248,86 @@ class AggregatorTest < Minitest::Test
     # Aggregate despite fork
     assert_equal(4, counter_datagrams.last.value)
     assert_equal([100.0, 300.0], timing_datagrams.last.value)
+  end
+
+  def test_race_condition_during_forking
+    skip("#{RUBY_ENGINE} not supported for this test. Reason: fork()") if RUBY_ENGINE != "ruby"
+    # Record initial metrics
+    @subject.increment("before_fork.count", 1, tags: { foo: "bar" })
+    @subject.aggregate_timing("before_fork.timing", 100, tags: { foo: "bar" })
+
+    # Fork the process
+    pid = Process.fork do
+      # In forked process, send more metrics
+      @subject.increment("in_child.count", 2, tags: { foo: "bar" })
+      @subject.aggregate_timing("in_child.timing", 200, tags: { foo: "bar" })
+
+      # Simulate thread waiting for flush
+      sleep(0.1)
+      @subject.flush
+
+      assert_equal(2, @sink.datagrams.size)
+      exit!
+    end
+
+    # Call flush concurrently in parent process
+    @subject.flush
+
+    # Wait for forked process to complete
+    Process.wait(pid)
+
+    # Send metrics in parent process
+    @subject.increment("after_fork.count", 3, tags: { foo: "bar" })
+    @subject.aggregate_timing("after_fork.timing", 300, tags: { foo: "bar" })
+    @subject.flush
+
+    assert_equal(4, @sink.datagrams.size)
+
+    # Verify metrics were properly aggregated in parent process
+    counter_datagrams = @sink.datagrams.select { |d| d.name == "before_fork.count" }
+    timing_datagrams = @sink.datagrams.select { |d| d.name == "before_fork.count" }
+    assert_equal(
+      1,
+      counter_datagrams.size,
+      "Expected to find 1 counter datagram. Datagrams: #{@sink.datagrams.inspect}",
+    )
+    assert_equal(1, timing_datagrams.size)
+
+    # After fork metrics
+    counter_datagrams = @sink.datagrams.select { |d| d.name == "after_fork.count" }
+    timing_datagrams = @sink.datagrams.select { |d| d.name == "after_fork.count" }
+    assert_equal(1, counter_datagrams.size)
+    assert_equal(1, timing_datagrams.size)
+  end
+
+  def test_finalizer_flushes_pending_metrics
+    @subject.increment("foo", 1, tags: { foo: "bar" })
+    @subject.aggregate_timing("bar", 100, tags: { foo: "bar" })
+    @subject.gauge("baz", 100, tags: { foo: "bar" })
+
+    # Manually trigger the finalizer
+    finalizer = StatsD::Instrument::Aggregator.finalize(
+      @subject.instance_variable_get(:@aggregation_state),
+      @subject.instance_variable_get(:@sink),
+      @subject.instance_variable_get(:@datagram_builders),
+      StatsD::Instrument::DatagramBuilder,
+      [],
+    )
+    finalizer.call
+
+    # Verify that all pending metrics are sent
+    assert_equal(3, @sink.datagrams.size)
+
+    counter_datagram = @sink.datagrams.find { |d| d.name == "foo" }
+    assert_equal(1, counter_datagram.value)
+    assert_equal(["foo:bar"], counter_datagram.tags)
+
+    timing_datagram = @sink.datagrams.find { |d| d.name == "bar" }
+    assert_equal([100.0], [timing_datagram.value])
+    assert_equal(["foo:bar"], timing_datagram.tags)
+
+    gauge_datagram = @sink.datagrams.find { |d| d.name == "baz" }
+    assert_equal(100, gauge_datagram.value)
+    assert_equal(["foo:bar"], gauge_datagram.tags)
   end
 end
