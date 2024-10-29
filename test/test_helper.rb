@@ -10,10 +10,6 @@ if ENV["COVERAGE"]
   require "simplecov"
   SimpleCov.start
 end
-# Previous content of test helper now starts here
-unless ENV.key?("CI")
-  require "minitest/pride"
-end
 require "minitest/autorun"
 unless ENV.key?("CI")
   require "minitest/pride"

@@ -105,17 +105,7 @@ module StatsD
 
         @pid = Process.pid
         @flush_interval = flush_interval
-        @flush_thread = Thread.new do
-          Thread.current.abort_on_exception = true
-          loop do
-            sleep(@flush_interval)
-            thread_healthcheck
-            flush
-          rescue => e
-            StatsD.logger.error { "[#{self.class.name}] Error in flush thread: #{e}" }
-            raise e
-          end
-        end
+        start_flush_thread
 
         ObjectSpace.define_finalizer(
           self,
@@ -131,7 +121,7 @@ module StatsD
       # @return [void]
       def increment(name, value = 1, tags: [], no_prefix: false)
         unless thread_healthcheck
-          sink << datagram_builder(no_prefix: no_prefix).c(name, value, CONST_SAMPLE_RATE, tags)
+          @sink << datagram_builder(no_prefix: no_prefix).c(name, value, CONST_SAMPLE_RATE, tags)
           return
         end
 
@@ -146,8 +136,8 @@ module StatsD
 
       def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION)
         unless thread_healthcheck
-          sink << datagram_builder(no_prefix: no_prefix).timing_value_packed(
-            name, type, [value], CONST_SAMPLE_RATE, tags
+          @sink << datagram_builder(no_prefix: no_prefix).timing_value_packed(
+            name, type.to_s, [value], CONST_SAMPLE_RATE, tags
           )
           return
         end
@@ -166,7 +156,7 @@ module StatsD
 
       def gauge(name, value, tags: [], no_prefix: false)
         unless thread_healthcheck
-          sink << datagram_builder(no_prefix: no_prefix).g(name, value, CONST_SAMPLE_RATE, tags)
+          @sink << datagram_builder(no_prefix: no_prefix).g(name, value, CONST_SAMPLE_RATE, tags)
           return
         end
 
@@ -240,26 +230,41 @@ module StatsD
         )
       end
 
+      def start_flush_thread
+        @flush_thread = Thread.new do
+          Thread.current.abort_on_exception = true
+          loop do
+            sleep(@flush_interval)
+            thread_healthcheck
+            flush
+          end
+        rescue => e
+          StatsD.logger.error { "[#{self.class.name}] Error in flush thread: #{e}" }
+          raise e
+        end
+      end
+
       def thread_healthcheck
         @mutex.synchronize do
           unless @flush_thread&.alive?
+            # The main thread is dead, fallback to direct writes
             return false unless Thread.main.alive?
 
+            # If the PID changed, the process forked, reset the aggregator state
             if @pid != Process.pid
-              StatsD.logger.debug { "[#{self.class.name}] Restarting the flush thread after fork" }
+              # TODO: Investigate/replace this with Process._fork hook.
+              # https://github.com/ruby/ruby/pull/5017
+              StatsD.logger.debug do
+                "[#{self.class.name}] Restarting the flush thread after fork. State size: #{@aggregation_state.size}"
+              end
               @pid = Process.pid
+              # Clear the aggregation state to avoid duplicate metrics
               @aggregation_state.clear
             else
               StatsD.logger.debug { "[#{self.class.name}] Restarting the flush thread" }
             end
-            @flush_thread = Thread.new do
-              Thread.current.abort_on_exception = true
-              loop do
-                sleep(@flush_interval)
-                thread_healthcheck
-                flush
-              end
-            end
+            # Restart the flush thread
+            start_flush_thread
           end
           true
         end
