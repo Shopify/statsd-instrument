@@ -252,6 +252,8 @@ module StatsD
 
             # If the PID changed, the process forked, reset the aggregator state
             if @pid != Process.pid
+              # TODO: Investigate/replace this with Process._fork hook.
+              # https://github.com/ruby/ruby/pull/5017
               StatsD.logger.debug do
                 "[#{self.class.name}] Restarting the flush thread after fork. State size: #{@aggregation_state.size}"
               end
