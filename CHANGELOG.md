@@ -6,6 +6,11 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.5
+
+- [#387](https://github.com/Shopify/statsd-instrument/pull/387) - Fixing bug when using aggregation and sending sampled
+histogram metrics, they will not be scaled properly because of missing sampling rate in the final sent sample.
+
 ## Version 3.9.4
 
 - [#384](https://github.com/Shopify/statsd-instrument/pull/384) - Aggregation: fixing bug when sending metrics synchronously

@@ -3,13 +3,14 @@
 module StatsD
   module Instrument
     class AggregationKey
-      attr_reader :name, :tags, :no_prefix, :type, :hash
+      attr_reader :name, :tags, :no_prefix, :type, :hash, :sample_rate
 
-      def initialize(name, tags, no_prefix, type)
+      def initialize(name, tags, no_prefix, type, sample_rate: 1.0)
         @name = name
         @tags = tags
         @no_prefix = no_prefix
         @type = type
+        @sample_rate = sample_rate
         @hash = [@name, @tags, @no_prefix, @type].hash
       end
 
@@ -56,7 +57,7 @@ module StatsD
                   key.name,
                   key.type.to_s,
                   agg_value,
-                  CONST_SAMPLE_RATE,
+                  key.sample_rate,
                   key.tags,
                 )
               when GAUGE
@@ -134,7 +135,7 @@ module StatsD
         end
       end
 
-      def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION)
+      def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION, sample_rate: CONST_SAMPLE_RATE)
         unless thread_healthcheck
           @sink << datagram_builder(no_prefix: no_prefix).timing_value_packed(
             name, type.to_s, [value], CONST_SAMPLE_RATE, tags
@@ -143,7 +144,7 @@ module StatsD
         end
 
         tags = tags_sorted(tags)
-        key = packet_key(name, tags, no_prefix, type)
+        key = packet_key(name, tags, no_prefix, type, sample_rate: sample_rate)
 
         @mutex.synchronize do
           values = @aggregation_state[key] ||= []
@@ -176,6 +177,9 @@ module StatsD
 
       EMPTY_ARRAY = [].freeze
 
+      # Flushes the aggregated metrics to the sink.
+      # Iterates over the aggregation state and sends each metric to the sink.
+      # If you change this function, you need to update the logic in the finalizer as well.
       def do_flush
         @aggregation_state.each do |key, value|
           case key.type
@@ -191,7 +195,7 @@ module StatsD
               key.name,
               key.type.to_s,
               value,
-              CONST_SAMPLE_RATE,
+              key.sample_rate,
               key.tags,
             )
           when GAUGE
@@ -219,8 +223,14 @@ module StatsD
         datagram_builder(no_prefix: false).normalize_tags(tags)
       end
 
-      def packet_key(name, tags = "".b, no_prefix = false, type = COUNT)
-        AggregationKey.new(DatagramBuilder.normalize_string(name), tags, no_prefix, type).freeze
+      def packet_key(name, tags = "".b, no_prefix = false, type = COUNT, sample_rate: CONST_SAMPLE_RATE)
+        AggregationKey.new(
+          DatagramBuilder.normalize_string(name),
+          tags,
+          no_prefix,
+          type,
+          sample_rate: sample_rate,
+        ).freeze
       end
 
       def datagram_builder(no_prefix:)
