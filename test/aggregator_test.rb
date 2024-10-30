@@ -58,6 +58,23 @@ class AggregatorTest < Minitest::Test
     assert_equal([1.0, 100.0], datagram.value)
   end
 
+  def test_timing_sampling_scaling
+    @subject.aggregate_timing("timing.sampled", 60.0, sample_rate: 0.01)
+    @subject.aggregate_timing("timing.sampled", 80.0, sample_rate: 0.01)
+    @subject.aggregate_timing("timing.unsampled", 60.0, sample_rate: 1.0)
+
+    @subject.flush
+
+    assert_equal(2, @sink.datagrams.size)
+
+    sampled_datagram = @sink.datagrams.find { |d| d.name == "timing.sampled" }
+    assert_equal([60.0, 80.0], sampled_datagram.value)
+    assert_equal(0.01, sampled_datagram.sample_rate)
+
+    unsampled_datagram = @sink.datagrams.find { |d| d.name == "timing.unsampled" }
+    assert_equal(60.0, unsampled_datagram.value)
+  end
+
   def test_mixed_type_timings
     @subject.aggregate_timing("foo_ms", 1, tags: { foo: "bar" }, type: :ms)
     @subject.aggregate_timing("foo_ms", 100, tags: { foo: "bar" }, type: :ms)
@@ -304,6 +321,7 @@ class AggregatorTest < Minitest::Test
     @subject.increment("foo", 1, tags: { foo: "bar" })
     @subject.aggregate_timing("bar", 100, tags: { foo: "bar" })
     @subject.gauge("baz", 100, tags: { foo: "bar" })
+    @subject.aggregate_timing("sampled_timing", 100, tags: { foo: "bar" }, sample_rate: 0.01)
 
     # Manually trigger the finalizer
     finalizer = StatsD::Instrument::Aggregator.finalize(
@@ -316,7 +334,7 @@ class AggregatorTest < Minitest::Test
     finalizer.call
 
     # Verify that all pending metrics are sent
-    assert_equal(3, @sink.datagrams.size)
+    assert_equal(4, @sink.datagrams.size)
 
     counter_datagram = @sink.datagrams.find { |d| d.name == "foo" }
     assert_equal(1, counter_datagram.value)
@@ -329,5 +347,9 @@ class AggregatorTest < Minitest::Test
     gauge_datagram = @sink.datagrams.find { |d| d.name == "baz" }
     assert_equal(100, gauge_datagram.value)
     assert_equal(["foo:bar"], gauge_datagram.tags)
+
+    sampled_timing_datagram = @sink.datagrams.find { |d| d.name == "sampled_timing" }
+    assert_equal(100.0, sampled_timing_datagram.value)
+    assert_equal(0.01, sampled_timing_datagram.sample_rate)
   end
 end
