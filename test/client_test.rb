@@ -90,7 +90,7 @@ class ClientTest < Minitest::Test
     client.measure("block_duration_example") { 1 + 1 }
     client.force_flush
 
-    datagram = client.sink.datagrams.first
+    datagram = client.sink.datagrams.find { |d| d.name == "bar.foo" }
     assert_equal("bar.foo", datagram.name)
     assert_equal(2, datagram.value)
 
@@ -249,12 +249,17 @@ class ClientTest < Minitest::Test
     mock_sink = mock("sink")
     mock_sink.stubs(:sample?).returns(false, true, false, false, true)
     # Since we are aggregating, we only expect a single datagram.
-    mock_sink.expects(:<<).with("metric:60:60|d").once
+    mock_sink.expects(:<<).with("metric:60:60|d|@0.5").once
     mock_sink.expects(:flush).once
 
     client = StatsD::Instrument::Client.new(sink: mock_sink, default_sample_rate: 0.5, enable_aggregation: true)
     5.times { client.distribution("metric", 60) }
     client.force_flush
+
+    # undo mock
+    mock_sink.unstub(:sample?)
+    mock_sink.unstub(:<<)
+    mock_sink.unstub(:flush)
   end
 
   def test_clone_with_prefix_option

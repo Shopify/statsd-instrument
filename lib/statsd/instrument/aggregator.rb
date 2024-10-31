@@ -138,7 +138,7 @@ module StatsD
       def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION, sample_rate: CONST_SAMPLE_RATE)
         unless thread_healthcheck
           @sink << datagram_builder(no_prefix: no_prefix).timing_value_packed(
-            name, type.to_s, [value], CONST_SAMPLE_RATE, tags
+            name, type.to_s, [value], sample_rate, tags
           )
           return
         end
