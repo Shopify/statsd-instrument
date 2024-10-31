@@ -318,25 +318,27 @@ module StatsD
       # @param tags (see #increment)
       # @return [void]
       def distribution(name, value = nil, sample_rate: nil, tags: nil, no_prefix: false, &block)
-        sample_rate ||= @default_sample_rate
-        if sample_rate && !sample?(sample_rate)
-          # For all timing metrics, we have to use the sampling logic.
-          # Not doing so would impact performance and CPU usage.
-          # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
-
-          if block_given?
-            return yield
-          end
-
-          return StatsD::Instrument::VOID
-        end
-
         if block_given?
           return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :d, no_prefix: no_prefix, &block)
         end
 
+        # For all timing metrics, we have to use the sampling logic.
+        # Not doing so would impact performance and CPU usage.
+        # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
+        sample_rate ||= @default_sample_rate
+        if sample_rate && !sample?(sample_rate)
+          return StatsD::Instrument::VOID
+        end
+
         if @enable_aggregation
-          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :d)
+          @aggregator.aggregate_timing(
+            name,
+            value,
+            tags: tags,
+            no_prefix: no_prefix,
+            type: :d,
+            sample_rate: sample_rate,
+          )
           return StatsD::Instrument::VOID
         end
 
@@ -392,13 +394,26 @@ module StatsD
         ensure
           stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
 
-          metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
-          latency_in_ms = stop - start
-          if @enable_aggregation
-            @aggregator.aggregate_timing(name, latency_in_ms, tags: tags, no_prefix: no_prefix, type: metric_type)
-          else
-            sample_rate ||= @default_sample_rate
-            if sample_rate.nil? || sample?(sample_rate)
+          # For all timing metrics, we have to use the sampling logic.
+          # Not doing so would impact performance and CPU usage.
+          # See Datadog's documentation for more details:
+          # https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
+          sample_rate ||= @default_sample_rate
+          if sample_rate.nil? || sample?(sample_rate)
+
+            metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
+            latency_in_ms = stop - start
+
+            if @enable_aggregation
+              @aggregator.aggregate_timing(
+                name,
+                latency_in_ms,
+                tags: tags,
+                no_prefix: no_prefix,
+                type: metric_type,
+                sample_rate: sample_rate,
+              )
+            else
               emit(datagram_builder(no_prefix: no_prefix).send(metric_type, name, latency_in_ms, sample_rate, tags))
             end
           end

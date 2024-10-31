@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "ostruct"
 
 class AggregatorTest < Minitest::Test
   class CaptureLogger
@@ -70,6 +69,7 @@ class AggregatorTest < Minitest::Test
     sampled_datagram = @sink.datagrams.find { |d| d.name == "timing.sampled" }
     assert_equal([60.0, 80.0], sampled_datagram.value)
     assert_equal(0.01, sampled_datagram.sample_rate)
+    assert_equal("timing.sampled:60.0:80.0|d|@0.01", sampled_datagram.source)
 
     unsampled_datagram = @sink.datagrams.find { |d| d.name == "timing.unsampled" }
     assert_equal(60.0, unsampled_datagram.value)
@@ -208,7 +208,7 @@ class AggregatorTest < Minitest::Test
 
     # Additional metrics should also go through synchronously
     @subject.increment("foo", 1, tags: { foo: "bar" })
-    @subject.aggregate_timing("bar", 200, tags: { foo: "bar" })
+    @subject.aggregate_timing("bar", 200, tags: { foo: "bar" }, sample_rate: 0.5)
 
     # Verify new metrics were also sent immediately
     assert_equal(5, @sink.datagrams.size)
@@ -220,6 +220,7 @@ class AggregatorTest < Minitest::Test
     timing_datagram = @sink.datagrams.select { |d| d.name == "bar" }.last
     assert_equal([200.0], [timing_datagram.value])
     assert_equal(["foo:bar"], timing_datagram.tags)
+    assert_equal(0.5, timing_datagram.sample_rate)
 
     # undo the stubbing
     @subject.unstub(:thread_healthcheck)

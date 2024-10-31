@@ -6,6 +6,11 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.6
+
+- [#388](https://github.com/Shopify/statsd-instrument/pull/388) - Properly fixing the bug when using aggregation and sending sampled
+histograms, now the client will respect the sampling rate when sending the metrics and pass it down to the aggregator.
+
 ## Version 3.9.5
 
 - [#387](https://github.com/Shopify/statsd-instrument/pull/387) - Fixing bug when using aggregation and sending sampled

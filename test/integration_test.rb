@@ -77,4 +77,30 @@ class IntegrationTest < Minitest::Test
     assert_equal("counter:20|c", @server.recvfrom(100).first)
     assert_operator(Time.now - before_flush, :<, 0.3, "Flush and ingest should have happened within 0.4s")
   end
+
+  def test_live_local_udp_socket_with_aggregation_sampled_scenario
+    client = StatsD::Instrument::Environment.new(
+      "STATSD_ADDR" => "#{@server.addr[2]}:#{@server.addr[1]}",
+      "STATSD_IMPLEMENTATION" => "dogstatsd",
+      "STATSD_ENV" => "production",
+      "STATSD_ENABLE_AGGREGATION" => "true",
+      "STATSD_AGGREGATION_INTERVAL" => "0.1",
+    ).client
+
+    100.times do
+      client.increment("counter", 2)
+      client.distribution("test_distribution", 3, sample_rate: 0.1)
+    end
+
+    sleep(0.2)
+
+    packets = []
+    while IO.select([@server], nil, nil, 0.1)
+      packets << @server.recvfrom(300).first
+    end
+    packets = packets.map { |packet| packet.split("\n") }.flatten
+
+    assert_match(/counter:\d+|c/, packets.find { |packet| packet.start_with?("counter:") })
+    assert_match(/test_distribution:\d+:3|d/, packets.find { |packet| packet.start_with?("test_distribution:") })
+  end
 end
