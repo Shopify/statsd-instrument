@@ -121,6 +121,12 @@ class BatchedUdsSinkTest < Minitest::Test
     @sinks.each(&:shutdown)
   end
 
+  def test_construct_from_addr
+    batched_sink = StatsD::Instrument::BatchedSink.for_addr(@socket_path)
+    assert_instance_of(StatsD::Instrument::BatchedSink, batched_sink)
+    assert_instance_of(StatsD::Instrument::UdsConnection, batched_sink.connection)
+  end
+
   def test_send_metric_with_tags
     metric = "test.metric"
     value = 42

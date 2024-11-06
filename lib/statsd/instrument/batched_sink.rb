@@ -18,13 +18,8 @@ module StatsD
 
       class << self
         def for_addr(addr, **kwargs)
-          if addr.include?(":")
-            sink = StatsD::Instrument::Sink.for_addr(addr)
-            new(sink, **kwargs)
-          else
-            connection = UdsConnection.new(addr)
-            new(connection, **kwargs)
-          end
+          sink = StatsD::Instrument::Sink.for_addr(addr)
+          new(sink, **kwargs)
         end
 
         def finalize(dispatcher)

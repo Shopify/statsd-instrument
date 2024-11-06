@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.7
+
+- [#389](https://github.com/Shopify/statsd-instrument/pull/389) - Fixing bug with BatchedSink constructor when using UDS, the constructor was not properly passing the Sink to the BatchedSink.
+
 ## Version 3.9.6
 
 - [#388](https://github.com/Shopify/statsd-instrument/pull/388) - Properly fixing the bug when using aggregation and sending sampled
