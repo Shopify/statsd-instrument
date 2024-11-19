@@ -33,6 +33,14 @@ module StatsD
           sink: env.default_sink_for_environment,
           datagram_builder_class: datagram_builder_class_for_implementation(implementation)
         )
+
+          emitter = StatsD::Instrument::Emitter.new(
+            sink,
+            datagram_builder_class,
+            prefix,
+            default_tags,
+            default_sample_rate
+          )
           new(
             prefix: prefix,
             default_sample_rate: default_sample_rate,
