@@ -22,6 +22,11 @@ module StatsD
 
       def close
         @socket&.close
+      rescue IOError, SystemCallError => e
+        StatsD.logger.debug do
+          "[#{self.class.name}] Error closing socket: #{e.class}: #{e.message}"
+        end
+      ensure
         @socket = nil
       end
 
@@ -45,6 +50,11 @@ module StatsD
           socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_SNDBUF, @max_packet_size.to_i)
           socket.connect(Socket.pack_sockaddr_un(@socket_path))
           socket
+        rescue IOError => e
+          StatsD.logger.debug do
+            "[#{self.class.name}] Failed to create socket: #{e.class}: #{e.message}"
+          end
+          nil
         end
       end
     end

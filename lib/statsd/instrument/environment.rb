@@ -104,10 +104,10 @@ module StatsD
 
       def statsd_max_packet_size
         if statsd_uds_send?
-          return Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdsConnection::DEFAULT_MAX_PACKET_SIZE))
+          Integer(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdsConnection::DEFAULT_MAX_PACKET_SIZE))
+        else
+          Integer(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdpConnection::DEFAULT_MAX_PACKET_SIZE))
         end
-
-        Float(env.fetch("STATSD_MAX_PACKET_SIZE", StatsD::Instrument::UdpConnection::DEFAULT_MAX_PACKET_SIZE))
       end
 
       def statsd_batch_statistics_interval
@@ -140,19 +140,25 @@ module StatsD
         case environment
         when "production", "staging"
           connection = if statsd_uds_send?
-            StatsD::Instrument::UdsConnection.new(statsd_socket_path)
+            StatsD::Instrument::UdsConnection.new(
+              statsd_socket_path,
+              max_packet_size: statsd_max_packet_size.to_i,
+            )
           else
             host, port = statsd_addr.split(":")
-            StatsD::Instrument::UdpConnection.new(host, port.to_i)
+            StatsD::Instrument::UdpConnection.new(
+              host,
+              port.to_i,
+              max_packet_size: statsd_max_packet_size.to_i,
+            )
           end
 
           sink = StatsD::Instrument::Sink.new(connection)
           if statsd_batching?
-            # if we are batching, wrap the sink in a batched sink
             return StatsD::Instrument::BatchedSink.new(
               sink,
               buffer_capacity: statsd_buffer_capacity,
-              max_packet_size: statsd_max_packet_size,
+              max_packet_size: statsd_max_packet_size.to_i,
               statistics_interval: statsd_batch_statistics_interval,
             )
           end

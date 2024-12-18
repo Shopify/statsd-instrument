@@ -76,4 +76,55 @@ class EnvironmentTest < Minitest::Test
     )
     assert_kind_of(StatsD::Instrument::Sink, env.client.sink)
   end
+
+  def test_client_from_env_uses_uds_sink_with_correct_packet_size_in_production
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_ENV" => "production",
+      "STATSD_SOCKET_PATH" => "/tmp/statsd.sock",
+      "STATSD_MAX_PACKET_SIZE" => "65507",
+      "STATSD_USE_NEW_CLIENT" => "1"
+    )
+
+    client = env.client
+    sink = client.sink
+    connection = sink.connection
+
+    assert_kind_of(StatsD::Instrument::UdsConnection, connection)
+    assert_equal(65507, connection.instance_variable_get(:@max_packet_size))
+  end
+
+  def test_client_from_env_uses_default_packet_size_for_uds_when_not_specified
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_ENV" => "production",
+      "STATSD_SOCKET_PATH" => "/tmp/statsd.sock",
+      "STATSD_USE_NEW_CLIENT" => "1"
+    )
+
+    client = env.client
+    sink = client.sink
+    connection = sink.connection
+
+    assert_kind_of(StatsD::Instrument::UdsConnection, connection)
+    assert_equal(StatsD::Instrument::UdsConnection::DEFAULT_MAX_PACKET_SIZE,
+      connection.instance_variable_get(:@max_packet_size))
+  end
+
+  def test_client_from_env_uses_batched_uds_sink_with_correct_packet_size
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_ENV" => "production",
+      "STATSD_SOCKET_PATH" => "/tmp/statsd.sock",
+      "STATSD_MAX_PACKET_SIZE" => "65507",
+      "STATSD_BUFFER_CAPACITY" => "1000",
+      "STATSD_USE_NEW_CLIENT" => "1",
+    )
+
+    client = env.client
+    sink = client.sink
+    assert_kind_of(StatsD::Instrument::BatchedSink, sink)
+
+    underlying_sink = sink.instance_variable_get(:@sink)
+    connection = underlying_sink.connection
+    assert_kind_of(StatsD::Instrument::UdsConnection, connection)
+    assert_equal(65507, connection.instance_variable_get(:@max_packet_size))
+  end
 end

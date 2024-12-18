@@ -40,12 +40,15 @@ module StatsD
           connection.send_datagram(datagram)
         rescue SocketError, IOError, SystemCallError => error
           StatsD.logger.debug do
-            "[#{self.class.name}] Resetting connection because of #{error.class}: #{error.message}"
+            "[#{self.class.name}] [#{connection.class.name}] " \
+              "Resetting connection because of #{error.class}: #{error.message}"
           end
           invalidate_connection
           if retried
             StatsD.logger.warn do
-              "[#{self.class.name}] Events were dropped because of #{error.class}: #{error.message}"
+              "[#{self.class.name}] [#{connection.class.name}] " \
+                "Events were dropped (after retrying) because of #{error.class}: #{error.message}. " \
+                "Message size: #{datagram.bytesize} bytes."
             end
           else
             retried = true
