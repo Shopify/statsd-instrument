@@ -82,7 +82,7 @@ class EnvironmentTest < Minitest::Test
       "STATSD_ENV" => "production",
       "STATSD_SOCKET_PATH" => "/tmp/statsd.sock",
       "STATSD_MAX_PACKET_SIZE" => "65507",
-      "STATSD_USE_NEW_CLIENT" => "1"
+      "STATSD_USE_NEW_CLIENT" => "1",
     )
 
     client = env.client
@@ -97,7 +97,7 @@ class EnvironmentTest < Minitest::Test
     env = StatsD::Instrument::Environment.new(
       "STATSD_ENV" => "production",
       "STATSD_SOCKET_PATH" => "/tmp/statsd.sock",
-      "STATSD_USE_NEW_CLIENT" => "1"
+      "STATSD_USE_NEW_CLIENT" => "1",
     )
 
     client = env.client
@@ -105,8 +105,10 @@ class EnvironmentTest < Minitest::Test
     connection = sink.connection
 
     assert_kind_of(StatsD::Instrument::UdsConnection, connection)
-    assert_equal(StatsD::Instrument::UdsConnection::DEFAULT_MAX_PACKET_SIZE,
-      connection.instance_variable_get(:@max_packet_size))
+    assert_equal(
+      StatsD::Instrument::UdsConnection::DEFAULT_MAX_PACKET_SIZE,
+      connection.instance_variable_get(:@max_packet_size),
+    )
   end
 
   def test_client_from_env_uses_batched_uds_sink_with_correct_packet_size

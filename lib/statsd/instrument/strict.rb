@@ -65,7 +65,6 @@ module StatsD
 
       def event(title, text, tags: nil, no_prefix: false,
         hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil)
-
         super
       end
 

@@ -33,7 +33,6 @@ module StatsD
       # @see https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/#events
       def _e(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
         source_type_name: nil, alert_type: nil, tags: nil)
-
         escaped_title = "#{@prefix}#{title}".gsub("\n", '\n')
         escaped_text = text.gsub("\n", '\n')
 

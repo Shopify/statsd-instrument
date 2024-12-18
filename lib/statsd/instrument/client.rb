@@ -459,7 +459,6 @@ module StatsD
       # @note Supported by the Datadog implementation only.
       def event(title, text, timestamp: nil, hostname: nil, aggregation_key: nil, priority: nil,
         source_type_name: nil, alert_type: nil, tags: nil, no_prefix: false)
-
         emit(datagram_builder(no_prefix: no_prefix)._e(
           title,
           text,
