@@ -30,6 +30,15 @@ module StatsD
   end
 end
 
+# Add helper methods available to all tests
+module Minitest
+  class Test
+    def skip_on_jruby(message = "Test skipped on JRuby")
+      skip(message) if RUBY_ENGINE == "jruby"
+    end
+  end
+end
+
 StatsD.logger = Logger.new(File::NULL)
 
 Thread.abort_on_exception = true

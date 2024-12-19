@@ -35,10 +35,6 @@ module UdsTestHelper
     @sink ||= build_sink(@socket_path)
   end
 
-  def skip_on_jruby(message = "JRuby does not support UNIX domain sockets")
-    skip(message) if RUBY_PLATFORM == "java"
-  end
-
   def read_datagrams(count, timeout: ENV["CI"] ? 5 : 1)
     datagrams = []
     count.times do

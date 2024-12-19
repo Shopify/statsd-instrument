@@ -78,6 +78,7 @@ class EnvironmentTest < Minitest::Test
   end
 
   def test_client_from_env_uses_uds_sink_with_correct_packet_size_in_production
+    skip_on_jruby("JRuby does not support UNIX domain sockets")
     socket_path = "/tmp/statsd-test-#{Process.pid}.sock"
 
     # Create a UDS server socket
@@ -105,6 +106,7 @@ class EnvironmentTest < Minitest::Test
   end
 
   def test_client_from_env_uses_default_packet_size_for_uds_when_not_specified
+    skip_on_jruby("JRuby does not support UNIX domain sockets")
     socket_path = "/tmp/statsd-test-#{Process.pid}-default.sock"
 
     # Create a UDS server socket
@@ -134,6 +136,7 @@ class EnvironmentTest < Minitest::Test
   end
 
   def test_client_from_env_uses_batched_uds_sink_with_correct_packet_size
+    skip_on_jruby("JRuby does not support UNIX domain sockets")
     socket_path = "/tmp/statsd-test-#{Process.pid}-batched.sock"
 
     # Create a UDS server socket
