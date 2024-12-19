@@ -3,6 +3,8 @@
 module StatsD
   module Instrument
     class UdsConnection
+      include ConnectionBehavior
+
       DEFAULT_MAX_PACKET_SIZE = 8_192
 
       def initialize(socket_path, max_packet_size: DEFAULT_MAX_PACKET_SIZE)
@@ -17,12 +19,7 @@ module StatsD
       end
 
       def send_datagram(message)
-        socket.sendmsg(message, 0)
-      end
-
-      def close
-        @socket&.close
-        @socket = nil
+        socket&.sendmsg(message, 0)
       end
 
       def host
@@ -41,10 +38,10 @@ module StatsD
 
       def socket
         @socket ||= begin
-          socket = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
-          socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_SNDBUF, @max_packet_size.to_i)
-          socket.connect(Socket.pack_sockaddr_un(@socket_path))
-          socket
+          unix_socket = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
+          setup_socket(unix_socket)&.tap do |s|
+            s.connect(Socket.pack_sockaddr_un(@socket_path))
+          end
         end
       end
     end

@@ -6,6 +6,11 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.8
+
+- [#390](https://github.com/Shopify/statsd-instrument/pull/391) - Fixing bug in Environment when using UDS. The max packet size option was not being passed to the 
+UDS connection, causing messages that were too large to be dropped (specially sensitive when used together with BatchedSink).
+
 ## Version 3.9.7
 
 - [#389](https://github.com/Shopify/statsd-instrument/pull/389) - Fixing bug with BatchedSink constructor when using UDS, the constructor was not properly passing the Sink to the BatchedSink.
