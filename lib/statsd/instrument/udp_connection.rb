@@ -27,8 +27,8 @@ module StatsD
 
       def socket
         @socket ||= begin
-          socket = UDPSocket.new
-          setup_socket(socket)&.tap do |s|
+          udp_socket = UDPSocket.new
+          setup_socket(udp_socket)&.tap do |s|
             s.connect(@host, @port)
           end
         end

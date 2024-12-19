@@ -149,15 +149,26 @@ class UDPSinkTest < Minitest::Test
       UDPSocket.stubs(:new).returns(socket = mock("socket"))
 
       seq = sequence("connect_fail_connect_succeed")
+
+      # First attempt
       socket.expects(:setsockopt)
         .with(Socket::SOL_SOCKET, Socket::SO_SNDBUF, StatsD::Instrument::UdpConnection::DEFAULT_MAX_PACKET_SIZE)
+        .in_sequence(seq)
+      socket.expects(:getsockopt)
+        .with(Socket::SOL_SOCKET, Socket::SO_SNDBUF)
+        .returns(mock(int: StatsD::Instrument::UdpConnection::DEFAULT_MAX_PACKET_SIZE))
         .in_sequence(seq)
       socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
       socket.expects(:send).raises(Errno::EDESTADDRREQ).in_sequence(seq)
       socket.expects(:close).in_sequence(seq)
 
+      # Second attempt after error
       socket.expects(:setsockopt)
         .with(Socket::SOL_SOCKET, Socket::SO_SNDBUF, StatsD::Instrument::UdpConnection::DEFAULT_MAX_PACKET_SIZE)
+        .in_sequence(seq)
+      socket.expects(:getsockopt)
+        .with(Socket::SOL_SOCKET, Socket::SO_SNDBUF)
+        .returns(mock(int: StatsD::Instrument::UdpConnection::DEFAULT_MAX_PACKET_SIZE))
         .in_sequence(seq)
       socket.expects(:connect).with("localhost", 8125).in_sequence(seq)
       socket.expects(:send).twice.returns(1).in_sequence(seq)

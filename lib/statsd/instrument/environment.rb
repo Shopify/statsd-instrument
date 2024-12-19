@@ -142,23 +142,30 @@ module StatsD
           connection = if statsd_uds_send?
             StatsD::Instrument::UdsConnection.new(
               statsd_socket_path,
-              max_packet_size: statsd_max_packet_size.to_i,
+              max_packet_size: statsd_max_packet_size,
             )
           else
             host, port = statsd_addr.split(":")
             StatsD::Instrument::UdpConnection.new(
               host,
               port.to_i,
-              max_packet_size: statsd_max_packet_size.to_i,
+              max_packet_size: statsd_max_packet_size,
             )
           end
 
           sink = StatsD::Instrument::Sink.new(connection)
           if statsd_batching?
+            current_send_buffer_size = connection.send_buffer_size
+            if current_send_buffer_size < statsd_max_packet_size
+              StatsD.logger.warn do
+                "[StatsD::Instrument::Environment] Send buffer size #{current_send_buffer_size} differs from " \
+                  "max packet size #{statsd_max_packet_size}. Using send buffer size as max packet size."
+              end
+            end
             return StatsD::Instrument::BatchedSink.new(
               sink,
               buffer_capacity: statsd_buffer_capacity,
-              max_packet_size: statsd_max_packet_size.to_i,
+              max_packet_size: [current_send_buffer_size, statsd_max_packet_size].min,
               statistics_interval: statsd_batch_statistics_interval,
             )
           end

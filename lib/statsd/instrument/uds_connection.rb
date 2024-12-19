@@ -38,8 +38,8 @@ module StatsD
 
       def socket
         @socket ||= begin
-          socket = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
-          setup_socket(socket)&.tap do |s|
+          unix_socket = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
+          setup_socket(unix_socket)&.tap do |s|
             s.connect(Socket.pack_sockaddr_un(@socket_path))
           end
         end
