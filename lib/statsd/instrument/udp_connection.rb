@@ -3,6 +3,8 @@
 module StatsD
   module Instrument
     class UdpConnection
+      include ConnectionBehavior
+
       DEFAULT_MAX_PACKET_SIZE = 1_472
 
       attr_reader :host, :port
@@ -17,11 +19,6 @@ module StatsD
         socket.send(message, 0)
       end
 
-      def close
-        @socket&.close
-        @socket = nil
-      end
-
       def type
         :udp
       end
@@ -31,9 +28,9 @@ module StatsD
       def socket
         @socket ||= begin
           socket = UDPSocket.new
-          socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_SNDBUF, @max_packet_size)
-          socket.connect(@host, @port)
-          socket
+          setup_socket(socket)&.tap do |s|
+            s.connect(@host, @port)
+          end
         end
       end
     end
