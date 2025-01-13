@@ -42,7 +42,7 @@ module StatsD
         original_socket
       rescue IOError => e
         StatsD.logger.debug do
-          "[#{self.class.name}] Failed to create socket: #{e.class}: #{e.message}"
+          "[#{self.class.name}] Failed to setup socket: #{e.class}: #{e.message}"
         end
         nil
       end
