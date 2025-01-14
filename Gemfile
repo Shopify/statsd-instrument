@@ -19,4 +19,9 @@ platform :mri do
   if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.2")
     gem "vernier", require: false
   end
+
+  # From Ruby >= 3.5, logger is not part of the stdlib anymore
+  if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.5")
+    gem "logger"
+  end
 end

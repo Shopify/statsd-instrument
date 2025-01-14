@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.9
+
+- [#392](https://github.com/Shopify/statsd-instrument/pull/392) - Prevent ENOBUFS errors when using UDP, by skipping setting socket buffer size.
+
 ## Version 3.9.8
 
 - [#390](https://github.com/Shopify/statsd-instrument/pull/391) - Fixing bug in Environment when using UDS. The max packet size option was not being passed to the 

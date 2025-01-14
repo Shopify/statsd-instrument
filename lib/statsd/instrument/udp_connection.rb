@@ -25,11 +25,16 @@ module StatsD
 
       private
 
+      def setup_socket(original_socket)
+        original_socket
+      end
+
       def socket
         @socket ||= begin
-          udp_socket = UDPSocket.new
+          family = Addrinfo.udp(host, port).afamily
+          udp_socket = UDPSocket.new(family)
           setup_socket(udp_socket)&.tap do |s|
-            s.connect(@host, @port)
+            s.connect(host, port)
           end
         end
       end
