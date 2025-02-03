@@ -38,10 +38,18 @@ module StatsD
       # Generates the tags for an instrumented method.
       # @private
       # @return [Array[String]]
-      def generate_tags(tags, callee, *args)
+      def generate_tags(tags, callee, result=nil, *args)
         return if tags.nil?
 
-        tags.respond_to?(:call) ? tags.call(callee, args) : tags
+        if tags.respond_to?(:call)
+          if result.nil?
+            tags.call(callee, args)
+          else
+            tags.call(callee, args, result)
+          end
+        else
+          tags
+        end
       end
 
       # Even though this method is considered private, and is no longer used internally,
@@ -214,6 +222,23 @@ module StatsD
           generated_tags = StatsD::Instrument.generate_tags(tags, self, *args)
           client.increment(key, sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix)
           super(*args, &block)
+        end
+      end
+    end
+
+    def statsd_count_but_better(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
+      add_to_method(method, name, :count_but_better) do
+        define_method(method) do |*args, &block|
+          error = nil
+          result = super(*args, &block)
+        rescue => e
+          error = e
+          raise
+        ensure
+          client ||= StatsD.singleton_client
+          generated_metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
+          generated_tags = StatsD::Instrument.generate_tags(tags, self, result, *args)
+          client.increment(generated_metric_name, sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix)
         end
       end
     end
