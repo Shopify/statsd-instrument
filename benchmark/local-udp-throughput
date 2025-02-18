@@ -123,13 +123,13 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
   receiver_uds.bind(Socket.pack_sockaddr_un(SOCKET_PATH))
   # with UDS we have to take data out of the socket, otherwise it will fill up
   # and we will block writing to it (which is what we are testing)
-  consume = Thread.new do
-    loop do
-      receiver_uds.recv(32768)
-    rescue
-      # Ignored
-    end
-  end
+  # consume = Thread.new do
+  #   loop do
+  #     receiver_uds.recv(32768)
+  #   rescue
+  #     # Ignored
+  #   end
+  # end
 
   log_file = File.open(log_filename, "w+", level: Logger::WARN)
   StatsD.logger = Logger.new(log_file)
@@ -170,7 +170,7 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
 
   duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
 
-  consume.kill
+  # consume.kill
   receiver.close
   receiver_uds.close
 
@@ -179,21 +179,21 @@ def benchmark_implementation(name, env = {}, datadog_client = false)
   puts "events: #{(events_sent / duration).round(1).to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse}/s"
 end
 
-if ENABLE_PROFILING
-  Vernier.start_profile(out: "tmp/benchmark_profile_udp_sync.json")
-end
-benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
-if ENABLE_PROFILING
-  Vernier.stop_profile
-end
+# if ENABLE_PROFILING
+#   Vernier.start_profile(out: "tmp/benchmark_profile_udp_sync.json")
+# end
+# benchmark_implementation("UDP sync", "STATSD_BUFFER_CAPACITY" => "0")
+# if ENABLE_PROFILING
+#   Vernier.stop_profile
+# end
 
-if ENABLE_PROFILING
-  Vernier.start_profile(out: "tmp/benchmark_profile_udp_async.json")
-end
-benchmark_implementation("UDP batched")
-if ENABLE_PROFILING
-  Vernier.stop_profile
-end
+# if ENABLE_PROFILING
+#   Vernier.start_profile(out: "tmp/benchmark_profile_udp_async.json")
+# end
+# benchmark_implementation("UDP batched")
+# if ENABLE_PROFILING
+#   Vernier.stop_profile
+# end
 
 if ENABLE_PROFILING
   Vernier.start_profile(out: "tmp/benchmark_profile_uds_small_packet.json")

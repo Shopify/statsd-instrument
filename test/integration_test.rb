@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "fileutils"
 
 class IntegrationTest < Minitest::Test
   def setup
@@ -102,5 +103,66 @@ class IntegrationTest < Minitest::Test
 
     assert_match(/counter:\d+|c/, packets.find { |packet| packet.start_with?("counter:") })
     assert_match(/test_distribution:\d+:3|d/, packets.find { |packet| packet.start_with?("test_distribution:") })
+  end
+
+  def test_live_local_uds_socket
+    socket_path = "/tmp/statsd-test-#{Process.pid}.socket"
+    begin
+      # Set up server with specific configuration
+      server = Socket.new(Socket::AF_UNIX, Socket::SOCK_DGRAM)
+      server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
+      server.setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVBUF, 8192) # Using DEFAULT_MAX_PACKET_SIZE
+      server.bind(Socket.pack_sockaddr_un(socket_path))
+
+      # Get and print the actual receive buffer size
+      actual_rcvbuf = server.getsockopt(Socket::SOL_SOCKET, Socket::SO_RCVBUF).int
+      puts "\nServer receive buffer size: #{actual_rcvbuf} bytes"
+
+      # Verify socket file exists
+      assert(File.exist?(socket_path), "Socket file should exist")
+
+      puts "Using socket path: #{socket_path}"
+      client = StatsD::Instrument::Environment.new(
+        "STATSD_SOCKET_PATH" => socket_path,
+        "STATSD_IMPLEMENTATION" => "dogstatsd",
+        "STATSD_ENV" => "production",
+      ).client
+
+      logger = Logger.new($stdout)
+      logger.level = Logger::INFO
+
+      StatsD.logger = logger
+
+      # Send messages until we block
+      start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+      # Create a large message
+      large_tags = (1..100).map { |i| "tag#{i}:value#{i}" }
+      test_message = "overflow_counter:2|c|##{large_tags.join(",")}"
+      puts "\nTest message size: #{test_message.bytesize} bytes"
+
+      begin
+        Timeout.timeout(1.0) do
+          100_000.times do |i|
+            client.distribution("overflow_distribution", 299, tags: large_tags)
+          end
+        end
+      rescue Timeout::Error
+        puts "Hit timeout as expected"
+      end
+      finish = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+      total_time = finish - start
+      puts "\nTotal time: #{total_time}s"
+      puts "Messages received: #{messages_received}"
+      puts "Average time per message: #{(total_time / 100_000.0) * 1000}ms"
+
+      # Should have blocked and hit the timeout
+      assert_operator(finish - start, :>, 0.5, "Should have blocked when socket buffer is full")
+    ensure
+      # slow_reader&.kill
+      server&.close
+      File.unlink(socket_path) if File.exist?(socket_path)
+    end
   end
 end
