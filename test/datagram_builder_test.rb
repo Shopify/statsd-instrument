@@ -27,6 +27,53 @@ class DatagramBuilderTest < Minitest::Test
     assert_equal("tag1:v1,tag2:v2", @datagram_builder.send(:compile_tags, { tag1: "v1", tag2: "v2" }))
   end
 
+  def test_compile_tags_memoizes_tags_from_string
+    tag_input = "tag1:v1"
+    compiled_tags = "tag1:v1"
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+    assert_equal({ tag_input => compiled_tags }, @datagram_builder.instance_variable_get(:@tag_cache))
+
+    assert_equal(compiled_tags, @datagram_builder.instance_variable_get(:@tag_cache)[tag_input])
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+  end
+
+  def test_compile_tags_memoizes_normalized_tags_from_string
+    tag_input = "tag1:v1|o"
+    compiled_tags = "tag1:v1_o"
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+    assert_equal({ tag_input => compiled_tags }, @datagram_builder.instance_variable_get(:@tag_cache))
+
+    assert_equal(compiled_tags, @datagram_builder.instance_variable_get(:@tag_cache)[tag_input])
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+  end
+
+  def test_compile_tags_memoizes_tags_from_hash
+    tag_input = { tag1: "v1", tag2: "v2" }
+    compiled_tags = "tag1:v1,tag2:v2"
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+    assert_equal({ tag_input => compiled_tags }, @datagram_builder.instance_variable_get(:@tag_cache))
+    assert_equal(compiled_tags, @datagram_builder.instance_variable_get(:@tag_cache)[tag_input])
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+  end
+
+  def test_compile_tags_memoizes_tags_from_array
+    tag_input = ["tag1:v1", "tag2:v2"]
+    compiled_tags = "tag1:v1,tag2:v2"
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+    assert_equal({ tag_input => compiled_tags }, @datagram_builder.instance_variable_get(:@tag_cache))
+    assert_equal(compiled_tags, @datagram_builder.instance_variable_get(:@tag_cache)[tag_input])
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+  end
+
+  def test_compile_tags_memoizes_normalized_tags_from_array
+    tag_input = ["tag1:v1|,", "tag2:v2"]
+    compiled_tags = "tag1:v1,tag2:v2"
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+    assert_equal({ tag_input => compiled_tags }, @datagram_builder.instance_variable_get(:@tag_cache))
+    assert_equal(compiled_tags, @datagram_builder.instance_variable_get(:@tag_cache)[tag_input])
+    assert_equal(compiled_tags, @datagram_builder.send(:compile_tags, tag_input))
+  end
+
   def test_c
     datagram = @datagram_builder.c("foo", 1, nil, nil)
     assert_equal("foo:1|c", datagram)
