@@ -104,30 +104,43 @@ module StatsD
       end
 
       def compile_tags(tags, buffer = "".b)
+        @tag_cache ||= {}
+        if (tag_str = @tag_cache[tags])
+          buffer << tag_str
+          return buffer
+        end
         if tags.is_a?(String)
-          tags = self.class.normalize_string(tags) if /[|,]/.match?(tags)
-          buffer << tags
+          normalized_tags = /[|,]/.match?(tags) ? self.class.normalize_string(tags) : tags
+          @tag_cache[tags] = normalized_tags
+          buffer << normalized_tags
           return buffer
         end
         if tags.is_a?(Hash)
           first = true
+          tag_repr = "".b
           tags.each do |key, value|
             if first
               first = false
             else
-              buffer << ","
+              tag_repr << ","
             end
             key = key.to_s
             key = key.tr("|,", "") if /[|,]/.match?(key)
             value = value.to_s
             value = value.tr("|,", "") if /[|,]/.match?(value)
-            buffer << key << ":" << value
+            tag_repr << key << ":" << value
           end
+          @tag_cache[tags] = tag_repr
+          buffer << tag_repr
         else
+          tag_array = [tags]
           if tags.any? { |tag| /[|,]/.match?(tag) }
-            tags = tags.map { |tag| tag.tr("|,", "") }
+            tag_array = tags.map { |tag| tag.tr("|,", "") }
           end
-          buffer << tags.join(",")
+          tag_str = tag_array.flatten.join(",")
+          @tag_cache[tags] = tag_str
+
+          buffer << tag_str
         end
         buffer
       end
