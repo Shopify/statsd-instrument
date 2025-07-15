@@ -44,6 +44,23 @@ module StatsD
         tags.respond_to?(:call) ? tags.call(callee, args) : tags
       end
 
+      # Generates the tags for an instrumented method with full context.
+      # @private
+      # @param tags [Hash, Proc] The tags to be associated with the metric. You can also
+      #    pass in a proc to dynamically generate the tags key and values
+      # @param callee The object that the method was called on
+      # @param result The result of the method call
+      # @param exception The exception that was raised, if any
+      # @param args The arguments passed to the method
+      # @return [Array[String], nil]
+      def generate_tags_for_result(tags, callee, result, exception, *args)
+        if tags.respond_to?(:call)
+          tags.call(callee, args, result, exception)
+        else
+          tags
+        end
+      end
+
       # Even though this method is considered private, and is no longer used internally,
       # applications in the wild rely on it. As a result, we cannot remove this method
       # until the next major version.
@@ -214,6 +231,36 @@ module StatsD
           generated_tags = StatsD::Instrument.generate_tags(tags, self, *args)
           client.increment(key, sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix)
           super(*args, &block)
+        end
+      end
+    end
+
+    # Adds counter instrumentation to a method with full context exposed to the tags.
+    #
+    # The metric will be incremented for every call of the instrumented method, no matter
+    # whether what the method returns, or whether it raises an exception.
+    #
+    # @param method (see client#increment)
+    # @param name (see client#increment)
+    # @param sample_rate (see client#increment)
+    # @param tags [Hash, Proc] The tags to be associated with the metric. You can also
+    #    pass in a proc to dynamically generate the tags key and values
+    # @param no_prefix (see client#increment)
+    # @param client (see client#increment)
+    # @return [void]
+    def statsd_result(method, name, sample_rate: nil, tags: nil, no_prefix: false, client: nil)
+      add_to_method(method, name, :result) do
+        define_method(method) do |*args, &block|
+          exception = nil
+          result = super(*args, &block)
+        rescue => e
+          exception = e
+          raise e
+        ensure
+          client ||= StatsD.singleton_client
+          generated_metric_name = StatsD::Instrument.generate_metric_name(name, self, *args)
+          generated_tags = StatsD::Instrument.generate_tags_for_result(tags, self, result, exception, *args)
+          client.increment(generated_metric_name, sample_rate: sample_rate, tags: generated_tags, no_prefix: no_prefix)
         end
       end
     end
