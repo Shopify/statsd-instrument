@@ -362,7 +362,7 @@ module StatsD
     # @!method distribution(name, value = nil, sample_rate: nil, tags: nil, &block)
     #   (see StatsD::Instrument::Client#distribution)
     #
-    # @!method event(title, text, tags: nil, hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil) # rubocop:disable Layout/LineLength
+    # @!method event(title, text, tags: nil, hostname: nil, timestamp: nil, aggregation_key: nil, priority: nil, source_type_name: nil, alert_type: nil)
     #   (see StatsD::Instrument::Client#event)
     #
     # @!method service_check(name, status, tags: nil, hostname: nil, timestamp: nil, message: nil)

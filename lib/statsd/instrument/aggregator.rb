@@ -278,6 +278,16 @@ module StatsD
           end
           true
         end
+      rescue ThreadError => e
+        # If we're in a trap context, we can't use mutex synchronization
+        # Fall back to direct writes to avoid losing metrics
+        if e.message.include?("can't be called from trap context")
+          StatsD.logger.debug { "[#{self.class.name}] In trap context, falling back to direct writes" }
+          false
+        else
+          # Re-raise other ThreadErrors
+          raise
+        end
       end
     end
   end

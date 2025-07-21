@@ -354,47 +354,49 @@ class AggregatorTest < Minitest::Test
     assert_equal(0.01, sampled_timing_datagram.sample_rate)
   end
 
-  def test_signal_trap_context_mutex_error
+  def test_signal_trap_context_fallback_to_direct_writes
     skip("#{RUBY_ENGINE} not supported for this test. Reason: signal handling") if RUBY_ENGINE != "ruby"
 
-    error_raised = nil
     signal_received = false
+    metrics_sent_in_trap = []
 
-    # Set up a signal trap that tries to use the aggregator
     old_trap = Signal.trap("USR1") do
       signal_received = true
-      begin
-        # These operations should fail because they use mutex synchronization
-        # which is not allowed in trap context
-        @subject.increment("trap_counter", 1)
-        @subject.gauge("trap_gauge", 42)
-        @subject.aggregate_timing("trap_timing", 100)
-      rescue => e
-        error_raised = e
-        # Debug output to see what error we get
-        $stderr.puts "Error in trap: #{e.class}: #{e.message}"
-        $stderr.puts e.backtrace.first(5).join("\n")
-      end
+      # These operations should now fall back to direct writes
+      @subject.increment("trap_counter", 1)
+      @subject.gauge("trap_gauge", 42)
+      @subject.aggregate_timing("trap_timing", 100)
+
+      metrics_sent_in_trap = @sink.datagrams.map(&:name)
     end
 
-    # Ensure aggregator is working normally outside trap
-    @subject.increment("normal_counter", 1)
+    @sink.clear
 
-    # Send signal to ourselves
     Process.kill("USR1", Process.pid)
 
-    # Give a moment for signal to be processed
     sleep(0.1)
 
     assert(signal_received, "Signal should have been received")
-    assert(error_raised, "Expected an error when trying to use mutex in trap context")
-    assert_match(
-      /can't be called from trap context|synchronize|Mutex/i,
-      error_raised.message,
-      "Error should mention trap context or mutex issue: #{error_raised.message}",
+
+    assert_includes(metrics_sent_in_trap, "trap_counter")
+    assert_includes(metrics_sent_in_trap, "trap_gauge")
+    assert_includes(metrics_sent_in_trap, "trap_timing")
+
+    counter_datagram = @sink.datagrams.find { |d| d.name == "trap_counter" }
+    assert_equal(1, counter_datagram.value)
+
+    gauge_datagram = @sink.datagrams.find { |d| d.name == "trap_gauge" }
+    assert_equal(42, gauge_datagram.value)
+
+    timing_datagram = @sink.datagrams.find { |d| d.name == "trap_timing" }
+    assert_equal([100.0], [timing_datagram.value].flatten)
+
+    debug_messages = @logger.messages.select { |m| m[:severity] == :debug }
+    assert(
+      debug_messages.any? { |m| m[:message].include?("In trap context, falling back to direct writes") },
+      "Expected debug message about trap context fallback",
     )
   ensure
-    # Restore original signal handler
     Signal.trap("USR1", old_trap || "DEFAULT")
   end
 end
