@@ -103,4 +103,52 @@ class IntegrationTest < Minitest::Test
     assert_match(/counter:\d+|c/, packets.find { |packet| packet.start_with?("counter:") })
     assert_match(/test_distribution:\d+:3|d/, packets.find { |packet| packet.start_with?("test_distribution:") })
   end
+
+  def test_signal_trap_with_aggregation_causes_mutex_error
+    skip("#{RUBY_ENGINE} not supported for this test. Reason: signal handling") if RUBY_ENGINE != "ruby"
+
+    client = StatsD::Instrument::Environment.new(
+      "STATSD_ADDR" => "#{@server.addr[2]}:#{@server.addr[1]}",
+      "STATSD_IMPLEMENTATION" => "dogstatsd",
+      "STATSD_ENV" => "production",
+      "STATSD_ENABLE_AGGREGATION" => "true",
+      "STATSD_AGGREGATION_INTERVAL" => "5.0",
+    ).client
+
+    error_raised = nil
+    signal_received = false
+
+    # Set up a signal trap that tries to send metrics
+    old_trap = Signal.trap("USR1") do
+      signal_received = true
+      begin
+        # This should fail because we're in a trap context and can't use mutex
+        client.increment("trap_metric", 1)
+        client.gauge("trap_gauge", 42)
+        client.distribution("trap_distribution", 100)
+      rescue => e
+        error_raised = e
+      end
+    end
+
+    # Ensure aggregator is initialized
+    client.increment("startup_metric", 1)
+
+    # Send signal to ourselves
+    Process.kill("USR1", Process.pid)
+
+    # Give a moment for signal to be processed
+    sleep(0.1)
+
+    assert(signal_received, "Signal should have been received")
+    assert(error_raised, "Expected an error when trying to use mutex in trap context")
+    assert_match(
+      /can't be called from trap context|synchronize|Mutex/i,
+      error_raised.message,
+      "Error should mention trap context or mutex issue",
+    )
+  ensure
+    # Restore original signal handler
+    Signal.trap("USR1", old_trap || "DEFAULT")
+  end
 end
