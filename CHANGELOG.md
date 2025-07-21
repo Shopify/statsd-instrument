@@ -6,6 +6,14 @@ section below.
 
 ## Unreleased changes
 
+## Version 3.9.10
+
+- [#398](https://github.com/Shopify/statsd-instrument/pull/398) - Fix metrics not being sent from signal trap contexts when aggregation is enabled.
+  When the aggregator is enabled and metrics are emitted from within a signal handler (e.g., SIGTERM, SIGINT), 
+  the thread health check would fail with `ThreadError: can't be called from trap context` due to mutex 
+  synchronization. The aggregator now gracefully falls back to direct writes when called from a trap context, 
+  ensuring metrics are not lost during signal handling such as graceful shutdowns.
+
 ## Version 3.9.9
 
 - [#392](https://github.com/Shopify/statsd-instrument/pull/392) - Prevent ENOBUFS errors when using UDP, by skipping setting socket buffer size.
