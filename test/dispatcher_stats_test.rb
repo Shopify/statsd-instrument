@@ -48,21 +48,21 @@ class DispatcherStatsTest < Minitest::Test
     end
     assert_equal(batches.length, stats.instance_variable_get(:@batched_sends))
     assert_equal(
-      batches.map { |b|
+      batches.map do |b|
         b[:buffer_len]
-      }.sum / batches.length,
+      end.sum / batches.length,
       stats.instance_variable_get(:@avg_buffer_length),
     )
     assert_equal(
-      batches.map { |b|
+      batches.map do |b|
         b[:packet_size]
-      }.sum / batches.length,
+      end.sum / batches.length,
       stats.instance_variable_get(:@avg_batched_packet_size),
     )
     assert_equal(
-      batches.map { |b|
+      batches.map do |b|
         b[:batch_len]
-      }.sum / batches.length,
+      end.sum / batches.length,
       stats.instance_variable_get(:@avg_batch_length),
     )
   end

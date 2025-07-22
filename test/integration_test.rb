@@ -103,4 +103,56 @@ class IntegrationTest < Minitest::Test
     assert_match(/counter:\d+|c/, packets.find { |packet| packet.start_with?("counter:") })
     assert_match(/test_distribution:\d+:3|d/, packets.find { |packet| packet.start_with?("test_distribution:") })
   end
+
+  def test_signal_trap_with_aggregation_fallback
+    skip("#{RUBY_ENGINE} not supported for this test. Reason: signal handling") if RUBY_ENGINE != "ruby"
+
+    client = StatsD::Instrument::Environment.new(
+      "STATSD_ADDR" => "#{@server.addr[2]}:#{@server.addr[1]}",
+      "STATSD_IMPLEMENTATION" => "dogstatsd",
+      "STATSD_ENV" => "production",
+      "STATSD_ENABLE_AGGREGATION" => "true",
+      "STATSD_AGGREGATION_INTERVAL" => "5.0",
+    ).client
+
+    signal_received = false
+
+    old_trap = Signal.trap("USR1") do
+      signal_received = true
+      # These should fall back to direct writes
+      client.increment("trap_metric", 5)
+      client.gauge("trap_gauge", 42)
+      client.distribution("trap_distribution", 100)
+    end
+
+    Process.kill("USR1", Process.pid)
+
+    sleep(0.1)
+
+    assert(signal_received, "Signal should have been received")
+
+    packets = []
+    while IO.select([@server], nil, nil, 0.1)
+      packet = @server.recvfrom(300).first
+      packets.concat(packet.split("\n"))
+    end
+
+    # When aggregation is disabled due to trap context, metrics might be batched
+    assert(packets.size >= 3, "Expected at least 3 metrics, got #{packets.size}: #{packets.inspect}")
+
+    assert(
+      packets.any? { |p| p == "trap_metric:5|c" },
+      "Expected counter metric, got: #{packets.inspect}",
+    )
+    assert(
+      packets.any? { |p| p == "trap_gauge:42|g" },
+      "Expected gauge metric, got: #{packets.inspect}",
+    )
+    assert(
+      packets.any? { |p| p == "trap_distribution:100|d" },
+      "Expected distribution metric, got: #{packets.inspect}",
+    )
+  ensure
+    Signal.trap("USR1", old_trap || "DEFAULT")
+  end
 end

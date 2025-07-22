@@ -353,4 +353,50 @@ class AggregatorTest < Minitest::Test
     assert_equal(100.0, sampled_timing_datagram.value)
     assert_equal(0.01, sampled_timing_datagram.sample_rate)
   end
+
+  def test_signal_trap_context_fallback_to_direct_writes
+    skip("#{RUBY_ENGINE} not supported for this test. Reason: signal handling") if RUBY_ENGINE != "ruby"
+
+    signal_received = false
+    metrics_sent_in_trap = []
+
+    old_trap = Signal.trap("USR1") do
+      signal_received = true
+      # These operations should now fall back to direct writes
+      @subject.increment("trap_counter", 1)
+      @subject.gauge("trap_gauge", 42)
+      @subject.aggregate_timing("trap_timing", 100)
+
+      metrics_sent_in_trap = @sink.datagrams.map(&:name)
+    end
+
+    @sink.clear
+
+    Process.kill("USR1", Process.pid)
+
+    sleep(0.1)
+
+    assert(signal_received, "Signal should have been received")
+
+    assert_includes(metrics_sent_in_trap, "trap_counter")
+    assert_includes(metrics_sent_in_trap, "trap_gauge")
+    assert_includes(metrics_sent_in_trap, "trap_timing")
+
+    counter_datagram = @sink.datagrams.find { |d| d.name == "trap_counter" }
+    assert_equal(1, counter_datagram.value)
+
+    gauge_datagram = @sink.datagrams.find { |d| d.name == "trap_gauge" }
+    assert_equal(42, gauge_datagram.value)
+
+    timing_datagram = @sink.datagrams.find { |d| d.name == "trap_timing" }
+    assert_equal([100.0], [timing_datagram.value].flatten)
+
+    debug_messages = @logger.messages.select { |m| m[:severity] == :debug }
+    assert(
+      debug_messages.any? { |m| m[:message].include?("In trap context, falling back to direct writes") },
+      "Expected debug message about trap context fallback",
+    )
+  ensure
+    Signal.trap("USR1", old_trap || "DEFAULT")
+  end
 end
