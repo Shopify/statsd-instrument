@@ -7,8 +7,10 @@ gem "rake"
 gem "minitest"
 gem "rspec"
 gem "mocha"
+gem "cgi" # for mocha
 gem "yard"
 gem "rubocop", ">= 1.0"
+gem "tsort" # for rubocop
 gem "rubocop-shopify", require: false
 gem "benchmark-ips"
 gem "dogstatsd-ruby", "~> 5.0", require: false

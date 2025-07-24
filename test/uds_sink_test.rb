@@ -187,3 +187,10 @@ class BatchedUdsSinkTest < Minitest::Test
     sink
   end
 end
+
+class RactorBatchedUdsSinkTest < BatchedUdsSinkTest
+  def setup
+    super
+    @sink_class = StatsD::Instrument::RactorBatchedSink
+  end
+end
