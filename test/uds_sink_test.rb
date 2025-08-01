@@ -8,7 +8,7 @@ module UdsTestHelper
 
   private
 
-  def create_socket_file
+  def create_socket_file_path
     tmpdir = Dir.mktmpdir
     socket_path = File.join(tmpdir, "sockets", "statsd.sock")
     FileUtils.mkdir_p(File.dirname(socket_path))
@@ -56,7 +56,7 @@ class UdsSinkTest < Minitest::Test
 
   def setup
     @sink_class = StatsD::Instrument::Sink
-    @socket_path = create_socket_file
+    @socket_path = create_socket_file_path
     skip_on_jruby
 
     @receiver = create_receiver(@socket_path)
@@ -100,7 +100,7 @@ class BatchedUdsSinkTest < Minitest::Test
   include UdsTestHelper
 
   def setup
-    @socket_path = create_socket_file
+    @socket_path = create_socket_file_path
     @sink_class = StatsD::Instrument::BatchedSink
     @sinks = []
 
@@ -152,6 +152,7 @@ class BatchedUdsSinkTest < Minitest::Test
     sink = build_sink(@socket_path, buffer_capacity: buffer_size)
     dispatcher = sink.instance_variable_get(:@dispatcher)
     buffer = dispatcher.instance_variable_get(:@buffer)
+
     (buffer_size * 2).times { |i| sink << "foo:#{i}|c" }
     assert(!buffer.empty?)
     sink.flush(blocking: false)
@@ -159,12 +160,12 @@ class BatchedUdsSinkTest < Minitest::Test
   end
 
   def test_statistics
-    datagrams = StatsD.singleton_client.capture do
-      buffer_size = 2
-      sink = build_sink(@socket_path, buffer_capacity: buffer_size, statistics_interval: 0.1)
+    buffer_size = 2
+    sink = build_sink(@socket_path, buffer_capacity: buffer_size, statistics_interval: 0.1)
+    datagrams = sink.capture do
       2.times { |i| sink << "foo:#{i}|c" }
       sink.flush(blocking: false)
-      sink.instance_variable_get(:@dispatcher).instance_variable_get(:@statistics).maybe_flush!(force: true)
+      sink.instance_variable_get(:@dispatcher)&.instance_variable_get(:@statistics)&.maybe_flush!(force: true)
     end
 
     assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_uds_sink.avg_batch_length") })
@@ -189,8 +190,49 @@ class BatchedUdsSinkTest < Minitest::Test
 end
 
 class RactorBatchedUdsSinkTest < BatchedUdsSinkTest
+  Warning[:experimental] = false
   def setup
     super
     @sink_class = StatsD::Instrument::RactorBatchedSink
+  end
+
+  def test_flush
+    buffer_size = 50
+    sink = build_sink(@socket_path, buffer_capacity: buffer_size)
+
+    (buffer_size * 2).times { |i| sink << "foo:#{i}|c" }
+    buffer =  sink.buffer
+    assert(!buffer.empty?)
+    sink.flush(blocking: false)
+    buffer =  sink.buffer
+    assert(buffer.empty?)
+  end
+
+  def test_statistics
+    buffer_size = 2
+    sink = build_sink(@socket_path, buffer_capacity: buffer_size, statistics_interval: 0.1)
+    datagrams = sink.capture do
+      2.times { |i| sink << "foo:#{i}|c" }
+      sink.flush(blocking: false)
+      sink.maybe_flush_stats!(force: true)
+    end
+
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_uds_sink.avg_batch_length") })
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_uds_sink.avg_batched_packet_size") })
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_uds_sink.avg_buffer_length") })
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_uds_sink.batched_sends") })
+    assert(datagrams.any? { |d| d.name.start_with?("statsd_instrument.batched_uds_sink.synchronous_sends") })
+  end
+
+  private
+
+  def build_sink(socket_path, buffer_capacity: 50, statistics_interval: 0)
+    sink = @sink_class.new(
+      socket_path,
+      buffer_capacity: buffer_capacity,
+      statistics_interval: statistics_interval,
+    )
+    @sinks << sink
+    sink
   end
 end

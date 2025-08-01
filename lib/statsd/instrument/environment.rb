@@ -6,8 +6,9 @@ module StatsD
     # which this library is active. It will use different default values based on the environment.
     class Environment
       class << self
+
         def current
-          @current ||= StatsD::Instrument::Environment.new(ENV)
+          Ractor.current["StatsD::Instrument::Environment"] ||= new(ENV)
         end
 
         # @deprecated For backwards compatibility only. Use {StatsD::Instrument::Environment#environment}

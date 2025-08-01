@@ -547,7 +547,7 @@ module StatsD
       # Captures metrics that were emitted during the provided block.
       #
       # @yield During the execution of the provided block, metrics will be captured.
-      # @return [Array<StatsD::Instagram::Datagram>] The list of metrics that were
+      # @return [Array<StatsD::Instrument::Datagram>] The list of metrics that were
       #   emitted during the block, in the same order in which they were emitted.
       def capture(&block)
         sink = capture_sink

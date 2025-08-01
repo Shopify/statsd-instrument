@@ -9,6 +9,7 @@ module StatsD
 
       def_delegator :@sink, :host
       def_delegator :@sink, :port
+      def_delegator :@sink, :capture
 
       DEFAULT_THREAD_PRIORITY = 100
       DEFAULT_BUFFER_CAPACITY = 5_000
@@ -42,7 +43,7 @@ module StatsD
           max_packet_size,
           statistics_interval,
         )
-        ObjectSpace.define_finalizer(self, self.class.finalize(@dispatcher))
+        ObjectSpace.define_finalizer(self, self.class.finalize(@dispatcher)) if Ractor.current == Ractor.main
       end
 
       def sample?(sample_rate)
@@ -66,7 +67,7 @@ module StatsD
         @sink.connection
       end
 
-      class Buffer < SizedQueue
+      class Buffer < Thread::SizedQueue
         def push_nonblock(item)
           push(item, true)
         rescue ThreadError, ClosedQueueError

@@ -326,22 +326,29 @@ module StatsD
     extend Forwardable
 
     # The logger to use in case of any errors.
-    #
+    def logger=(logger)
+      Ractor.current["StatsD@logger"] = logger
+    end
+
     # @return [Logger]
     # @see StatsD::Instrument::LogSink
-    attr_accessor :logger
+    def logger
+      Ractor.current["StatsD@logger"]
+    end
 
     # The StatsD client that handles method calls on the StatsD singleton.
     #
     # E.g. a call to `StatsD.increment` will be handled by this client.
     #
     # @return [StatsD::Instrument::Client]
-    attr_writer :singleton_client
+    def singleton_client=(client)
+      Ractor.current["StatsD@singleton_client"] = client
+    end
 
     # The StatsD client that handles method calls on the StatsD singleton
     # @return [StatsD::Instrument::Client]
     def singleton_client
-      @singleton_client ||= StatsD::Instrument::Environment.current.client
+      Ractor.current["StatsD@singleton_client"] ||= StatsD::Instrument::Environment.current.client
     end
 
     # @!method measure(name, value = nil, sample_rate: nil, tags: nil, &block)

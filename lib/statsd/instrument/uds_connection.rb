@@ -34,6 +34,10 @@ module StatsD
         :uds
       end
 
+      def socket_path
+        @socket_path
+      end
+
       private
 
       def socket

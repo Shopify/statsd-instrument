@@ -26,7 +26,7 @@ module StatsD
       end
 
       def initialize(connection = nil)
-        ObjectSpace.define_finalizer(self, FINALIZER)
+        ObjectSpace.define_finalizer(self, FINALIZER) if Ractor.current == Ractor.main
         @connection = connection
       end
 
@@ -76,6 +76,12 @@ module StatsD
 
       def port
         connection.port
+      end
+
+      def capture
+        StatsD.singleton_client.capture do
+          yield StatsD.singleton_client.instance_variable_get("@sink")
+        end
       end
 
       private
