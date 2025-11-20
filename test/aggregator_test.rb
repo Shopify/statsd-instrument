@@ -185,7 +185,6 @@ class AggregatorTest < Minitest::Test
     # Stub methods on @aggregation_state to ensure they are not called
     aggregation_state = @subject.instance_variable_get(:@aggregation_state)
     aggregation_state.stubs(:[]=).never
-    aggregation_state.stubs(:clear).never
 
     @subject.increment("foo", 1, tags: { foo: "bar" })
     @subject.aggregate_timing("bar", 100, tags: { foo: "bar" })
@@ -221,6 +220,9 @@ class AggregatorTest < Minitest::Test
     assert_equal([200.0], [timing_datagram.value])
     assert_equal(["foo:bar"], timing_datagram.tags)
     assert_equal(0.5, timing_datagram.sample_rate)
+
+    after_aggregation_state = @subject.instance_variable_get(:@aggregation_state)
+    assert_same(after_aggregation_state, aggregation_state)
 
     # undo the stubbing
     @subject.unstub(:thread_healthcheck)
