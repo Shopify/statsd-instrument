@@ -101,7 +101,10 @@ module StatsD
         @max_values = max_values
 
         # Mutex protects the aggregation_state and flush_thread from concurrent access
-        @mutex = Mutex.new
+        @aggregation_state_mutex = Mutex.new
+        # Mutex protects do_flush to prevent flushing to the sink concurrently
+        @flush_mutex = Mutex.new
+
         @aggregation_state = {}
 
         @pid = Process.pid
@@ -129,7 +132,7 @@ module StatsD
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix, COUNT)
 
-        @mutex.synchronize do
+        @aggregation_state_mutex.synchronize do
           @aggregation_state[key] ||= 0
           @aggregation_state[key] += value
         end
@@ -146,13 +149,18 @@ module StatsD
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix, type, sample_rate: sample_rate)
 
-        @mutex.synchronize do
+        aggregation_state = nil
+
+        @aggregation_state_mutex.synchronize do
           values = @aggregation_state[key] ||= []
           if values.size + 1 >= @max_values
-            do_flush
+            aggregation_state = @aggregation_state
+            @aggregation_state = {}
           end
           values << value
         end
+
+        do_flush(aggregation_state) if aggregation_state
       end
 
       def gauge(name, value, tags: [], no_prefix: false)
@@ -164,13 +172,19 @@ module StatsD
         tags = tags_sorted(tags)
         key = packet_key(name, tags, no_prefix, GAUGE)
 
-        @mutex.synchronize do
+        @aggregation_state_mutex.synchronize do
           @aggregation_state[key] = value
         end
       end
 
       def flush
-        @mutex.synchronize { do_flush }
+        state = nil
+        @aggregation_state_mutex.synchronize do
+          state = @aggregation_state
+          @aggregation_state = {}
+        end
+
+        do_flush(state)
       end
 
       private
@@ -180,36 +194,37 @@ module StatsD
       # Flushes the aggregated metrics to the sink.
       # Iterates over the aggregation state and sends each metric to the sink.
       # If you change this function, you need to update the logic in the finalizer as well.
-      def do_flush
-        @aggregation_state.each do |key, value|
-          case key.type
-          when COUNT
-            @sink << datagram_builder(no_prefix: key.no_prefix).c(
-              key.name,
-              value,
-              CONST_SAMPLE_RATE,
-              key.tags,
-            )
-          when DISTRIBUTION, MEASURE, HISTOGRAM
-            @sink << datagram_builder(no_prefix: key.no_prefix).timing_value_packed(
-              key.name,
-              key.type.to_s,
-              value,
-              key.sample_rate,
-              key.tags,
-            )
-          when GAUGE
-            @sink << datagram_builder(no_prefix: key.no_prefix).g(
-              key.name,
-              value,
-              CONST_SAMPLE_RATE,
-              key.tags,
-            )
-          else
-            StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
+      def do_flush(aggregation_state)
+        @flush_mutex.synchronize do
+          aggregation_state.each do |key, value|
+            case key.type
+            when COUNT
+              @sink << datagram_builder(no_prefix: key.no_prefix).c(
+                key.name,
+                value,
+                CONST_SAMPLE_RATE,
+                key.tags,
+              )
+            when DISTRIBUTION, MEASURE, HISTOGRAM
+              @sink << datagram_builder(no_prefix: key.no_prefix).timing_value_packed(
+                key.name,
+                key.type.to_s,
+                value,
+                key.sample_rate,
+                key.tags,
+              )
+            when GAUGE
+              @sink << datagram_builder(no_prefix: key.no_prefix).g(
+                key.name,
+                value,
+                CONST_SAMPLE_RATE,
+                key.tags,
+              )
+            else
+              StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
+            end
           end
         end
-        @aggregation_state.clear
       end
 
       def tags_sorted(tags)
@@ -255,7 +270,7 @@ module StatsD
       end
 
       def thread_healthcheck
-        @mutex.synchronize do
+        @aggregation_state_mutex.synchronize do
           unless @flush_thread&.alive?
             # The main thread is dead, fallback to direct writes
             return false unless Thread.main.alive?

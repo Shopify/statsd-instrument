@@ -6,6 +6,9 @@ section below.
 
 ## Unreleased changes
 
+- [#399](https://github.com/Shopify/statsd-instrument/pull/399) - Release the mutex protecting the Aggregator's internal
+  state when flushing metrics to avoid stalling other threads trying to emit metrics.
+
 ## Version 3.9.10
 
 - [#398](https://github.com/Shopify/statsd-instrument/pull/398) - Fix metrics not being sent from signal trap contexts when aggregation is enabled.
