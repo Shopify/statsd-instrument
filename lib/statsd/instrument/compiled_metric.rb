@@ -157,7 +157,9 @@ module StatsD
 
               datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @type)
 
-              StatsD.singleton_client.emit_precompiled_metric(datagram, value)
+              # Guard against nil client (can happen during test initialization)
+              client = StatsD.singleton_client
+              client&.emit_precompiled_metric(datagram, value)
             end
           RUBY
 
@@ -171,7 +173,9 @@ module StatsD
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
             def self.increment(value: 1)
-              StatsD.singleton_client.emit_precompiled_metric(@static_datagram, value)
+              # Guard against nil client (can happen during test initialization)
+              client = StatsD.singleton_client
+              client&.emit_precompiled_metric(@static_datagram, value)
             end
           RUBY
         end
