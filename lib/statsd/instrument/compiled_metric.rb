@@ -132,25 +132,25 @@ module StatsD
               # Look up or create a PrecompiledDatagram
               datagram =
                 if (cache = @tag_combination_cache)
-                  cache[cache_key] ||=
+                  cached_datagram = cache[cache_key] ||=
                     begin
-                      datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @type)
+                      new_datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @type)
 
                       # Clear cache if it grows too large to prevent memory bloat
                       if cache.size > MAX_TAG_COMBINATION_CACHE_SIZE
                         @tag_combination_cache = nil
                       end
 
-                      datagram
+                      new_datagram
                     end
 
                   # Hash collision detection
-                  if datagram && #{tag_names.map.with_index { |name, i| "#{name} != datagram.tag_values[#{i}]" }.join(" || ")}
+                  if cached_datagram && #{tag_names.map.with_index { |name, i| "#{name} != cached_datagram.tag_values[#{i}]" }.join(" || ")}
                     # Hash collision - fall back to creating a new datagram
-                    datagram = nil
+                    cached_datagram = nil
                   end
 
-                  datagram
+                  cached_datagram
                 else
                   # Cache was cleared, create datagram without caching
                   nil
