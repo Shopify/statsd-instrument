@@ -231,6 +231,30 @@ module StatsD
         StatsD::Instrument::VOID
       end
 
+      # Emits a precompiled metric for high-performance use cases.
+      # This method is used by {StatsD::Instrument::CompiledMetric} to emit metrics
+      # with minimal allocations.
+      #
+      # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
+      #   The precompiled metric datagram
+      # @param value [Numeric] The metric value
+      # @return [void]
+      # @api private
+      def emit_precompiled_metric(precompiled_datagram, value)
+        sample_rate ||= @default_sample_rate
+
+        if @enable_aggregation
+          @aggregator.aggregate_precompiled_metric(precompiled_datagram, value)
+          return StatsD::Instrument::VOID
+        end
+
+        if sample_rate.nil? || sample?(sample_rate)
+          emit(precompiled_datagram.to_datagram(value))
+        end
+
+        StatsD::Instrument::VOID
+      end
+
       # Emits a timing metric.
       #
       # @param name (see #increment)
