@@ -46,7 +46,7 @@ class CompiledMetricTest < Minitest::Test
       tags: { shop_id: Integer, user_id: Integer },
     )
 
-    metric.increment(123, 456, value: 1)
+    metric.increment(shop_id: 123, user_id: 456, value: 1)
 
     datagram = @sink.datagrams.first
     assert_equal("test_foo.bar", datagram.name)
@@ -62,7 +62,7 @@ class CompiledMetricTest < Minitest::Test
       tags: { shop_id: Integer },
     )
 
-    metric.increment(999, value: 3)
+    metric.increment(shop_id: 999, value: 3)
 
     datagram = @sink.datagrams.first
     assert_equal("test_foo.bar", datagram.name)
@@ -76,7 +76,7 @@ class CompiledMetricTest < Minitest::Test
       tags: { country: String, region: String },
     )
 
-    metric.increment("US", "West", value: 2)
+    metric.increment(country: "US", region: "West", value: 2)
 
     datagram = @sink.datagrams.first
     assert_equal("test_foo.bar", datagram.name)
@@ -90,7 +90,7 @@ class CompiledMetricTest < Minitest::Test
       tags: { rate: Float },
     )
 
-    metric.increment(1.5, value: 1)
+    metric.increment(rate: 1.5, value: 1)
 
     datagram = @sink.datagrams.first
     assert_equal("test_foo.bar", datagram.name)
@@ -144,7 +144,7 @@ class CompiledMetricTest < Minitest::Test
       tags: { endpoint: String },
     )
 
-    metric.increment("/api|v1,endpoint", value: 1)
+    metric.increment(endpoint: "/api|v1,endpoint", value: 1)
 
     datagram = @sink.datagrams.first
     # Pipes and commas should be removed
@@ -157,9 +157,9 @@ class CompiledMetricTest < Minitest::Test
       tags: { shop_id: Integer },
     )
 
-    metric.increment(123, value: 1)
-    metric.increment(123, value: 2)
-    metric.increment(123, value: 3)
+    metric.increment(shop_id: 123, value: 1)
+    metric.increment(shop_id: 123, value: 2)
+    metric.increment(shop_id: 123, value: 3)
 
     assert_equal(3, @sink.datagrams.size)
     @sink.datagrams.each do |datagram|
@@ -173,9 +173,9 @@ class CompiledMetricTest < Minitest::Test
       tags: { shop_id: Integer },
     )
 
-    metric.increment(123, value: 1)
-    metric.increment(456, value: 1)
-    metric.increment(789, value: 1)
+    metric.increment(shop_id: 123, value: 1)
+    metric.increment(shop_id: 456, value: 1)
+    metric.increment(shop_id: 789, value: 1)
 
     assert_equal(3, @sink.datagrams.size)
     assert_equal(["shop_id:123"], @sink.datagrams[0].tags)
@@ -237,9 +237,9 @@ class CompiledMetricWithAggregationTest < Minitest::Test
       tags: { shop_id: Integer },
     )
 
-    metric.increment(123, value: 1)
-    metric.increment(123, value: 2)
-    metric.increment(123, value: 3)
+    metric.increment(shop_id: 123, value: 1)
+    metric.increment(shop_id: 123, value: 2)
+    metric.increment(shop_id: 123, value: 3)
 
     @aggregator.flush
 
@@ -255,9 +255,9 @@ class CompiledMetricWithAggregationTest < Minitest::Test
       tags: { shop_id: Integer },
     )
 
-    metric.increment(123, value: 1)
-    metric.increment(456, value: 2)
-    metric.increment(123, value: 3)
+    metric.increment(shop_id: 123, value: 1)
+    metric.increment(shop_id: 456, value: 2)
+    metric.increment(shop_id: 123, value: 3)
 
     @aggregator.flush
 

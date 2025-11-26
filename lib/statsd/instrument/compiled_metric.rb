@@ -121,19 +121,20 @@ module StatsD
         # Defines the increment method for metrics with dynamic tags
         # Generates optimized code with tag caching
         def define_dynamic_increment_method(tags)
-          arg_names = tags.map.with_index { |(k, _v), i| "arg#{i}" }
+          # Use the actual tag names as keyword arguments
+          tag_names = tags.keys
 
           increment_code = <<~RUBY
-            def self.increment(#{arg_names.join(", ")}, value: 1)
+            def self.increment(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: 1)
               # Compute hash of tag values for cache lookup
-              cache_key = #{arg_names.map { |arg| "#{arg}.hash" }.join(" ^ ")}
+              cache_key = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
 
               # Look up or create a PrecompiledDatagram
               datagram =
                 if (cache = @tag_combination_cache)
                   cache[cache_key] ||=
                     begin
-                      datagram = PrecompiledDatagram.new([#{arg_names.join(", ")}], @datagram_blueprint, @type)
+                      datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @type)
 
                       # Clear cache if it grows too large to prevent memory bloat
                       if cache.size > MAX_TAG_COMBINATION_CACHE_SIZE
@@ -144,7 +145,7 @@ module StatsD
                     end
 
                   # Hash collision detection
-                  if datagram && #{arg_names.map.with_index { |arg, i| "#{arg} != datagram.tag_values[#{i}]" }.join(" || ")}
+                  if datagram && #{tag_names.map.with_index { |name, i| "#{name} != datagram.tag_values[#{i}]" }.join(" || ")}
                     # Hash collision - fall back to creating a new datagram
                     datagram = nil
                   end
@@ -155,7 +156,7 @@ module StatsD
                   nil
                 end
 
-              datagram ||= PrecompiledDatagram.new([#{arg_names.join(", ")}], @datagram_blueprint, @type)
+              datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @type)
 
               @singleton_client.emit_precompiled_metric(datagram, value)
             end
