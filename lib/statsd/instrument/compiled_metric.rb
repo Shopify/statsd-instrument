@@ -74,7 +74,6 @@ module StatsD
             end
 
             @tag_combination_cache = {}
-            @singleton_client = StatsD.singleton_client
 
             if tags.any?
               define_dynamic_increment_method(tags)
@@ -158,7 +157,7 @@ module StatsD
 
               datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @type)
 
-              @singleton_client.emit_precompiled_metric(datagram, value)
+              StatsD.singleton_client.emit_precompiled_metric(datagram, value)
             end
           RUBY
 
@@ -172,7 +171,7 @@ module StatsD
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
             def self.increment(value: 1)
-              @singleton_client.emit_precompiled_metric(@static_datagram, value)
+              StatsD.singleton_client.emit_precompiled_metric(@static_datagram, value)
             end
           RUBY
         end
