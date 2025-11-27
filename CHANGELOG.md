@@ -6,6 +6,7 @@ section below.
 
 ## Unreleased changes
 
+- [#401](https://github.com/Shopify/statsd-instrument/pull/401) - Add `CompiledMetric` pattern for high-performance metric emission. Pre-compiles metric datagrams at definition time with tag caching for 2-7x performance improvement over standard `StatsD.increment`.
 - [#399](https://github.com/Shopify/statsd-instrument/pull/399) - Release the mutex protecting the Aggregator's internal
   state when flushing metrics to avoid stalling other threads trying to emit metrics.
 
