@@ -169,6 +169,7 @@ module StatsD
 
                       # Clear cache if it grows too large to prevent memory bloat
                       if cache.size > @max_cache_size
+                        StatsD.logger.warn("[CompiledMetric] Tag combination cache exceeded max size (\#{@max_cache_size}) for metric '\#{@name}', clearing cache")
                         @tag_combination_cache = nil
                       end
 
@@ -178,6 +179,7 @@ module StatsD
                   # Hash collision detection
                   if cached_datagram && #{tag_names.map.with_index { |name, i| "#{name} != cached_datagram.tag_values[#{i}]" }.join(" || ")}
                     # Hash collision - fall back to creating a new datagram
+                    StatsD.logger.warn("[CompiledMetric] Hash collision detected for metric '\#{@name}' with cache_key \#{cache_key}")
                     cached_datagram = nil
                   end
 
