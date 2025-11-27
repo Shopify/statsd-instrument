@@ -243,7 +243,7 @@ module StatsD
       def emit_precompiled_metric(precompiled_datagram, value)
         sample_rate ||= @default_sample_rate
 
-        if @enable_aggregation && @aggregator
+        if @enable_aggregation
           @aggregator.aggregate_precompiled_metric(precompiled_datagram, value)
           return StatsD::Instrument::VOID
         end
