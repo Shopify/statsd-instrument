@@ -203,6 +203,97 @@ class CompiledMetricTest < Minitest::Test
       )
     end
   end
+
+  def test_includes_default_tags_from_client
+    # Create a client with default tags
+    old_client = StatsD.singleton_client
+    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: sink,
+      prefix: "test",
+      default_tags: ["env:production", "region:us-east"],
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    metric.increment(value: 1)
+
+    datagram = sink.datagrams.first
+    assert_equal("test_foo.bar", datagram.name)
+    # Should include default tags from client + static tags
+    assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
+  ensure
+    sink.clear
+    StatsD.singleton_client = old_client
+  end
+
+  def test_excludes_default_tags_with_no_prefix
+    # Create a client with default tags
+    old_client = StatsD.singleton_client
+    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: sink,
+      prefix: "test",
+      default_tags: ["env:production", "region:us-east"],
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+      no_prefix: true,
+    )
+
+    metric.increment(value: 1)
+
+    datagram = sink.datagrams.first
+    assert_equal("foo.bar", datagram.name) # No prefix
+    # Should NOT include default tags when no_prefix is true
+    assert_equal(["service:web"], datagram.tags)
+  ensure
+    sink.clear
+    StatsD.singleton_client = old_client
+  end
+
+  def test_custom_max_cache_size
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { shop_id: Integer },
+      max_cache_size: 2,
+    )
+
+    # Increment with 3 different tag combinations
+    metric.increment(shop_id: 1, value: 1)
+    metric.increment(shop_id: 2, value: 1)
+    metric.increment(shop_id: 3, value: 1)
+
+    # After 3 increments with max_cache_size of 2, cache should be cleared
+    # We can't easily test the internal cache state, but we can verify it doesn't crash
+    assert_equal(3, @sink.datagrams.size)
+  end
+
+  def test_cache_handles_hash_collisions
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { shop_id: Integer },
+    )
+
+    # Even if we get hash collisions, it should handle them correctly
+    100.times do |i|
+      metric.increment(shop_id: i, value: 1)
+    end
+
+    assert_equal(100, @sink.datagrams.size)
+    # Verify all shop_ids are different
+    shop_ids = @sink.datagrams.map { |d| d.tags.first.split(":").last.to_i }
+    assert_equal(100, shop_ids.uniq.size)
+  end
 end
 
 class CompiledMetricWithAggregationTest < Minitest::Test

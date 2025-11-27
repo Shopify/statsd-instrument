@@ -16,10 +16,9 @@ module StatsD
     #   # Later, emit with minimal allocations:
     #   CheckoutMetric.increment(shop_id: 123, user_id: 456, value: 1)
     class CompiledMetric
-      # Maximum number of unique tag combinations to cache before clearing
+      # Default maximum number of unique tag combinations to cache before clearing
       # the cache to prevent unbounded memory growth
-      MAX_TAG_COMBINATION_CACHE_SIZE = 5000
-      private_constant(:MAX_TAG_COMBINATION_CACHE_SIZE)
+      DEFAULT_MAX_TAG_COMBINATION_CACHE_SIZE = 5000
 
       class << self
         # Defines a new compiled metric class with the given configuration.
@@ -27,9 +26,12 @@ module StatsD
         # @param name [String] The metric name
         # @param static_tags [Hash{Symbol, String => String, Integer, Float}] Tags with fixed values
         # @param tags [Hash{Symbol, String => Class}] Tags with dynamic values (Integer, Float, or String)
-        # @param no_prefix [Boolean] If true, skip the StatsD prefix
+        # @param no_prefix [Boolean] If true, skip the StatsD prefix and default_tags
+        # @param max_cache_size [Integer] Maximum tag combinations to cache before clearing
         # @return [Class] A new CompiledMetric subclass configured for this metric
-        def define(name:, static_tags: {}, tags: {}, no_prefix: false)
+        def define(name:, static_tags: {}, tags: {}, no_prefix: false, max_cache_size: DEFAULT_MAX_TAG_COMBINATION_CACHE_SIZE)
+          client = StatsD.singleton_client
+
           # Build the tag template string
           tags_str =
             tags.map do |(k, v)|
@@ -54,17 +56,27 @@ module StatsD
               "#{tag_name}:#{value}"
             end
 
-          all_tags = (static_tags_str + tags_str).join(",")
+          # Add default_tags from client unless no_prefix is true
+          default_tags_str = []
+          unless no_prefix
+            default_tags_str = (client.default_tags || []).map do |tag|
+              normalize_tag_value(tag)
+            end
+          end
+
+          all_tags = (default_tags_str + static_tags_str + tags_str).join(",")
 
           # Create a new class for this specific metric
           # Using classes instead of instances for better YJIT optimization
           metric_class = Class.new(self) do
             @name = normalize_name(name)
             @type = type
-            @prefix =
-              if !no_prefix && StatsD.singleton_client.prefix
-                StatsD.singleton_client.prefix + "_"
-              end
+
+            # Build prefix: only add it if no_prefix is false AND a prefix exists
+            @prefix = ""
+            if !no_prefix && client.prefix
+              @prefix = client.prefix + "_"
+            end
 
             # Build the datagram blueprint with sprintf placeholders
             # Format: "<prefix><name>:%d|<type>|#<tags>"
@@ -74,13 +86,10 @@ module StatsD
             end
 
             @tag_combination_cache = {}
-            @singleton_client = StatsD.singleton_client
+            @max_cache_size = max_cache_size
+            @singleton_client = client
 
-            if tags.any?
-              define_dynamic_increment_method(tags)
-            else
-              define_static_increment_method
-            end
+            define_metric_method(tags)
           end
 
           metric_class
@@ -109,6 +118,17 @@ module StatsD
           raise NotImplementedError, "Subclasses must implement #type"
         end
 
+        # @return [Symbol] The method name to define (e.g., :increment)
+        def method_name
+          raise NotImplementedError, "Subclasses must implement #method_name"
+        end
+
+        # Defines the metric emission method - must be implemented by subclasses
+        # @param tags [Hash] The dynamic tags configuration
+        def define_metric_method(tags)
+          raise NotImplementedError, "Subclasses must implement #define_metric_method"
+        end
+
         private
 
         # Normalizes metric names by replacing special characters
@@ -117,92 +137,28 @@ module StatsD
         def normalize_name(name)
           name.tr(":|@", "_")
         end
-
-        # Defines the increment method for metrics with dynamic tags
-        # Generates optimized code with tag caching
-        def define_dynamic_increment_method(tags)
-          # Use the actual tag names as keyword arguments
-          tag_names = tags.keys
-
-          increment_code = <<~RUBY
-            def self.increment(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: 1)
-              # Compute hash of tag values for cache lookup
-              cache_key = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
-
-              # Look up or create a PrecompiledDatagram
-              datagram =
-                if (cache = @tag_combination_cache)
-                  cached_datagram = cache[cache_key] ||=
-                    begin
-                      new_datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @type)
-
-                      # Clear cache if it grows too large to prevent memory bloat
-                      if cache.size > MAX_TAG_COMBINATION_CACHE_SIZE
-                        @tag_combination_cache = nil
-                      end
-
-                      new_datagram
-                    end
-
-                  # Hash collision detection
-                  if cached_datagram && #{tag_names.map.with_index { |name, i| "#{name} != cached_datagram.tag_values[#{i}]" }.join(" || ")}
-                    # Hash collision - fall back to creating a new datagram
-                    cached_datagram = nil
-                  end
-
-                  cached_datagram
-                else
-                  # Cache was cleared, create datagram without caching
-                  nil
-                end
-
-              datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @type)
-
-              @singleton_client.emit_precompiled_metric(datagram, value)
-            end
-          RUBY
-
-          instance_eval(increment_code, __FILE__, __LINE__ + 1)
-        end
-
-        # Defines the increment method for metrics without dynamic tags
-        # Uses a single precompiled datagram for all calls
-        def define_static_increment_method
-          @static_datagram = PrecompiledDatagram.new([], @datagram_blueprint, @type)
-
-          instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
-            def self.increment(value: 1)
-              @singleton_client.emit_precompiled_metric(@static_datagram, value)
-            end
-          RUBY
-        end
       end
 
       # A precompiled datagram that can quickly build the final StatsD datagram
       # string using sprintf formatting with cached tag values.
       class PrecompiledDatagram
-        attr_reader :tag_values, :datagram_blueprint, :metric_type
+        attr_reader :tag_values, :datagram_blueprint
 
         # @param tag_values [Array] The tag values to cache
         # @param datagram_blueprint [String] The sprintf template
-        # @param metric_type [String] The metric type character (e.g., "c")
-        def initialize(tag_values, datagram_blueprint, metric_type)
+        def initialize(tag_values, datagram_blueprint)
           @tag_values = tag_values
           @datagram_blueprint = datagram_blueprint
-          @metric_type = metric_type
-          @hash_code = [@datagram_blueprint, @tag_values].hash
         end
 
-        # Enables PrecompiledDatagram to be used as a hash key for aggregation
-        def hash
-          @hash_code
+        def type
+          :p
         end
 
-        # Enables PrecompiledDatagram to be used as a hash key for aggregation
+        # Use object identity for hash key - each unique tag combination
+        # gets its own cached PrecompiledDatagram object
         def eql?(other)
-          other.is_a?(PrecompiledDatagram) &&
-            @datagram_blueprint == other.datagram_blueprint &&
-            @tag_values == other.tag_values
+          equal?(other)
         end
 
         # Builds the final datagram string by substituting values into the blueprint
@@ -237,6 +193,81 @@ module StatsD
         class << self
           def type
             "c"
+          end
+
+          def method_name
+            :increment
+          end
+
+          # Defines the increment method for counter metrics
+          # @param tags [Hash] The dynamic tags configuration
+          def define_metric_method(tags)
+            if tags.any?
+              define_dynamic_increment_method(tags)
+            else
+              define_static_increment_method
+            end
+          end
+
+          private
+
+          # Defines the increment method for metrics with dynamic tags
+          # Generates optimized code with tag caching
+          def define_dynamic_increment_method(tags)
+            # Use the actual tag names as keyword arguments
+            tag_names = tags.keys
+
+            increment_code = <<~RUBY
+              def self.increment(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: 1)
+                # Compute hash of tag values for cache lookup
+                cache_key = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
+
+                # Look up or create a PrecompiledDatagram
+                datagram =
+                  if (cache = @tag_combination_cache)
+                    cached_datagram = cache[cache_key] ||=
+                      begin
+                        new_datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint)
+
+                        # Clear cache if it grows too large to prevent memory bloat
+                        if cache.size > @max_cache_size
+                          @tag_combination_cache = nil
+                        end
+
+                        new_datagram
+                      end
+
+                    # Hash collision detection
+                    if cached_datagram && #{tag_names.map.with_index { |name, i| "#{name} != cached_datagram.tag_values[#{i}]" }.join(" || ")}
+                      # Hash collision - fall back to creating a new datagram
+                      cached_datagram = nil
+                    end
+
+                    cached_datagram
+                  else
+                    # Cache was cleared, create datagram without caching
+                    nil
+                  end
+
+                datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint)
+
+                @singleton_client.emit_precompiled_metric(datagram, value)
+              end
+            RUBY
+
+            instance_eval(increment_code, __FILE__, __LINE__ + 1)
+          end
+
+          # Defines the increment method for metrics without dynamic tags
+          # Uses a single precompiled datagram for all calls
+          def define_static_increment_method
+            @static_datagram = PrecompiledDatagram.new([], @datagram_blueprint)
+
+            instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
+              def self.increment(value: 1)
+                @singleton_client.emit_precompiled_metric(@static_datagram, value)
+              end
+            RUBY
           end
         end
       end
