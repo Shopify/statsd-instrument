@@ -80,9 +80,10 @@ module StatsD
 
             # Build the datagram blueprint with sprintf placeholders
             # Format: "<prefix><name>:%d|<type>|#<tags>"
-            @datagram_blueprint = "#{@prefix}#{@name}:%d|#{@type}".dup
-            unless all_tags.empty?
-              @datagram_blueprint << "|##{all_tags}"
+            @datagram_blueprint = if all_tags.empty?
+              "#{@prefix}#{@name}:%d|#{@type}"
+            else
+              "#{@prefix}#{@name}:%d|#{@type}|##{all_tags}"
             end
 
             @tag_combination_cache = {}
