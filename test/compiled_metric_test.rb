@@ -417,4 +417,46 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     datagram = @sink.datagrams.first
     assert_equal(8, datagram.value) # 1 + 2 + 5
   end
+
+  def test_minimal_allocations_with_aggregation_static_tags
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    # Warm up to ensure everything is cached
+    metric.increment(value: 1)
+
+    # Measure allocations - disable GC to get accurate count
+    GC.disable
+    before = GC.stat(:total_allocated_objects)
+    metric.increment(value: 1)
+    after = GC.stat(:total_allocated_objects)
+    GC.enable
+
+    allocations = after - before
+    # With aggregation, we expect minimal allocations (just keyword args hash)
+    assert(allocations <= 1, "Expected <= 1 allocations with aggregation but got #{allocations}")
+  end
+
+  def test_minimal_allocations_with_aggregation_dynamic_tags
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { shop_id: Integer },
+    )
+
+    # Warm up to ensure tag combination is cached
+    metric.increment(shop_id: 123, value: 1)
+
+    # Measure allocations on subsequent call with same tags - disable GC to get accurate count
+    GC.disable
+    before = GC.stat(:total_allocated_objects)
+    metric.increment(shop_id: 123, value: 1)
+    after = GC.stat(:total_allocated_objects)
+    GC.enable
+
+    allocations = after - before
+    # With aggregation and cached tags, we expect minimal allocations (just keyword args hash)
+    assert(allocations <= 1, "Expected <= 1 allocations with aggregation (cached tags) but got #{allocations}")
+  end
 end
