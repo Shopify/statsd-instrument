@@ -419,6 +419,8 @@ class CompiledMetricWithAggregationTest < Minitest::Test
   end
 
   def test_minimal_allocations_with_aggregation_static_tags
+    skip("Allocation tracking not supported on JRuby") if RUBY_ENGINE == "jruby"
+
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
       static_tags: { service: "web" },
@@ -444,6 +446,8 @@ class CompiledMetricWithAggregationTest < Minitest::Test
   end
 
   def test_minimal_allocations_with_aggregation_dynamic_tags
+    skip("Allocation tracking not supported on JRuby") if RUBY_ENGINE == "jruby"
+
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
       tags: { shop_id: Integer },
