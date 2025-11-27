@@ -294,6 +294,58 @@ class CompiledMetricTest < Minitest::Test
     shop_ids = @sink.datagrams.map { |d| d.tags.first.split(":").last.to_i }
     assert_equal(100, shop_ids.uniq.size)
   end
+
+  def test_sample_rate_parameter_with_static_tags
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    # Verify sample_rate parameter is accepted (CaptureSink always samples)
+    metric.increment(value: 1, sample_rate: 0.5)
+
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal("test_foo.bar", @sink.datagrams.first.name)
+    assert_equal(["service:web"], @sink.datagrams.first.tags)
+  end
+
+  def test_sample_rate_parameter_with_dynamic_tags
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { shop_id: Integer },
+    )
+
+    # Verify sample_rate parameter is accepted (CaptureSink always samples)
+    metric.increment(shop_id: 123, value: 1, sample_rate: 0.5)
+
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal(["shop_id:123"], @sink.datagrams.first.tags)
+  end
+
+  def test_default_sample_rate_from_client
+    # Create a client with default sample rate
+    old_client = StatsD.singleton_client
+    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: sink,
+      prefix: "test",
+      default_tags: [],
+      enable_aggregation: false,
+      default_sample_rate: 1.0,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+    )
+
+    # Should use client's default sample rate
+    metric.increment(value: 1)
+    assert_equal(1, sink.datagrams.size)
+  ensure
+    sink.clear
+    StatsD.singleton_client = old_client
+  end
 end
 
 class CompiledMetricWithAggregationTest < Minitest::Test
