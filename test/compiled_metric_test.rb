@@ -206,10 +206,9 @@ class CompiledMetricTest < Minitest::Test
 
   def test_includes_default_tags_from_client
     # Create a client with default tags
-    old_client = StatsD.singleton_client
-    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     client = StatsD::Instrument::Client.new(
-      sink: sink,
+      sink: @sink,
       prefix: "test",
       default_tags: ["env:production", "region:us-east"],
       enable_aggregation: false,
@@ -223,21 +222,17 @@ class CompiledMetricTest < Minitest::Test
 
     metric.increment(value: 1)
 
-    datagram = sink.datagrams.first
+    datagram = @sink.datagrams.first
     assert_equal("test_foo.bar", datagram.name)
     # Should include default tags from client + static tags
     assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
-  ensure
-    sink.clear
-    StatsD.singleton_client = old_client
   end
 
   def test_excludes_default_tags_with_no_prefix
     # Create a client with default tags
-    old_client = StatsD.singleton_client
-    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     client = StatsD::Instrument::Client.new(
-      sink: sink,
+      sink: @sink,
       prefix: "test",
       default_tags: ["env:production", "region:us-east"],
       enable_aggregation: false,
@@ -252,13 +247,10 @@ class CompiledMetricTest < Minitest::Test
 
     metric.increment(value: 1)
 
-    datagram = sink.datagrams.first
+    datagram = @sink.datagrams.first
     assert_equal("foo.bar", datagram.name) # No prefix
     # Should NOT include default tags when no_prefix is true
     assert_equal(["service:web"], datagram.tags)
-  ensure
-    sink.clear
-    StatsD.singleton_client = old_client
   end
 
   def test_custom_max_cache_size
@@ -324,10 +316,9 @@ class CompiledMetricTest < Minitest::Test
 
   def test_default_sample_rate_from_client
     # Create a client with default sample rate
-    old_client = StatsD.singleton_client
-    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     client = StatsD::Instrument::Client.new(
-      sink: sink,
+      sink: @sink,
       prefix: "test",
       default_tags: [],
       enable_aggregation: false,
@@ -341,10 +332,7 @@ class CompiledMetricTest < Minitest::Test
 
     # Should use client's default sample rate
     metric.increment(value: 1)
-    assert_equal(1, sink.datagrams.size)
-  ensure
-    sink.clear
-    StatsD.singleton_client = old_client
+    assert_equal(1, @sink.datagrams.size)
   end
 end
 
