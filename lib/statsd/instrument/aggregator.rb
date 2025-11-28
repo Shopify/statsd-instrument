@@ -39,7 +39,6 @@ module StatsD
         def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class, default_tags)
           proc do
             aggregation_state.each do |key, agg_value|
-              # Handle precompiled datagrams
               if key.is_a?(StatsD::Instrument::CompiledMetric::PrecompiledDatagram)
                 sink << key.to_datagram(agg_value)
                 next
@@ -147,7 +146,7 @@ module StatsD
       # Aggregates a precompiled metric for later flushing.
       # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
       #   The precompiled metric datagram
-      # @param value [Integer] The value to aggregate
+      # @param value [Numeric] The value to aggregate
       # @return [void]
       def aggregate_precompiled_metric(precompiled_datagram, value = 1)
         unless thread_healthcheck
@@ -221,7 +220,6 @@ module StatsD
       def do_flush(aggregation_state)
         @flush_mutex.synchronize do
           aggregation_state.each do |key, value|
-            # Handle precompiled datagrams
             if key.is_a?(StatsD::Instrument::CompiledMetric::PrecompiledDatagram)
               @sink << key.to_datagram(value)
               next

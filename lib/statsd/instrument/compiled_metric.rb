@@ -27,91 +27,40 @@ module StatsD
         # @param static_tags [Hash{Symbol, String => String, Integer, Float}] Tags with fixed values
         # @param tags [Hash{Symbol, String => Class}] Tags with dynamic values (Integer, Float, or String)
         # @param no_prefix [Boolean] If true, skip the StatsD prefix and default_tags
+        # @param sample_rate [Float, nil] The sample rate (0.0-1.0) for this metric, nil for no sampling
         # @param max_cache_size [Integer] Maximum tag combinations to cache before clearing
         # @return [Class] A new CompiledMetric subclass configured for this metric
-        def define(name:, static_tags: {}, tags: {}, no_prefix: false, max_cache_size: DEFAULT_MAX_TAG_COMBINATION_CACHE_SIZE)
+        def define(name:, static_tags: {}, tags: {}, no_prefix: false, sample_rate: nil, max_cache_size: DEFAULT_MAX_TAG_COMBINATION_CACHE_SIZE)
           client = StatsD.singleton_client
 
-          # Build the tag template string
-          tags_str =
-            tags.map do |(k, v)|
-              tag_name = normalize_tag_name(k)
-              placeholder =
-                if v == String
-                  "%s"
-                elsif v == Integer
-                  "%d"
-                elsif v == Float
-                  "%f"
-                else
-                  raise ArgumentError, "Unsupported tag value type: #{v}. Use String, Integer, or Float class."
-                end
-              "#{tag_name}:#{placeholder}"
-            end
-
-          static_tags_str =
-            static_tags.map do |(k, v)|
-              tag_name = normalize_tag_name(k)
-              value = normalize_tag_value(v)
-              "#{tag_name}:#{value}"
-            end
-
-          # Add default_tags from client unless no_prefix is true
-          default_tags_str = []
-          unless no_prefix
-            default_tags_str = (client.default_tags || []).map do |tag|
-              normalize_tag_value(tag)
-            end
-          end
-
-          all_tags = (default_tags_str + static_tags_str + tags_str).join(",")
+          # Build the datagram blueprint using the builder
+          # The builder handles prefix, tags compilation, and blueprint construction
+          datagram_blueprint = DatagramBlueprintBuilder.build(
+            name: name,
+            type: type,
+            client_prefix: client.prefix,
+            no_prefix: no_prefix,
+            default_tags: client.default_tags,
+            static_tags: static_tags,
+            dynamic_tags: tags,
+            sample_rate: sample_rate || client.default_sample_rate,
+            enable_aggregation: client.enable_aggregation,
+          )
 
           # Create a new class for this specific metric
           # Using classes instead of instances for better YJIT optimization
           metric_class = Class.new(self) do
-            @name = normalize_name(name)
-            @type = type
-
-            # Build prefix: only add it if no_prefix is false AND a prefix exists
-            @prefix = ""
-            if !no_prefix && client.prefix
-              @prefix = client.prefix + "_"
-            end
-
-            # Build the datagram blueprint with sprintf placeholders
-            # Format: "<prefix><name>:%d|<type>|#<tags>"
-            @datagram_blueprint = if all_tags.empty?
-              "#{@prefix}#{@name}:%d|#{@type}"
-            else
-              "#{@prefix}#{@name}:%d|#{@type}|##{all_tags}"
-            end
-
+            @name = DatagramBlueprintBuilder.normalize_name(name)
+            @datagram_blueprint = datagram_blueprint
             @tag_combination_cache = {}
             @max_cache_size = max_cache_size
             @singleton_client = client
+            @sample_rate = sample_rate
 
             define_metric_method(tags)
           end
 
           metric_class
-        end
-
-        # Normalizes tag names by removing StatsD protocol special characters
-        # @param name [Symbol, String] The tag name
-        # @return [String] The normalized tag name
-        def normalize_tag_name(name)
-          name = name.to_s
-          name = name.tr("|,", "") if /[|,]/.match?(name)
-          name
-        end
-
-        # Normalizes tag values by removing StatsD protocol special characters
-        # @param value [String, Integer, Float] The tag value
-        # @return [String] The normalized tag value
-        def normalize_tag_value(value)
-          value = value.to_s
-          value = value.tr("|,", "") if /[|,]/.match?(value)
-          value
         end
 
         # @return [String] The metric type character (e.g., "c" for counter)
@@ -156,7 +105,7 @@ module StatsD
           block_param = accepts_block? ? ", &block" : ""
 
           method_code = <<~RUBY
-            def self.#{method}(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: #{default_val.inspect}, sample_rate: nil#{block_param})
+            def self.#{method}(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: #{default_val.inspect}#{block_param})
               # Compute hash of tag values for cache lookup
               cache_key = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
 
@@ -191,7 +140,7 @@ module StatsD
 
               datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint)
 
-              @singleton_client.emit_precompiled_metric(datagram, value, sample_rate: sample_rate)
+              @singleton_client.emit_precompiled_metric(datagram, value, sample_rate: @sample_rate)
             end
           RUBY
 
@@ -207,17 +156,142 @@ module StatsD
           block_param = accepts_block? ? ", &block" : ""
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
-            def self.#{method}(value: #{default_val.inspect}, sample_rate: nil#{block_param})
-              @singleton_client.emit_precompiled_metric(@static_datagram, value, sample_rate: sample_rate)
+            def self.#{method}(value: #{default_val.inspect}#{block_param})
+              @singleton_client.emit_precompiled_metric(@static_datagram, value, sample_rate: @sample_rate)
             end
           RUBY
         end
+      end
 
-        # Normalizes metric names by replacing special characters
-        # @param name [String] The metric name
-        # @return [String] The normalized metric name
-        def normalize_name(name)
-          name.tr(":|@", "_")
+      # Helper class to build datagram blueprints at definition time.
+      # Handles prefix building, tag compilation, and blueprint construction.
+      class DatagramBlueprintBuilder
+        class << self
+          # Builds a datagram blueprint string
+          #
+          # @param name [String] The metric name
+          # @param type [String] The metric type (e.g., "c" for counter)
+          # @param client_prefix [String, nil] The client's prefix
+          # @param no_prefix [Boolean] Whether to skip the prefix
+          # @param default_tags [String, Hash, Array, nil] The client's default tags
+          # @param static_tags [Hash] Static tags with fixed values
+          # @param dynamic_tags [Hash] Dynamic tags with type specifications
+          # @param sample_rate [Float, nil] The sample rate (0.0-1.0), nil for no sampling
+          # @param enable_aggregation [Boolean] Whether aggregation is enabled
+          # @return [String] The datagram blueprint with sprintf placeholders
+          def build(name:, type:, client_prefix:, no_prefix:, default_tags:, static_tags:, dynamic_tags:, sample_rate:, enable_aggregation:)
+            # Normalize and build prefix
+            normalized_name = normalize_name(name)
+            prefix = build_prefix(client_prefix, no_prefix)
+
+            # Compile all tags (default, static, dynamic)
+            all_tags = compile_all_tags(default_tags, static_tags, dynamic_tags)
+
+            # Build the datagram blueprint
+            # Format: "<prefix><name>:%s|<type>|@<sample_rate>|#<tags>" or "<prefix><name>:%s|<type>|#<tags>"
+            # Using %s to support both float and integer values (preserves natural formatting)
+            # Note: When aggregation is enabled, sample_rate is always ignored (always 1.0)
+            if sample_rate && sample_rate < 1 && !enable_aggregation
+              # Include sample_rate in the blueprint (only when not aggregating)
+              if all_tags.empty?
+                "#{prefix}#{normalized_name}:%s|#{type}|@#{sample_rate}"
+              else
+                "#{prefix}#{normalized_name}:%s|#{type}|@#{sample_rate}|##{all_tags}"
+              end
+            elsif all_tags.empty?
+              "#{prefix}#{normalized_name}:%s|#{type}"
+            else
+              "#{prefix}#{normalized_name}:%s|#{type}|##{all_tags}"
+            end
+          end
+
+          # Normalizes metric names by replacing special characters
+          # @param name [String] The metric name
+          # @return [String] The normalized metric name
+          def normalize_name(name)
+            name.tr(":|@", "_")
+          end
+
+          private
+
+          # Builds the metric prefix
+          # @param client_prefix [String, nil] The client's prefix
+          # @param no_prefix [Boolean] Whether to skip the prefix
+          # @return [String] The prefix string (with trailing dot if present)
+          def build_prefix(client_prefix, no_prefix)
+            return "" if no_prefix || client_prefix.nil?
+
+            "#{client_prefix}."
+          end
+
+          # Normalizes tag names/values by removing StatsD protocol special characters
+          # @param str [Symbol, String, Integer, Float] The string to normalize
+          # @return [String] The normalized string
+          def normalize_statsd_string(str)
+            str = str.to_s
+            str = str.tr("|,", "") if /[|,]/.match?(str)
+            str
+          end
+
+          # Compiles all tags (default_tags, static_tags, dynamic_tags) into a single string
+          # @param default_tags [String, Hash, Array, nil] The client's default tags
+          # @param static_tags [Hash] Static tags with fixed values
+          # @param dynamic_tags [Hash] Dynamic tags with type specifications
+          # @return [String] The comma-separated tags string
+          def compile_all_tags(default_tags, static_tags, dynamic_tags)
+            default_tags_str = compile_default_tags(default_tags)
+            static_tags_str = compile_static_tags(static_tags)
+            dynamic_tags_str = compile_dynamic_tags(dynamic_tags)
+
+            (default_tags_str + static_tags_str + dynamic_tags_str).join(",")
+          end
+
+          # Compiles default tags from the client (can be String, Hash, or Array)
+          # @param default_tags [String, Hash, Array, nil] The client's default tags
+          # @return [Array<String>] Array of normalized tag strings
+          def compile_default_tags(default_tags)
+            return [] if default_tags.nil? || default_tags.empty?
+
+            if default_tags.is_a?(String)
+              [normalize_statsd_string(default_tags)]
+            elsif default_tags.is_a?(Hash)
+              default_tags.map do |key, value|
+                "#{normalize_statsd_string(key)}:#{normalize_statsd_string(value)}"
+              end
+            else
+              # Array
+              default_tags.map { |tag| normalize_statsd_string(tag) }
+            end
+          end
+
+          # Compiles static tags (hash of key => value)
+          # @param static_tags [Hash] Static tags with fixed values
+          # @return [Array<String>] Array of "key:value" strings
+          def compile_static_tags(static_tags)
+            static_tags.map do |key, value|
+              "#{normalize_statsd_string(key)}:#{normalize_statsd_string(value)}"
+            end
+          end
+
+          # Compiles dynamic tags (hash of key => type) into sprintf placeholders
+          # @param dynamic_tags [Hash] Dynamic tags with type specifications
+          # @return [Array<String>] Array of "key:%s" placeholder strings
+          def compile_dynamic_tags(dynamic_tags)
+            dynamic_tags.map do |key, type|
+              tag_name = normalize_statsd_string(key)
+              placeholder =
+                if type == String
+                  "%s"
+                elsif type == Integer
+                  "%d"
+                elsif type == Float
+                  "%f"
+                else
+                  raise ArgumentError, "Unsupported tag value type: #{type}. Use String, Integer, or Float class."
+                end
+              "#{tag_name}:#{placeholder}"
+            end
+          end
         end
       end
 
@@ -231,12 +305,6 @@ module StatsD
         def initialize(tag_values, datagram_blueprint)
           @tag_values = tag_values
           @datagram_blueprint = datagram_blueprint
-        end
-
-        # Use object identity for hash key - each unique tag combination
-        # gets its own cached PrecompiledDatagram object
-        def eql?(other)
-          equal?(other)
         end
 
         # Builds the final datagram string by substituting values into the blueprint

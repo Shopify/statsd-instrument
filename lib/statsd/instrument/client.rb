@@ -134,6 +134,12 @@ module StatsD
       # @return [Array<String>, Hash, nil]
       attr_reader :default_tags
 
+      # Whether aggregation is enabled for this client. When enabled, metrics are
+      # buffered and sent in batches to reduce network overhead.
+      #
+      # @return [Boolean]
+      attr_reader :enable_aggregation
+
       # The default sample rate to use for metrics that are emitted without a
       # sample rate set. This should be a value between 0 (never emit a metric) and
       # 1.0 (always emit). If it is not set, the default value 1.0 is used.

@@ -34,7 +34,7 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(value: 5)
 
     datagram = @sink.datagrams.first
-    assert_equal("test_foo.bar", datagram.name)
+    assert_equal("test.foo.bar", datagram.name)
     assert_equal(5, datagram.value)
     assert_equal(:c, datagram.type)
     assert_equal(["env:prod", "service:web"], datagram.tags.sort)
@@ -49,7 +49,7 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(shop_id: 123, user_id: 456, value: 1)
 
     datagram = @sink.datagrams.first
-    assert_equal("test_foo.bar", datagram.name)
+    assert_equal("test.foo.bar", datagram.name)
     assert_equal(1, datagram.value)
     assert_equal(:c, datagram.type)
     assert_equal(["shop_id:123", "user_id:456"], datagram.tags.sort)
@@ -65,7 +65,7 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(shop_id: 999, value: 3)
 
     datagram = @sink.datagrams.first
-    assert_equal("test_foo.bar", datagram.name)
+    assert_equal("test.foo.bar", datagram.name)
     assert_equal(3, datagram.value)
     assert_equal(["service:web", "shop_id:999"], datagram.tags.sort)
   end
@@ -79,7 +79,7 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(country: "US", region: "West", value: 2)
 
     datagram = @sink.datagrams.first
-    assert_equal("test_foo.bar", datagram.name)
+    assert_equal("test.foo.bar", datagram.name)
     assert_equal(2, datagram.value)
     assert_equal(["country:US", "region:West"], datagram.tags.sort)
   end
@@ -93,7 +93,7 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(rate: 1.5, value: 1)
 
     datagram = @sink.datagrams.first
-    assert_equal("test_foo.bar", datagram.name)
+    assert_equal("test.foo.bar", datagram.name)
     assert_equal(1, datagram.value)
     # Float formatting uses %f which outputs full precision
     assert_equal(1, datagram.tags.size)
@@ -192,7 +192,7 @@ class CompiledMetricTest < Minitest::Test
 
     datagram = @sink.datagrams.first
     # Special characters should be converted to underscores
-    assert_equal("test_foo_bar_baz_qux", datagram.name)
+    assert_equal("test.foo_bar_baz_qux", datagram.name)
   end
 
   def test_raises_on_unsupported_tag_type
@@ -223,12 +223,12 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(value: 1)
 
     datagram = @sink.datagrams.first
-    assert_equal("test_foo.bar", datagram.name)
+    assert_equal("test.foo.bar", datagram.name)
     # Should include default tags from client + static tags
     assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
   end
 
-  def test_excludes_default_tags_with_no_prefix
+  def test_includes_default_tags_with_no_prefix
     # Create a client with default tags
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     client = StatsD::Instrument::Client.new(
@@ -249,8 +249,8 @@ class CompiledMetricTest < Minitest::Test
 
     datagram = @sink.datagrams.first
     assert_equal("foo.bar", datagram.name) # No prefix
-    # Should NOT include default tags when no_prefix is true
-    assert_equal(["service:web"], datagram.tags)
+    # Should include default tags even when no_prefix is true
+    assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
   end
 
   def test_custom_max_cache_size
@@ -287,31 +287,17 @@ class CompiledMetricTest < Minitest::Test
     assert_equal(100, shop_ids.uniq.size)
   end
 
-  def test_sample_rate_parameter_with_static_tags
+  def test_sample_rate_parameter
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
       static_tags: { service: "web" },
+      sample_rate: 0.5,
     )
 
-    # Verify sample_rate parameter is accepted (CaptureSink always samples)
-    metric.increment(value: 1, sample_rate: 0.5)
+    metric.increment(value: 1)
 
     assert_equal(1, @sink.datagrams.size)
-    assert_equal("test_foo.bar", @sink.datagrams.first.name)
-    assert_equal(["service:web"], @sink.datagrams.first.tags)
-  end
-
-  def test_sample_rate_parameter_with_dynamic_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer },
-    )
-
-    # Verify sample_rate parameter is accepted (CaptureSink always samples)
-    metric.increment(shop_id: 123, value: 1, sample_rate: 0.5)
-
-    assert_equal(1, @sink.datagrams.size)
-    assert_equal(["shop_id:123"], @sink.datagrams.first.tags)
+    assert_equal(0.5, @sink.datagrams.first.sample_rate)
   end
 
   def test_default_sample_rate_from_client
@@ -322,7 +308,7 @@ class CompiledMetricTest < Minitest::Test
       prefix: "test",
       default_tags: [],
       enable_aggregation: false,
-      default_sample_rate: 1.0,
+      default_sample_rate: 0.6,
     )
     StatsD.singleton_client = client
 
@@ -330,9 +316,38 @@ class CompiledMetricTest < Minitest::Test
       name: "foo.bar",
     )
 
-    # Should use client's default sample rate
     metric.increment(value: 1)
     assert_equal(1, @sink.datagrams.size)
+    assert_equal(0.6, @sink.datagrams.first.sample_rate)
+  end
+
+  def test_sample_rate_default_to_1_without_aggregation
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    metric.increment(value: 5)
+
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal(1.0, @sink.datagrams.first.sample_rate)
+  end
+
+  def test_sample_rate_omitted_when_1_without_aggregation
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      sample_rate: 1.0,
+    )
+
+    # With sample rate = 1.0, it should be omitted from the datagram
+    metric.increment(value: 3)
+
+    assert_equal(1, @sink.datagrams.size)
+    datagram = @sink.datagrams.first
+    # Sample rate defaults to 1.0 when not present in datagram
+    assert_equal(1.0, datagram.sample_rate)
+    # Verify the source doesn't contain |@1.0
+    refute_includes(datagram.source, "|@")
   end
 end
 
@@ -437,11 +452,6 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     GC.enable
 
     allocations = after - before
-    # With aggregation, we expect minimal allocations (≤2)
-    # The allocations come from:
-    # 1. Keyword argument hash for sample_rate: nil (unavoidable in Ruby)
-    # 2. Possibly method call frame overhead (Ruby version dependent)
-    # This is still vastly better than StatsD.increment (14+ allocations)
     assert(allocations <= 2, "Expected <= 2 allocations with aggregation but got #{allocations}")
   end
 
@@ -464,11 +474,103 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     GC.enable
 
     allocations = after - before
-    # With aggregation and cached tags, we expect minimal allocations (≤2)
-    # The allocations come from:
-    # 1. Keyword argument hash for sample_rate: nil (unavoidable in Ruby)
-    # 2. Possibly method call frame overhead (Ruby version dependent)
-    # This is still vastly better than StatsD.increment (14+ allocations)
     assert(allocations <= 2, "Expected <= 2 allocations with aggregation (cached tags) but got #{allocations}")
+  end
+
+  def test_sample_rate_ignored_with_aggregation
+    # When aggregating, sample_rate should be ignored and the aggregated
+    # value should be emitted with sample_rate = 1.0 (or omitted entirely)
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+      sample_rate: 0.1,
+    )
+
+    # Even with sample_rate specified at definition time, aggregation ignores it
+    metric.increment(value: 5)
+    metric.increment(value: 3)
+
+    @aggregator.flush
+
+    assert_equal(1, @sink.datagrams.size)
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal(8, datagram.value) # 5 + 3 (not scaled)
+    # Sample rate should be 1.0 (default) when aggregating
+    assert_equal(1.0, datagram.sample_rate)
+    refute_includes(datagram.source, "|@")
+  end
+end
+
+class DatagramBlueprintBuilderTest < Minitest::Test
+  def setup
+    @old_client = StatsD.singleton_client
+  end
+
+  def teardown
+    StatsD.singleton_client = @old_client
+  end
+
+  def test_handles_default_tags_as_array
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: ["env:production", "region:us-east"],
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    metric.increment(value: 1)
+
+    datagram = @sink.datagrams.first
+    assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
+  end
+
+  def test_handles_default_tags_as_hash
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: { env: "production", region: "us-east" },
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    metric.increment(value: 1)
+
+    datagram = @sink.datagrams.first
+    assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
+  end
+
+  def test_handles_default_tags_as_string
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: "env:production",
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    metric.increment(value: 1)
+
+    datagram = @sink.datagrams.first
+    assert_equal(["env:production", "service:web"], datagram.tags.sort)
   end
 end
