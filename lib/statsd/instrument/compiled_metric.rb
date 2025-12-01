@@ -28,7 +28,7 @@ module StatsD
         # @param tags [Hash{Symbol, String => Class}] Tags with dynamic values (Integer, Float, or String)
         # @param no_prefix [Boolean] If true, skip the StatsD prefix and default_tags
         # @param sample_rate [Float, nil] The sample rate (0.0-1.0) for this metric, nil for no sampling
-        # @param max_cache_size [Integer] Maximum tag combinations to cache before clearing
+        # @param max_cache_size [Integer] Maximum tag combinations this metric supports, and will be retained in-memory. Cardinality beyond this number will fall back to the slow path and should be avoided.
         # @return [Class] A new CompiledMetric subclass configured for this metric
         def define(name:, static_tags: {}, tags: {}, no_prefix: false, sample_rate: nil, max_cache_size: DEFAULT_MAX_TAG_COMBINATION_CACHE_SIZE)
           client = StatsD.singleton_client
@@ -84,11 +84,6 @@ module StatsD
           raise NotImplementedError, "Subclasses must implement #default_value"
         end
 
-        # @return [Boolean] Whether the metric method accepts a block
-        def accepts_block?
-          false
-        end
-
         # Defines the metric emission method - must be implemented by subclasses
         # @param tags [Hash] The dynamic tags configuration
         def define_metric_method(tags)
@@ -108,10 +103,9 @@ module StatsD
           tag_names = tags.keys
           method = method_name
           default_val = default_value
-          block_param = accepts_block? ? ", &block" : ""
 
           method_code = <<~RUBY
-            def self.#{method}(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: #{default_val.inspect}#{block_param})
+            def self.#{method}(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: #{default_val.inspect})
               # Compute hash of tag values for cache lookup
               cache_key = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
 
@@ -123,7 +117,7 @@ module StatsD
                       new_datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint)
 
                       # Clear cache if it grows too large to prevent memory bloat
-                      if cache.size > @max_cache_size
+                      if cache.size >= @max_cache_size
                         StatsD.increment("statsd_instrument.compiled_metric.cache_exceeded_total", tags: { metric_name: @name, max_size: @max_cache_size })
                         @tag_combination_cache = nil
                       end
@@ -132,16 +126,13 @@ module StatsD
                     end
 
                   # Hash collision detection
-                  if cached_datagram && #{tag_names.map.with_index { |name, i| "#{name} != cached_datagram.tag_values[#{i}]" }.join(" || ")}
+                  if #{tag_names.map.with_index { |name, i| "#{name} != cached_datagram.tag_values[#{i}]" }.join(" || ")}
                     # Hash collision - fall back to creating a new datagram
                     StatsD.increment("statsd_instrument.compiled_metric.hash_collision_detected", tags: { metric_name: @name })
                     cached_datagram = nil
                   end
 
                   cached_datagram
-                else
-                  # Cache was cleared, create datagram without caching
-                  nil
                 end
 
               datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint)
@@ -159,10 +150,9 @@ module StatsD
           @static_datagram = PrecompiledDatagram.new([], @datagram_blueprint)
           method = method_name
           default_val = default_value
-          block_param = accepts_block? ? ", &block" : ""
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
-            def self.#{method}(value: #{default_val.inspect}#{block_param})
+            def self.#{method}(value: #{default_val.inspect})
               @singleton_client.emit_precompiled_metric(@static_datagram, value, sample_rate: @sample_rate)
             end
           RUBY
@@ -323,16 +313,11 @@ module StatsD
 
           # Sanitize and convert tag values to strings
           values = @tag_values.map do |arg|
-            case arg
-            when String
-              # Remove StatsD protocol delimiters if present
-              /[|,]/.match?(arg) ? arg.tr("|,", "") : arg
-            when Integer, Float
+            if arg.is_a?(Integer) || arg.is_a?(Float)
               arg.to_s
-            else
-              # Convert to string and remove StatsD protocol delimiters
-              str = arg.to_s
-              /[|,]/.match?(str) ? str.tr("|,", "") : str
+            else 
+              arg = arg.to_s unless arg.is_a?(String)
+              /[|,]/.match?(arg) ? arg.tr("|,", "") : arg
             end
           end
 
