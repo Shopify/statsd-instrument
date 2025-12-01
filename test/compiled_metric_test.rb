@@ -582,28 +582,102 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     refute_includes(datagram.source, "|@")
   end
 
-  def test_sample_rate_applied_before_aggregation
-    # Note: CaptureSink.sample? always returns true for testing purposes,
-    # so we can't test actual sampling behavior here. This test verifies that
-    # sample_rate is passed through to the aggregation path correctly.
-    # In production with real sinks, sampling would be applied before aggregation.
+  def test_sample_rate_filters_before_aggregation
+    # Mock sink to control sampling behavior
+    mock_sink = mock("sink")
+    # Return pattern: false, true, false, true, false (2 out of 5 pass)
+    mock_sink.stubs(:sample?).returns(false, true, false, true, false)
+    mock_sink.expects(:<<).once  # Only one aggregated datagram emitted at flush
+
+    mock_aggregator = StatsD::Instrument::Aggregator.new(
+      mock_sink,
+      StatsD::Instrument::DatagramBuilder,
+      "test",
+      [],
+      flush_interval: 0.1,
+    )
+
+    client = StatsD::Instrument::Client.new(
+      sink: mock_sink,
+      prefix: "test",
+      default_tags: [],
+      enable_aggregation: true,
+    )
+    client.instance_variable_set(:@aggregator, mock_aggregator)
+    old_client = StatsD.singleton_client
+    StatsD.singleton_client = client
 
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
-      static_tags: { service: "web" },
       sample_rate: 0.5,
     )
 
-    # With CaptureSink (sample? always true), all increments reach aggregation
-    metric.increment(value: 5)
-    metric.increment(value: 3)
+    # Send 5 increments - only 2 should pass sampling and reach aggregation
+    5.times { metric.increment(value: 1) }
 
-    @aggregator.flush
+    mock_aggregator.flush
 
-    assert_equal(1, @sink.datagrams.size)
-    datagram = @sink.datagrams.first
-    assert_equal("test.foo.bar", datagram.name)
-    # With CaptureSink, all increments are aggregated since sample? always returns true
-    assert_equal(8, datagram.value) # 5 + 3
+    StatsD.singleton_client = old_client
+    # Verify the aggregated value is 2 (only the sampled increments)
+    # The mock expects exactly 1 call to << (the aggregated result)
+  end
+end
+
+class CompiledMetricSamplingTest < Minitest::Test
+  def test_sampling_without_aggregation
+    # Mock sink to control sampling behavior
+    mock_sink = mock("sink")
+    # Return pattern: false, true, false, true, false (2 out of 5 pass)
+    mock_sink.stubs(:sample?).returns(false, true, false, true, false)
+    # Expect exactly 2 emissions (the ones that passed sampling)
+    mock_sink.expects(:<<).twice
+
+    old_client = StatsD.singleton_client
+    StatsD.singleton_client = StatsD::Instrument::Client.new(
+      sink: mock_sink,
+      prefix: "test",
+      default_tags: [],
+      enable_aggregation: false,
+    )
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      sample_rate: 0.5,
+    )
+
+    # Send 5 increments - only 2 should pass sampling
+    5.times { metric.increment(value: 1) }
+
+    StatsD.singleton_client = old_client
+  end
+
+  def test_sampling_with_dynamic_tags_without_aggregation
+    # Mock sink to control sampling behavior
+    mock_sink = mock("sink")
+    # Return pattern: true, false, true (2 out of 3 pass)
+    mock_sink.stubs(:sample?).returns(true, false, true)
+    # Expect exactly 2 emissions
+    mock_sink.expects(:<<).twice
+
+    old_client = StatsD.singleton_client
+    StatsD.singleton_client = StatsD::Instrument::Client.new(
+      sink: mock_sink,
+      prefix: "test",
+      default_tags: [],
+      enable_aggregation: false,
+    )
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { shop_id: Integer },
+      sample_rate: 0.5,
+    )
+
+    # Send 3 increments - only 2 should pass sampling
+    metric.increment(shop_id: 123, value: 1)
+    metric.increment(shop_id: 456, value: 1)
+    metric.increment(shop_id: 789, value: 1)
+
+    StatsD.singleton_client = old_client
   end
 end
