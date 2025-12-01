@@ -38,6 +38,7 @@ module StatsD
           datagram_blueprint = DatagramBlueprintBuilder.build(
             name: name,
             type: type,
+            value_format: value_format,
             client_prefix: client.prefix,
             no_prefix: no_prefix,
             default_tags: client.default_tags,
@@ -66,6 +67,11 @@ module StatsD
         # @return [String] The metric type character (e.g., "c" for counter)
         def type
           raise NotImplementedError, "Subclasses must implement #type"
+        end
+
+        # @return [String] The sprintf format specifier for the metric value (e.g., "%d", "%f", "%s")
+        def value_format
+          "%f" # Default to float format
         end
 
         # @return [Symbol] The method name to define (e.g., :increment)
@@ -118,7 +124,7 @@ module StatsD
 
                       # Clear cache if it grows too large to prevent memory bloat
                       if cache.size > @max_cache_size
-                        StatsD.logger.warn("[CompiledMetric] Tag combination cache exceeded max size (\#{@max_cache_size}) for metric '\#{@name}', clearing cache")
+                        StatsD.increment("statsd_instrument.compiled_metric.cache_exceeded_total", tags: { metric_name: @name, max_size: @max_cache_size })
                         @tag_combination_cache = nil
                       end
 
@@ -128,7 +134,7 @@ module StatsD
                   # Hash collision detection
                   if cached_datagram && #{tag_names.map.with_index { |name, i| "#{name} != cached_datagram.tag_values[#{i}]" }.join(" || ")}
                     # Hash collision - fall back to creating a new datagram
-                    StatsD.logger.warn("[CompiledMetric] Hash collision detected for metric '\#{@name}' with cache_key \#{cache_key}")
+                    StatsD.increment("statsd_instrument.compiled_metric.hash_collision_detected", tags: { metric_name: @name })
                     cached_datagram = nil
                   end
 
@@ -171,6 +177,7 @@ module StatsD
           #
           # @param name [String] The metric name
           # @param type [String] The metric type (e.g., "c" for counter)
+          # @param value_format [String] The sprintf format for the value (e.g., "%d", "%f")
           # @param client_prefix [String, nil] The client's prefix
           # @param no_prefix [Boolean] Whether to skip the prefix
           # @param default_tags [String, Hash, Array, nil] The client's default tags
@@ -179,7 +186,7 @@ module StatsD
           # @param sample_rate [Float, nil] The sample rate (0.0-1.0), nil for no sampling
           # @param enable_aggregation [Boolean] Whether aggregation is enabled
           # @return [String] The datagram blueprint with sprintf placeholders
-          def build(name:, type:, client_prefix:, no_prefix:, default_tags:, static_tags:, dynamic_tags:, sample_rate:, enable_aggregation:)
+          def build(name:, type:, value_format:, client_prefix:, no_prefix:, default_tags:, static_tags:, dynamic_tags:, sample_rate:, enable_aggregation:)
             # Normalize and build prefix
             normalized_name = normalize_name(name)
             prefix = build_prefix(client_prefix, no_prefix)
@@ -188,20 +195,20 @@ module StatsD
             all_tags = compile_all_tags(default_tags, static_tags, dynamic_tags)
 
             # Build the datagram blueprint
-            # Format: "<prefix><name>:%s|<type>|@<sample_rate>|#<tags>" or "<prefix><name>:%s|<type>|#<tags>"
-            # Using %s to support both float and integer values (preserves natural formatting)
+            # Format: "<prefix><name>:<value_format>|<type>|@<sample_rate>|#<tags>"
+            # value_format is delegated to the metric subclass (e.g., %d for Counter, %f for others)
             # Note: When aggregation is enabled, sample_rate is always ignored (always 1.0)
             if sample_rate && sample_rate < 1 && !enable_aggregation
               # Include sample_rate in the blueprint (only when not aggregating)
               if all_tags.empty?
-                "#{prefix}#{normalized_name}:%s|#{type}|@#{sample_rate}"
+                "#{prefix}#{normalized_name}:#{value_format}|#{type}|@#{sample_rate}"
               else
-                "#{prefix}#{normalized_name}:%s|#{type}|@#{sample_rate}|##{all_tags}"
+                "#{prefix}#{normalized_name}:#{value_format}|#{type}|@#{sample_rate}|##{all_tags}"
               end
             elsif all_tags.empty?
-              "#{prefix}#{normalized_name}:%s|#{type}"
+              "#{prefix}#{normalized_name}:#{value_format}|#{type}"
             else
-              "#{prefix}#{normalized_name}:%s|#{type}|##{all_tags}"
+              "#{prefix}#{normalized_name}:#{value_format}|#{type}|##{all_tags}"
             end
           end
 
@@ -323,6 +330,10 @@ module StatsD
               end
             when Integer, Float
               arg.to_s
+            else
+              # Convert to string and remove StatsD protocol delimiters
+              str = arg.to_s
+              /[|,]/.match?(str) ? str.tr("|,", "") : str
             end
           end
 
@@ -339,6 +350,10 @@ module StatsD
         class << self
           def type
             "c"
+          end
+
+          def value_format
+            "%d" # Counters use integer format
           end
 
           def method_name

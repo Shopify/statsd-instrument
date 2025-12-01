@@ -573,4 +573,145 @@ class DatagramBlueprintBuilderTest < Minitest::Test
     datagram = @sink.datagrams.first
     assert_equal(["env:production", "service:web"], datagram.tags.sort)
   end
+
+  def test_normalizes_tag_values_with_special_characters
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: [],
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    # Test with string tag that contains special characters
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { message: String },
+    )
+
+    # String with pipes and commas should be sanitized
+    metric.increment(message: "hello|world,test", value: 1)
+
+    datagram = @sink.datagrams.first
+    assert_equal(["message:helloworldtest"], datagram.tags)
+  end
+
+  def test_normalizes_symbol_tag_values
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: [],
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    # Test with tag value that's a symbol (should hit the else clause)
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { status: String },
+    )
+
+    # Pass a symbol as a tag value (not a common case but should be handled)
+    # This will be converted to string via normalize_statsd_string
+    metric.increment(status: :active, value: 1)
+
+    datagram = @sink.datagrams.first
+    assert_equal(["status:active"], datagram.tags)
+  end
+
+  def test_emits_metric_when_cache_exceeded
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: [],
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    # Create a metric with a very small cache size
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { shop_id: Integer },
+      max_cache_size: 2,
+    )
+
+    # Clear any existing datagrams
+    @sink.clear
+
+    # Fill the cache (2 entries)
+    metric.increment(shop_id: 1, value: 1)
+    metric.increment(shop_id: 2, value: 1)
+
+    # Third entry brings us to max_cache_size
+    metric.increment(shop_id: 3, value: 1)
+
+    # This fourth entry should trigger cache exceeded (cache.size = 3 > 2)
+    metric.increment(shop_id: 4, value: 1)
+
+    # Find the cache exceeded metric (includes prefix)
+    cache_exceeded_metric = @sink.datagrams.find do |datagram|
+      datagram.name == "test.statsd_instrument.compiled_metric.cache_exceeded_total"
+    end
+
+    refute_nil(cache_exceeded_metric, "Expected cache exceeded metric to be emitted")
+    assert_equal(1, cache_exceeded_metric.value)
+    assert_includes(cache_exceeded_metric.tags, "metric_name:foo.bar")
+    assert_includes(cache_exceeded_metric.tags, "max_size:2")
+  end
+
+  def test_emits_metric_on_hash_collision
+    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: [],
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    # Create a metric with a single tag
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      tags: { shop_id: Integer },
+    )
+
+    # First call with shop_id=1 to populate cache
+    metric.increment(shop_id: 1, value: 1)
+
+    # Access the cache and manually inject a hash collision
+    # We'll find a different shop_id that has the same hash as 1
+    cache = metric.instance_variable_get(:@tag_combination_cache)
+    original_key = 1.hash
+
+    # Find a number with a different hash to force a collision scenario
+    # For testing purposes, we'll manipulate the cache directly
+    collision_shop_id = 2
+    while collision_shop_id.hash == original_key
+      collision_shop_id += 1
+    end
+
+    # Store the cached datagram under the collision key
+    cached_datagram = cache[original_key]
+    cache[collision_shop_id.hash] = cached_datagram
+
+    # Clear datagrams before the collision test
+    @sink.clear
+
+    # Now increment with the collision shop_id - this should detect the collision
+    # because the tag_values won't match
+    metric.increment(shop_id: collision_shop_id, value: 1)
+
+    # Find the hash collision metric (includes prefix)
+    hash_collision_metric = @sink.datagrams.find do |datagram|
+      datagram.name == "test.statsd_instrument.compiled_metric.hash_collision_detected"
+    end
+
+    refute_nil(hash_collision_metric, "Expected hash collision metric to be emitted")
+    assert_equal(1, hash_collision_metric.value)
+    # The metric name uses the normalized name (only : | @ are replaced, not .)
+    assert_includes(hash_collision_metric.tags, "metric_name:foo.bar")
+  end
 end
