@@ -187,8 +187,8 @@ module StatsD
             # Build the datagram blueprint
             # Format: "<prefix><name>:<value_format>|<type>|@<sample_rate>|#<tags>"
             # value_format is delegated to the metric subclass (e.g., %d for Counter, %f for others)
-            # Note: When aggregation is enabled, sample_rate is always ignored (always 1.0)
-            if sample_rate && sample_rate < 1 && !enable_aggregation
+            # Note: When aggregation is enabled, sample_rate is applied before aggregation
+            if sample_rate && sample_rate < 1
               # Include sample_rate in the blueprint (only when not aggregating)
               if all_tags.empty?
                 "#{prefix}#{normalized_name}:#{value_format}|#{type}|@#{sample_rate}"

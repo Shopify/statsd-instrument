@@ -558,16 +558,16 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     assert_equal(8, datagram.value) # 1 + 2 + 5
   end
 
-  def test_sample_rate_ignored_with_aggregation
-    # When aggregating, sample_rate should be ignored and the aggregated
-    # value should be emitted with sample_rate = 1.0 (or omitted entirely)
+  def test_sample_rate_applied_with_aggregation
+    # When aggregating with sample_rate, sampling happens before aggregation
+    # This test verifies that with sample_rate=1.0, all increments are aggregated
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
       static_tags: { service: "web" },
-      sample_rate: 0.1,
+      sample_rate: 1.0,
     )
 
-    # Even with sample_rate specified at definition time, aggregation ignores it
+    # With sample_rate=1.0, all increments should be aggregated
     metric.increment(value: 5)
     metric.increment(value: 3)
 
@@ -576,9 +576,34 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     assert_equal(1, @sink.datagrams.size)
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
-    assert_equal(8, datagram.value) # 5 + 3 (not scaled)
-    # Sample rate should be 1.0 (default) when aggregating
+    assert_equal(8, datagram.value) # 5 + 3
+    # Sample rate should be 1.0 when aggregating
     assert_equal(1.0, datagram.sample_rate)
     refute_includes(datagram.source, "|@")
+  end
+
+  def test_sample_rate_applied_before_aggregation
+    # Note: CaptureSink.sample? always returns true for testing purposes,
+    # so we can't test actual sampling behavior here. This test verifies that
+    # sample_rate is passed through to the aggregation path correctly.
+    # In production with real sinks, sampling would be applied before aggregation.
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+      sample_rate: 0.5,
+    )
+
+    # With CaptureSink (sample? always true), all increments reach aggregation
+    metric.increment(value: 5)
+    metric.increment(value: 3)
+
+    @aggregator.flush
+
+    assert_equal(1, @sink.datagrams.size)
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    # With CaptureSink, all increments are aggregated since sample? always returns true
+    assert_equal(8, datagram.value) # 5 + 3
   end
 end

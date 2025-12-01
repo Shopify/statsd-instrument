@@ -251,7 +251,10 @@ module StatsD
         sample_rate ||= @default_sample_rate
 
         if @enable_aggregation
-          @aggregator.aggregate_precompiled_metric(precompiled_datagram, value)
+          # Apply sampling before aggregation
+          if sample_rate.nil? || sample?(sample_rate)
+            @aggregator.aggregate_precompiled_metric(precompiled_datagram, value)
+          end
           return StatsD::Instrument::VOID
         end
 
