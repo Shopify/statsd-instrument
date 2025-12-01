@@ -19,7 +19,7 @@ class CompiledMetricTest < Minitest::Test
   def teardown
     super
 
-    @sink.clear
+    StatsD.singleton_client.sink.clear
     StatsD.singleton_client = @old_client
   end
 
@@ -164,8 +164,8 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(shop_id: 123, value: 2)
     metric.increment(shop_id: 123, value: 3)
 
-    assert_equal(3, @sink.datagrams.size)
-    @sink.datagrams.each do |datagram|
+    assert_equal(3, sink.datagrams.size)
+    sink.datagrams.each do |datagram|
       assert_equal(["shop_id:123"], datagram.tags)
     end
   end
@@ -180,10 +180,10 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(shop_id: 456, value: 1)
     metric.increment(shop_id: 789, value: 1)
 
-    assert_equal(3, @sink.datagrams.size)
-    assert_equal(["shop_id:123"], @sink.datagrams[0].tags)
-    assert_equal(["shop_id:456"], @sink.datagrams[1].tags)
-    assert_equal(["shop_id:789"], @sink.datagrams[2].tags)
+    assert_equal(3, sink.datagrams.size)
+    assert_equal(["shop_id:123"], sink.datagrams[0].tags)
+    assert_equal(["shop_id:456"], sink.datagrams[1].tags)
+    assert_equal(["shop_id:789"], sink.datagrams[2].tags)
   end
 
   def test_normalizes_metric_name
@@ -209,7 +209,6 @@ class CompiledMetricTest < Minitest::Test
 
   def test_includes_default_tags_from_client
     # Create a client with default tags
-    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     client = StatsD::Instrument::Client.new(
       sink: @sink,
       prefix: "test",
@@ -233,7 +232,6 @@ class CompiledMetricTest < Minitest::Test
 
   def test_includes_default_tags_with_no_prefix
     # Create a client with default tags
-    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     client = StatsD::Instrument::Client.new(
       sink: @sink,
       prefix: "test",
@@ -265,13 +263,12 @@ class CompiledMetricTest < Minitest::Test
 
     metric.increment(value: 1)
 
-    assert_equal(1, @sink.datagrams.size)
-    assert_equal(0.5, @sink.datagrams.first.sample_rate)
+    assert_equal(1, sink.datagrams.size)
+    assert_equal(0.5, sink.datagrams.first.sample_rate)
   end
 
   def test_default_sample_rate_from_client
     # Create a client with default sample rate
-    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     client = StatsD::Instrument::Client.new(
       sink: @sink,
       prefix: "test",
@@ -286,8 +283,8 @@ class CompiledMetricTest < Minitest::Test
     )
 
     metric.increment(value: 1)
-    assert_equal(1, @sink.datagrams.size)
-    assert_equal(0.6, @sink.datagrams.first.sample_rate)
+    assert_equal(1, sink.datagrams.size)
+    assert_equal(0.6, sink.datagrams.first.sample_rate)
   end
 
   def test_sample_rate_default_to_1_without_aggregation
@@ -298,8 +295,8 @@ class CompiledMetricTest < Minitest::Test
 
     metric.increment(value: 5)
 
-    assert_equal(1, @sink.datagrams.size)
-    assert_equal(1.0, @sink.datagrams.first.sample_rate)
+    assert_equal(1, sink.datagrams.size)
+    assert_equal(1.0, sink.datagrams.first.sample_rate)
   end
 
   def test_sample_rate_omitted_when_1_without_aggregation
@@ -311,7 +308,7 @@ class CompiledMetricTest < Minitest::Test
     # With sample rate = 1.0, it should be omitted from the datagram
     metric.increment(value: 3)
 
-    assert_equal(1, @sink.datagrams.size)
+    assert_equal(1, sink.datagrams.size)
     datagram = @sink.datagrams.first
     # Sample rate defaults to 1.0 when not present in datagram
     assert_equal(1.0, datagram.sample_rate)
@@ -357,7 +354,7 @@ class CompiledMetricTest < Minitest::Test
     )
 
     # Clear any existing datagrams
-    @sink.clear
+    sink.clear
 
     # Fill the cache (2 entries)
     metric.increment(shop_id: 1, value: 1)
@@ -374,7 +371,7 @@ class CompiledMetricTest < Minitest::Test
       datagram.name == "test.statsd_instrument.compiled_metric.cache_exceeded_total"
     end
 
-    assert_equal(5, @sink.datagrams.size)
+    assert_equal(5, sink.datagrams.size)
     refute_nil(cache_exceeded_metric, "Expected cache exceeded metric to be emitted")
     assert_equal(1, cache_exceeded_metric.value)
     assert_includes(cache_exceeded_metric.tags, "metric_name:foo.bar")
@@ -398,7 +395,7 @@ class CompiledMetricTest < Minitest::Test
     cache[2.hash] = cached_datagram
 
     # Clear datagrams before the collision test
-    @sink.clear
+    sink.clear
 
     # Now increment with the collision shop_id - this should detect the collision
     # because the tag_values won't match
@@ -471,6 +468,12 @@ class CompiledMetricTest < Minitest::Test
     datagram = @sink.datagrams.first
     assert_equal(["env:production", "service:web"], datagram.tags.sort)
   end
+
+  private
+
+  def sink
+    StatsD.singleton_client.sink
+  end
 end
 
 class CompiledMetricWithAggregationTest < Minitest::Test
@@ -484,14 +487,14 @@ class CompiledMetricWithAggregationTest < Minitest::Test
       [],
       flush_interval: 0.1,
     )
-    @client = StatsD::Instrument::Client.new(
+    client = StatsD::Instrument::Client.new(
       sink: @sink,
       prefix: "test",
       default_tags: [],
       enable_aggregation: true,
     )
-    @client.instance_variable_set(:@aggregator, @aggregator)
-    StatsD.singleton_client = @client
+    client.instance_variable_set(:@aggregator, @aggregator)
+    StatsD.singleton_client = client
   end
 
   def teardown
