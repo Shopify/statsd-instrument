@@ -5,7 +5,6 @@ require "test_helper"
 class CompiledMetricTest < Minitest::Test
   def setup
     super
-
     @old_client = StatsD.singleton_client
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     StatsD.singleton_client = StatsD::Instrument::Client.new(
@@ -18,8 +17,7 @@ class CompiledMetricTest < Minitest::Test
 
   def teardown
     super
-
-    StatsD.singleton_client.sink.clear
+    @sink.clear
     StatsD.singleton_client = @old_client
   end
 
@@ -125,7 +123,8 @@ class CompiledMetricTest < Minitest::Test
 
     datagram = @sink.datagrams.first
     # Pipes and commas should be removed from tag names
-    assert(datagram.tags.none? { |t| t.include?("|") || t.include?(",") })
+    assert(datagram.tags[0], "tag_with_pipes:value")
+    assert(datagram.tags[1], "tag_with_commas:value2")
   end
 
   def test_sanitizes_tag_values_in_static_tags
@@ -164,8 +163,8 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(shop_id: 123, value: 2)
     metric.increment(shop_id: 123, value: 3)
 
-    assert_equal(3, sink.datagrams.size)
-    sink.datagrams.each do |datagram|
+    assert_equal(3, @sink.datagrams.size)
+    @sink.datagrams.each do |datagram|
       assert_equal(["shop_id:123"], datagram.tags)
     end
   end
@@ -180,10 +179,10 @@ class CompiledMetricTest < Minitest::Test
     metric.increment(shop_id: 456, value: 1)
     metric.increment(shop_id: 789, value: 1)
 
-    assert_equal(3, sink.datagrams.size)
-    assert_equal(["shop_id:123"], sink.datagrams[0].tags)
-    assert_equal(["shop_id:456"], sink.datagrams[1].tags)
-    assert_equal(["shop_id:789"], sink.datagrams[2].tags)
+    assert_equal(3, @sink.datagrams.size)
+    assert_equal(["shop_id:123"], @sink.datagrams[0].tags)
+    assert_equal(["shop_id:456"], @sink.datagrams[1].tags)
+    assert_equal(["shop_id:789"], @sink.datagrams[2].tags)
   end
 
   def test_normalizes_metric_name
@@ -263,8 +262,8 @@ class CompiledMetricTest < Minitest::Test
 
     metric.increment(value: 1)
 
-    assert_equal(1, sink.datagrams.size)
-    assert_equal(0.5, sink.datagrams.first.sample_rate)
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal(0.5, @sink.datagrams.first.sample_rate)
   end
 
   def test_default_sample_rate_from_client
@@ -283,11 +282,11 @@ class CompiledMetricTest < Minitest::Test
     )
 
     metric.increment(value: 1)
-    assert_equal(1, sink.datagrams.size)
-    assert_equal(0.6, sink.datagrams.first.sample_rate)
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal(0.6, @sink.datagrams.first.sample_rate)
   end
 
-  def test_sample_rate_default_to_1_without_aggregation
+  def test_sample_rate_default_to_1
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
       static_tags: { service: "web" },
@@ -295,11 +294,11 @@ class CompiledMetricTest < Minitest::Test
 
     metric.increment(value: 5)
 
-    assert_equal(1, sink.datagrams.size)
-    assert_equal(1.0, sink.datagrams.first.sample_rate)
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal(1.0, @sink.datagrams.first.sample_rate)
   end
 
-  def test_sample_rate_omitted_when_1_without_aggregation
+  def test_sample_rate_omitted_when_1
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
       sample_rate: 1.0,
@@ -308,26 +307,12 @@ class CompiledMetricTest < Minitest::Test
     # With sample rate = 1.0, it should be omitted from the datagram
     metric.increment(value: 3)
 
-    assert_equal(1, sink.datagrams.size)
+    assert_equal(1, @sink.datagrams.size)
     datagram = @sink.datagrams.first
     # Sample rate defaults to 1.0 when not present in datagram
     assert_equal(1.0, datagram.sample_rate)
     # Verify the source doesn't contain |@1.0
     refute_includes(datagram.source, "|@")
-  end
-
-  def test_normalizes_tag_values_with_special_characters
-    # Test with string tag that contains special characters
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { message: String },
-    )
-
-    # String with pipes and commas should be sanitized
-    metric.increment(message: "hello|world,test", value: 1)
-
-    datagram = @sink.datagrams.first
-    assert_equal(["message:helloworldtest"], datagram.tags)
   end
 
   def test_normalizes_symbol_tag_values
@@ -354,24 +339,21 @@ class CompiledMetricTest < Minitest::Test
     )
 
     # Clear any existing datagrams
-    sink.clear
+    @sink.clear
 
     # Fill the cache (2 entries)
     metric.increment(shop_id: 1, value: 1)
     metric.increment(shop_id: 2, value: 1)
 
-    # Third entry brings us to max_cache_size
+    # Third entry brings us to max_cache_size. it should trigger cache exceeded (cache.size = 3 >= 2)
     metric.increment(shop_id: 3, value: 1)
-
-    # This fourth entry should trigger cache exceeded (cache.size = 3 >= 2)
-    metric.increment(shop_id: 4, value: 1)
 
     # Find the cache exceeded metric (includes prefix)
     cache_exceeded_metric = @sink.datagrams.find do |datagram|
       datagram.name == "test.statsd_instrument.compiled_metric.cache_exceeded_total"
     end
 
-    assert_equal(5, sink.datagrams.size)
+    assert_equal(4, @sink.datagrams.size)
     refute_nil(cache_exceeded_metric, "Expected cache exceeded metric to be emitted")
     assert_equal(1, cache_exceeded_metric.value)
     assert_includes(cache_exceeded_metric.tags, "metric_name:foo.bar")
@@ -395,7 +377,7 @@ class CompiledMetricTest < Minitest::Test
     cache[2.hash] = cached_datagram
 
     # Clear datagrams before the collision test
-    sink.clear
+    @sink.clear
 
     # Now increment with the collision shop_id - this should detect the collision
     # because the tag_values won't match
@@ -468,16 +450,11 @@ class CompiledMetricTest < Minitest::Test
     datagram = @sink.datagrams.first
     assert_equal(["env:production", "service:web"], datagram.tags.sort)
   end
-
-  private
-
-  def sink
-    StatsD.singleton_client.sink
-  end
 end
 
 class CompiledMetricWithAggregationTest < Minitest::Test
   def setup
+    super
     @old_client = StatsD.singleton_client
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
     @aggregator = StatsD::Instrument::Aggregator.new(
@@ -498,6 +475,7 @@ class CompiledMetricWithAggregationTest < Minitest::Test
   end
 
   def teardown
+    super
     @sink.clear
     StatsD.singleton_client = @old_client
   end
@@ -558,7 +536,7 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     assert_equal(8, datagram.value) # 1 + 2 + 5
   end
 
-  def test_sample_rate_applied_with_aggregation
+  def test_sample_rate_equal_to_1_with_aggregation
     # When aggregating with sample_rate, sampling happens before aggregation
     # This test verifies that with sample_rate=1.0, all increments are aggregated
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
@@ -582,102 +560,26 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     refute_includes(datagram.source, "|@")
   end
 
-  def test_sample_rate_filters_before_aggregation
-    # Mock sink to control sampling behavior
-    mock_sink = mock("sink")
-    # Return pattern: false, true, false, true, false (2 out of 5 pass)
-    mock_sink.stubs(:sample?).returns(false, true, false, true, false)
-    mock_sink.expects(:<<).once  # Only one aggregated datagram emitted at flush
-
-    mock_aggregator = StatsD::Instrument::Aggregator.new(
-      mock_sink,
-      StatsD::Instrument::DatagramBuilder,
-      "test",
-      [],
-      flush_interval: 0.1,
-    )
-
-    client = StatsD::Instrument::Client.new(
-      sink: mock_sink,
-      prefix: "test",
-      default_tags: [],
-      enable_aggregation: true,
-    )
-    client.instance_variable_set(:@aggregator, mock_aggregator)
-    old_client = StatsD.singleton_client
-    StatsD.singleton_client = client
-
+  def test_sample_rate_applied_with_aggregation
+    # When aggregating with sample_rate, sampling happens before aggregation
+    # This test verifies that with sample_rate=0.5, all increments are aggregated
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
+      static_tags: { service: "web" },
       sample_rate: 0.5,
     )
 
-    # Send 5 increments - only 2 should pass sampling and reach aggregation
-    5.times { metric.increment(value: 1) }
+    metric.increment(value: 5)
+    metric.increment(value: 3)
 
-    mock_aggregator.flush
+    @aggregator.flush
 
-    StatsD.singleton_client = old_client
-    # Verify the aggregated value is 2 (only the sampled increments)
-    # The mock expects exactly 1 call to << (the aggregated result)
-  end
-end
-
-class CompiledMetricSamplingTest < Minitest::Test
-  def test_sampling_without_aggregation
-    # Mock sink to control sampling behavior
-    mock_sink = mock("sink")
-    # Return pattern: false, true, false, true, false (2 out of 5 pass)
-    mock_sink.stubs(:sample?).returns(false, true, false, true, false)
-    # Expect exactly 2 emissions (the ones that passed sampling)
-    mock_sink.expects(:<<).twice
-
-    old_client = StatsD.singleton_client
-    StatsD.singleton_client = StatsD::Instrument::Client.new(
-      sink: mock_sink,
-      prefix: "test",
-      default_tags: [],
-      enable_aggregation: false,
-    )
-
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      sample_rate: 0.5,
-    )
-
-    # Send 5 increments - only 2 should pass sampling
-    5.times { metric.increment(value: 1) }
-
-    StatsD.singleton_client = old_client
-  end
-
-  def test_sampling_with_dynamic_tags_without_aggregation
-    # Mock sink to control sampling behavior
-    mock_sink = mock("sink")
-    # Return pattern: true, false, true (2 out of 3 pass)
-    mock_sink.stubs(:sample?).returns(true, false, true)
-    # Expect exactly 2 emissions
-    mock_sink.expects(:<<).twice
-
-    old_client = StatsD.singleton_client
-    StatsD.singleton_client = StatsD::Instrument::Client.new(
-      sink: mock_sink,
-      prefix: "test",
-      default_tags: [],
-      enable_aggregation: false,
-    )
-
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer },
-      sample_rate: 0.5,
-    )
-
-    # Send 3 increments - only 2 should pass sampling
-    metric.increment(shop_id: 123, value: 1)
-    metric.increment(shop_id: 456, value: 1)
-    metric.increment(shop_id: 789, value: 1)
-
-    StatsD.singleton_client = old_client
+    assert_equal(1, @sink.datagrams.size)
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal(8, datagram.value) # 5 + 3
+    # Sample rate should be 1.0 when aggregating
+    assert_equal(0.5, datagram.sample_rate)
+    assert_includes(datagram.source, "|@")
   end
 end

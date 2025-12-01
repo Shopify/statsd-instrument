@@ -45,7 +45,6 @@ module StatsD
             static_tags: static_tags,
             dynamic_tags: tags,
             sample_rate: sample_rate || client.default_sample_rate,
-            enable_aggregation: client.enable_aggregation,
           )
 
           # Create a new class for this specific metric
@@ -176,7 +175,7 @@ module StatsD
           # @param sample_rate [Float, nil] The sample rate (0.0-1.0), nil for no sampling
           # @param enable_aggregation [Boolean] Whether aggregation is enabled
           # @return [String] The datagram blueprint with sprintf placeholders
-          def build(name:, type:, value_format:, client_prefix:, no_prefix:, default_tags:, static_tags:, dynamic_tags:, sample_rate:, enable_aggregation:)
+          def build(name:, type:, value_format:, client_prefix:, no_prefix:, default_tags:, static_tags:, dynamic_tags:, sample_rate:)
             # Normalize and build prefix
             normalized_name = normalize_name(name)
             prefix = build_prefix(client_prefix, no_prefix)
