@@ -318,16 +318,15 @@ module StatsD
         # @param value [Numeric] The metric value
         # @return [String] The complete StatsD datagram
         def to_datagram(value)
+          # Fast path: no tag values (static metrics)
+          return @datagram_blueprint % value if @tag_values.empty?
+
           # Sanitize and convert tag values to strings
           values = @tag_values.map do |arg|
             case arg
             when String
               # Remove StatsD protocol delimiters if present
-              if /[|,]/.match?(arg)
-                arg.tr("|,", "")
-              else
-                arg
-              end
+              /[|,]/.match?(arg) ? arg.tr("|,", "") : arg
             when Integer, Float
               arg.to_s
             else
