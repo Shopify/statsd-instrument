@@ -8,13 +8,12 @@ class CompiledMetricTest < Minitest::Test
 
     @old_client = StatsD.singleton_client
     @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
-    @client = StatsD::Instrument::Client.new(
+    StatsD.singleton_client = StatsD::Instrument::Client.new(
       sink: @sink,
       prefix: "test",
       default_tags: [],
       enable_aggregation: false,
     )
-    StatsD.singleton_client = @client
   end
 
   def teardown
@@ -417,13 +416,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_handles_default_tags_as_array
-    client = StatsD::Instrument::Client.new(
+    StatsD.singleton_client = StatsD::Instrument::Client.new(
       sink: @sink,
       prefix: "test",
       default_tags: ["env:production", "region:us-east"],
       enable_aggregation: false,
     )
-    StatsD.singleton_client = client
 
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
@@ -437,13 +435,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_handles_default_tags_as_hash
-    client = StatsD::Instrument::Client.new(
+    StatsD.singleton_client = StatsD::Instrument::Client.new(
       sink: @sink,
       prefix: "test",
       default_tags: { env: "production", region: "us-east" },
       enable_aggregation: false,
     )
-    StatsD.singleton_client = client
 
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
@@ -457,13 +454,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_handles_default_tags_as_string
-    client = StatsD::Instrument::Client.new(
+    StatsD.singleton_client = StatsD::Instrument::Client.new(
       sink: @sink,
       prefix: "test",
       default_tags: "env:production",
       enable_aggregation: false,
     )
-    StatsD.singleton_client = client
 
     metric = StatsD::Instrument::CompiledMetric::Counter.define(
       name: "foo.bar",
