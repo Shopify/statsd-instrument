@@ -315,7 +315,7 @@ module StatsD
           values = @tag_values.map do |arg|
             if arg.is_a?(Integer) || arg.is_a?(Float)
               arg.to_s
-            else 
+            else
               arg = arg.to_s unless arg.is_a?(String)
               /[|,]/.match?(arg) ? arg.tr("|,", "") : arg
             end

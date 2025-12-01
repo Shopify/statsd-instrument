@@ -415,6 +415,66 @@ class CompiledMetricTest < Minitest::Test
     # The metric name uses the normalized name (only : | @ are replaced, not .)
     assert_includes(hash_collision_metric.tags, "metric_name:foo.bar")
   end
+
+  def test_handles_default_tags_as_array
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: ["env:production", "region:us-east"],
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    metric.increment(value: 1)
+
+    datagram = @sink.datagrams.first
+    assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
+  end
+
+  def test_handles_default_tags_as_hash
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: { env: "production", region: "us-east" },
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    metric.increment(value: 1)
+
+    datagram = @sink.datagrams.first
+    assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
+  end
+
+  def test_handles_default_tags_as_string
+    client = StatsD::Instrument::Client.new(
+      sink: @sink,
+      prefix: "test",
+      default_tags: "env:production",
+      enable_aggregation: false,
+    )
+    StatsD.singleton_client = client
+
+    metric = StatsD::Instrument::CompiledMetric::Counter.define(
+      name: "foo.bar",
+      static_tags: { service: "web" },
+    )
+
+    metric.increment(value: 1)
+
+    datagram = @sink.datagrams.first
+    assert_equal(["env:production", "service:web"], datagram.tags.sort)
+  end
 end
 
 class CompiledMetricWithAggregationTest < Minitest::Test
@@ -521,78 +581,5 @@ class CompiledMetricWithAggregationTest < Minitest::Test
     # Sample rate should be 1.0 (default) when aggregating
     assert_equal(1.0, datagram.sample_rate)
     refute_includes(datagram.source, "|@")
-  end
-end
-
-class DatagramBlueprintBuilderTest < Minitest::Test
-  def setup
-    @old_client = StatsD.singleton_client
-  end
-
-  def teardown
-    StatsD.singleton_client = @old_client
-  end
-
-  def test_handles_default_tags_as_array
-    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
-    client = StatsD::Instrument::Client.new(
-      sink: @sink,
-      prefix: "test",
-      default_tags: ["env:production", "region:us-east"],
-      enable_aggregation: false,
-    )
-    StatsD.singleton_client = client
-
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
-
-    metric.increment(value: 1)
-
-    datagram = @sink.datagrams.first
-    assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
-  end
-
-  def test_handles_default_tags_as_hash
-    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
-    client = StatsD::Instrument::Client.new(
-      sink: @sink,
-      prefix: "test",
-      default_tags: { env: "production", region: "us-east" },
-      enable_aggregation: false,
-    )
-    StatsD.singleton_client = client
-
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
-
-    metric.increment(value: 1)
-
-    datagram = @sink.datagrams.first
-    assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
-  end
-
-  def test_handles_default_tags_as_string
-    @sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
-    client = StatsD::Instrument::Client.new(
-      sink: @sink,
-      prefix: "test",
-      default_tags: "env:production",
-      enable_aggregation: false,
-    )
-    StatsD.singleton_client = client
-
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
-
-    metric.increment(value: 1)
-
-    datagram = @sink.datagrams.first
-    assert_equal(["env:production", "service:web"], datagram.tags.sort)
   end
 end
