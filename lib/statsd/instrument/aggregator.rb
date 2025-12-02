@@ -39,6 +39,11 @@ module StatsD
         def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class, default_tags)
           proc do
             aggregation_state.each do |key, agg_value|
+              if key.is_a?(StatsD::Instrument::CompiledMetric::PrecompiledDatagram)
+                sink << key.to_datagram(agg_value)
+                next
+              end
+
               no_prefix = key.no_prefix
               datagram_builders[no_prefix] ||= datagram_builder_class.new(
                 prefix: no_prefix ? nil : @metric_prefix,
@@ -138,6 +143,24 @@ module StatsD
         end
       end
 
+      # Aggregates a precompiled metric for later flushing.
+      # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
+      #   The precompiled metric datagram
+      # @param value [Numeric] The value to aggregate
+      # @return [void]
+      def aggregate_precompiled_metric(precompiled_datagram, value = 1)
+        unless thread_healthcheck
+          # Fallback: emit directly if thread is unhealthy
+          @sink << precompiled_datagram.to_datagram(value)
+          return
+        end
+
+        @aggregation_state_mutex.synchronize do
+          @aggregation_state[precompiled_datagram] ||= 0
+          @aggregation_state[precompiled_datagram] += value
+        end
+      end
+
       def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION, sample_rate: CONST_SAMPLE_RATE)
         unless thread_healthcheck
           @sink << datagram_builder(no_prefix: no_prefix).timing_value_packed(
@@ -197,6 +220,11 @@ module StatsD
       def do_flush(aggregation_state)
         @flush_mutex.synchronize do
           aggregation_state.each do |key, value|
+            if key.is_a?(StatsD::Instrument::CompiledMetric::PrecompiledDatagram)
+              @sink << key.to_datagram(value)
+              next
+            end
+
             case key.type
             when COUNT
               @sink << datagram_builder(no_prefix: key.no_prefix).c(
