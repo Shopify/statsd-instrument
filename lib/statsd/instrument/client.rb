@@ -238,14 +238,13 @@ module StatsD
       # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
       #   The precompiled metric datagram
       # @param value [Numeric] The metric value
-      # @param sample_rate [Float, nil] The sample rate (0.0-1.0), or nil to use default
       # @return [void]
       # @api private
-      def emit_precompiled_metric(precompiled_datagram, value, sample_rate: nil)
-        sample_rate ||= @default_sample_rate
+      def emit_precompiled_metric(precompiled_datagram, value)
+        sample_rate = precompiled_datagram.sample_rate
 
         if @enable_aggregation
-          # Apply sampling before aggregation
+          # Sampling decision is done at the definition of a compiled metric, see StatsD::Instrument::CompiledMetric.define
           if sample_rate.nil? || sample?(sample_rate)
             @aggregator.aggregate_precompiled_metric(precompiled_datagram, value)
           end

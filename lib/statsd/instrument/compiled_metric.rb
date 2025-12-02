@@ -113,7 +113,7 @@ module StatsD
                 if (cache = @tag_combination_cache)
                   cached_datagram = cache[cache_key] ||=
                     begin
-                      new_datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint)
+                      new_datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
 
                       # Clear cache if it grows too large to prevent memory bloat
                       if cache.size >= @max_cache_size
@@ -134,9 +134,9 @@ module StatsD
                   cached_datagram
                 end
 
-              datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint)
+              datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
 
-              @singleton_client.emit_precompiled_metric(datagram, value, sample_rate: @sample_rate)
+              @singleton_client.emit_precompiled_metric(datagram, value)
             end
           RUBY
 
@@ -146,13 +146,13 @@ module StatsD
         # Defines the metric method for metrics without dynamic tags
         # Uses a single precompiled datagram for all calls
         def define_static_method
-          @static_datagram = PrecompiledDatagram.new([], @datagram_blueprint)
+          @static_datagram = PrecompiledDatagram.new([], @datagram_blueprint, @sample_rate)
           method = method_name
           default_val = default_value
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
             def self.#{method}(value: #{default_val.inspect})
-              @singleton_client.emit_precompiled_metric(@static_datagram, value, sample_rate: @sample_rate)
+              @singleton_client.emit_precompiled_metric(@static_datagram, value)
             end
           RUBY
         end
@@ -294,13 +294,15 @@ module StatsD
       # A precompiled datagram that can quickly build the final StatsD datagram
       # string using sprintf formatting with cached tag values.
       class PrecompiledDatagram
-        attr_reader :tag_values, :datagram_blueprint
+        attr_reader :tag_values, :datagram_blueprint, :sample_rate
 
         # @param tag_values [Array] The tag values to cache
         # @param datagram_blueprint [String] The sprintf template
-        def initialize(tag_values, datagram_blueprint)
+        # @param sample_rate [Float] The sample rate (0.0-1.0)
+        def initialize(tag_values, datagram_blueprint, sample_rate)
           @tag_values = tag_values
           @datagram_blueprint = datagram_blueprint
+          @sample_rate = sample_rate
         end
 
         # Builds the final datagram string by substituting values into the blueprint
@@ -336,7 +338,7 @@ module StatsD
           end
 
           def value_format
-            "%d" # Counters use integer format
+            "%d"
           end
 
           def method_name
