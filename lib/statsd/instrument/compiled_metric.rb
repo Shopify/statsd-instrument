@@ -40,7 +40,6 @@ module StatsD
           datagram_blueprint = DatagramBlueprintBuilder.build(
             name: name,
             type: type,
-            value_format: value_format,
             client_prefix: client.prefix,
             no_prefix: no_prefix,
             default_tags: client.default_tags,
@@ -68,11 +67,6 @@ module StatsD
         # @return [String] The metric type character (e.g., "c" for counter)
         def type
           raise NotImplementedError, "Subclasses must implement #type"
-        end
-
-        # @return [String] The sprintf format specifier for the metric value (e.g., "%d", "%f", "%s")
-        def value_format
-          "%f" # Default to float format
         end
 
         # @return [Symbol] The method name to define (e.g., :increment)
@@ -138,7 +132,7 @@ module StatsD
 
               datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
 
-              @singleton_client.emit_precompiled_metric(datagram, value)
+              @singleton_client.emit_precompiled_#{method}_metric(datagram, value)
             end
           RUBY
 
@@ -154,7 +148,7 @@ module StatsD
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
             def self.#{method}(value: #{default_val.inspect})
-              @singleton_client.emit_precompiled_metric(@static_datagram, value)
+              @singleton_client.emit_precompiled_#{method}_metric(@static_datagram, value)
             end
           RUBY
         end
@@ -168,8 +162,8 @@ module StatsD
           #
           # @param name [String] The metric name
           # @param type [String] The metric type (e.g., "c" for counter)
-          # @param value_format [String] The sprintf format for the value (e.g., "%d", "%f")
           # @param client_prefix [String, nil] The client's prefix
+          # @param value_format [String] The sprintf format for the value (e.g., "%d", "%f")
           # @param no_prefix [Boolean] Whether to skip the prefix
           # @param default_tags [String, Hash, Array, nil] The client's default tags
           # @param static_tags [Hash] Static tags with fixed values
@@ -177,7 +171,7 @@ module StatsD
           # @param sample_rate [Float, nil] The sample rate (0.0-1.0), nil for no sampling
           # @param enable_aggregation [Boolean] Whether aggregation is enabled
           # @return [String] The datagram blueprint with sprintf placeholders
-          def build(name:, type:, value_format:, client_prefix:, no_prefix:, default_tags:, static_tags:, dynamic_tags:, sample_rate:)
+          def build(name:, type:, client_prefix:, no_prefix:, default_tags:, static_tags:, dynamic_tags:, sample_rate:)
             # Normalize and build prefix
             normalized_name = normalize_name(name)
             prefix = build_prefix(client_prefix, no_prefix)
@@ -187,19 +181,18 @@ module StatsD
 
             # Build the datagram blueprint
             # Format: "<prefix><name>:<value_format>|<type>|@<sample_rate>|#<tags>"
-            # value_format is delegated to the metric subclass (e.g., %d for Counter, %f for others)
             # Note: When aggregation is enabled, sample_rate is applied before aggregation
             if sample_rate && sample_rate < 1
               # Include sample_rate in the blueprint (only when not aggregating)
               if all_tags.empty?
-                "#{prefix}#{normalized_name}:#{value_format}|#{type}|@#{sample_rate}"
+                "#{prefix}#{normalized_name}:%s|#{type}|@#{sample_rate}"
               else
-                "#{prefix}#{normalized_name}:#{value_format}|#{type}|@#{sample_rate}|##{all_tags}"
+                "#{prefix}#{normalized_name}:%s|#{type}|@#{sample_rate}|##{all_tags}"
               end
             elsif all_tags.empty?
-              "#{prefix}#{normalized_name}:#{value_format}|#{type}"
+              "#{prefix}#{normalized_name}:%s|#{type}"
             else
-              "#{prefix}#{normalized_name}:#{value_format}|#{type}|##{all_tags}"
+              "#{prefix}#{normalized_name}:%s|#{type}|##{all_tags}"
             end
           end
 
@@ -308,11 +301,18 @@ module StatsD
         end
 
         # Builds the final datagram string by substituting values into the blueprint
-        # @param value [Numeric] The metric value
+        # @param value [Numeric | Array[Numeric]] The metric value
         # @return [String] The complete StatsD datagram
         def to_datagram(value)
+          packed_value = if value.is_a?(Array)
+            value.join(":")
+          else
+            # TODO: make sure it accounts correctly for "%d", "%f"
+            value.to_s
+          end
+
           # Fast path: no tag values (static metrics)
-          return @datagram_blueprint % value if @tag_values.empty?
+          return @datagram_blueprint % packed_value if @tag_values.empty?
 
           # Sanitize and convert tag values to strings
           values = @tag_values.map do |arg|
@@ -325,7 +325,7 @@ module StatsD
           end
 
           # Prepend the metric value
-          values.unshift(value)
+          values.unshift(packed_value)
 
           # Use sprintf to build the final datagram
           @datagram_blueprint % values
@@ -339,10 +339,6 @@ module StatsD
             "c"
           end
 
-          def value_format
-            "%d"
-          end
-
           def method_name
             :increment
           end
@@ -352,6 +348,25 @@ module StatsD
           end
 
           def increment(value: 1, **tags); end
+        end
+      end
+
+      # Distribution metric type
+      class Distribution < CompiledMetric
+        class << self
+          def type
+            "d"
+          end
+
+          def method_name
+            :distribution
+          end
+
+          def default_value
+            0
+          end
+
+          def distribution(value: 0, **tags); end
         end
       end
     end

@@ -161,12 +161,12 @@ module StatsD
         end
       end
 
-      # Aggregates a precompiled metric for later flushing.
+      # Aggregates a precompiled metric that can be combined into a single scalar for later flushing.
       # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
       #   The precompiled metric datagram
       # @param value [Numeric] The value to aggregate
       # @return [void]
-      def aggregate_precompiled_metric(precompiled_datagram, value = 1)
+      def aggregate_precompiled_increment_metric(precompiled_datagram, value = 1)
         unless thread_healthcheck
           # Fallback: emit directly if thread is unhealthy
           @sink << precompiled_datagram.to_datagram(value)
@@ -177,6 +177,32 @@ module StatsD
           @aggregation_state[precompiled_datagram] ||= 0
           @aggregation_state[precompiled_datagram] += value
         end
+      end
+
+      # Aggregates a precompiled metric that can be packed into a single datagram for later flushing.
+      # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
+      #   The precompiled metric datagram
+      # @param value [Numeric] The value to aggregate
+      # @return [void]
+      def aggregate_precompiled_timing_metric(precompiled_datagram, value = 1)
+        unless thread_healthcheck
+          # Fallback: emit directly if thread is unhealthy
+          @sink << precompiled_datagram.to_datagram(value)
+          return
+        end
+
+        aggregation_state = nil
+
+        @aggregation_state_mutex.synchronize do
+          values = @aggregation_state[precompiled_datagram] ||= []
+          if values.size + 1 >= @max_values
+            aggregation_state = @aggregation_state
+            @aggregation_state = {}
+          end
+          values << value
+        end
+
+        do_flush(aggregation_state) if aggregation_state
       end
 
       def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION, sample_rate: CONST_SAMPLE_RATE)
