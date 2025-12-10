@@ -49,7 +49,7 @@ module StatsD
 
           # Create a new class for this specific metric
           # Using classes instead of instances for better YJIT optimization
-          metric_class = Class.new(self) do
+          metric_class = tap do
             @name = DatagramBlueprintBuilder.normalize_name(name)
             @datagram_blueprint = datagram_blueprint
             @tag_combination_cache = {}
@@ -348,6 +348,8 @@ module StatsD
           def default_value
             1
           end
+
+          def increment(value: 1, **tags); end
         end
       end
     end
