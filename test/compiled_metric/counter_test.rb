@@ -215,6 +215,29 @@ class CompiledMetricCounterTest < Minitest::Test
     # Should include default tags even when no_prefix is true
     assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
   end
+
+  def test_counter_does_not_support_blocks
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+
+        tags: { shop_id: Integer },
+      )
+    end
+
+    block_called = false
+    metric.increment(shop_id: 999) do
+      block_called = true
+    end
+
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    # Default value
+    assert_equal(1, datagram.value)
+    refute(block_called)
+    assert_equal(["service:web", "shop_id:999"], datagram.tags.sort)
+  end
 end
 
 class CompiledMetricCounterWithAggregationTest < Minitest::Test

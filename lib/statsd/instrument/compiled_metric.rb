@@ -79,6 +79,13 @@ module StatsD
           raise NotImplementedError, "Subclasses must implement #default_value"
         end
 
+        # @return [Boolean] When set to `true`, the created `method_name` method will accept a block.
+        # The `value` kwarg will be ignored and instead the execution time of the block in milliseconds will be used.
+        # The return value of the block will be passed through.
+        def allow_measuring_latency
+          false
+        end
+
         # Defines the metric emission method - must be implemented by subclasses
         # @param tags [Hash] The dynamic tags configuration
         def define_metric_method(tags)
@@ -91,6 +98,33 @@ module StatsD
 
         private
 
+        def generate_block_handler
+          <<~RUBY
+            # For all timing metrics, we have to use the sampling logic.
+            # Not doing so would impact performance and CPU usage.
+            # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
+            sample_rate ||= @default_sample_rate
+            if sample_rate && !sample?(sample_rate)
+              if block_given?
+                return yield
+              end
+
+              return StatsD::Instrument::VOID
+            end
+
+            if block_given?
+              # We want to track the time it takes
+              start = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+              begin
+                return_value = yield
+              ensure
+                stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+                value = stop - start
+              end
+            end
+          RUBY
+        end
+
         # Defines the metric method for metrics with dynamic tags
         # Generates optimized code with tag caching
         def define_dynamic_method(tags)
@@ -98,9 +132,13 @@ module StatsD
           tag_names = tags.keys
           method = method_name
           default_val = default_value
+          allow_block = allow_measuring_latency
 
           method_code = <<~RUBY
             def self.#{method}(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: #{default_val.inspect})
+              return_value = StatsD::Instrument::VOID
+              #{generate_block_handler if allow_block}
+
               # Compute hash of tag values for cache lookup
               cache_key = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
 
@@ -133,6 +171,7 @@ module StatsD
               datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
 
               @singleton_client.emit_precompiled_#{method}_metric(datagram, value)
+              return_value
             end
           RUBY
 
@@ -307,8 +346,7 @@ module StatsD
           packed_value = if value.is_a?(Array)
             value.join(":")
           else
-            # TODO: make sure it accounts correctly for "%d", "%f"
-            value.to_s
+            value
           end
 
           # Fast path: no tag values (static metrics)
@@ -364,6 +402,10 @@ module StatsD
 
           def default_value
             0
+          end
+
+          def allow_measuring_latency
+            true
           end
 
           def distribution(value: 0, **tags); end

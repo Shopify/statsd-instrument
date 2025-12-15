@@ -215,6 +215,51 @@ class CompiledMetricDistributionTest < Minitest::Test
     # Should include default tags even when no_prefix is true
     assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
   end
+
+  def test_latency_as_value_when_block_provided
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+        tags: { shop_id: Integer, user_id: Integer },
+      )
+    end
+
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0)
+
+    returned_value = metric.distribution(shop_id: 123, user_id: 456) do
+      4
+    end
+
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal(4, returned_value)
+    assert_equal(100, datagram.value)
+    assert_equal(:d, datagram.type)
+    assert_equal(["service:web", "shop_id:123", "user_id:456"], datagram.tags.sort)
+  end
+
+  def test_ignores_explicit_value_when_block_provided
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+        tags: { shop_id: Integer, user_id: Integer },
+      )
+    end
+
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0)
+
+    returned_value = metric.distribution(shop_id: 123, user_id: 456, value: 42) {}
+
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_nil(returned_value)
+    # Time of block is used and overrides the passed in `value: 42`
+    assert_equal(100, datagram.value)
+    assert_equal(:d, datagram.type)
+    assert_equal(["service:web", "shop_id:123", "user_id:456"], datagram.tags.sort)
+  end
 end
 
 class CompiledMetricDistributionWithAggregationTest < Minitest::Test
@@ -332,5 +377,63 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
     # Sample rate should be 1.0 when aggregating
     assert_equal(1.0, datagram.sample_rate)
     refute_includes(datagram.source, "|@")
+  end
+
+  def test_aggregates_values_with_blocks
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+        tags: { shop_id: Integer, user_id: Integer },
+      )
+    end
+
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0, 300.0, 350.0)
+
+    first_returned_value = metric.distribution(shop_id: 123, user_id: 456) do
+      1
+    end
+
+    second_returned_value = metric.distribution(shop_id: 123, user_id: 456) do
+      2
+    end
+
+    @aggregator.flush
+
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal(1, first_returned_value)
+    assert_equal(2, second_returned_value)
+    # First block 100ms, second block 50ms
+    assert_equal([100, 50], datagram.value)
+    assert_equal(:d, datagram.type)
+    assert_equal(["service:web", "shop_id:123", "user_id:456"], datagram.tags.sort)
+  end
+
+  def test_aggregates_with_values_and_blocks_mixed
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+        tags: { shop_id: Integer, user_id: Integer },
+      )
+    end
+
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(300.0, 350.0)
+
+    metric.distribution(shop_id: 123, user_id: 456, value: 42)
+    second_returned_value = metric.distribution(shop_id: 123, user_id: 456) do
+      2
+    end
+
+    @aggregator.flush
+
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal(2, second_returned_value)
+    # First value 42, second block 50ms
+    assert_equal([42, 50], datagram.value)
+    assert_equal(:d, datagram.type)
+    assert_equal(["service:web", "shop_id:123", "user_id:456"], datagram.tags.sort)
   end
 end
