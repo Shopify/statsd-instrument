@@ -7,11 +7,13 @@ module StatsD
     # beneficial for high-frequency metrics with consistent tag patterns.
     #
     # Example:
-    #   CheckoutMetric = StatsD::Instrument::CompiledMetric::Counter.define(
-    #     name: "checkout.completed",
-    #     static_tags: { service: "web" },
-    #     tags: { shop_id: Integer, user_id: Integer }
-    #   )
+    #   class CheckoutMetric < StatsD::Instrument::CompiledMetric::Counter
+    #     define(
+    #       name: "checkout.completed",
+    #       static_tags: { service: "web" },
+    #       tags: { shop_id: Integer, user_id: Integer }
+    #     )
+    #   end
     #
     #   # Later, emit with minimal allocations:
     #   CheckoutMetric.increment(shop_id: 123, user_id: 456, value: 1)

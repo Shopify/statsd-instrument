@@ -244,7 +244,7 @@ module StatsD
         sample_rate = precompiled_datagram.sample_rate
 
         if @enable_aggregation
-          # Sampling decision is done at the definition of a compiled metric, see StatsD::Instrument::CompiledMetric.define
+          # Sampling decision is done at the definition of a compiled metric, see StatsD::Instrument::CompiledMetric#define
           if sample_rate.nil? || sample?(sample_rate)
             @aggregator.aggregate_precompiled_metric(precompiled_datagram, value)
           end
