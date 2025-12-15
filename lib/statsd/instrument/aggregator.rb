@@ -253,6 +253,7 @@ module StatsD
             end
           end
         end
+        aggregation_state.clear
       end
 
       def tags_sorted(tags)

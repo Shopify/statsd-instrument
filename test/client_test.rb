@@ -8,6 +8,10 @@ class ClientTest < Minitest::Test
     @dogstatsd_client = StatsD::Instrument::Client.new(implementation: "datadog")
   end
 
+  def teardown
+    GC.start(immediate_sweep: true, immediate_mark: true, full_mark: true)
+  end
+
   def test_client_from_env
     env = StatsD::Instrument::Environment.new(
       "STATSD_ENV" => "production",
@@ -252,9 +256,11 @@ class ClientTest < Minitest::Test
     mock_sink.expects(:<<).with("metric:60:60|d|@0.5").once
     mock_sink.expects(:flush).once
 
-    client = StatsD::Instrument::Client.new(sink: mock_sink, default_sample_rate: 0.5, enable_aggregation: true)
+    client = StatsD::Instrument::Client.new(sink: mock_sink, default_sample_rate: 0.5, enable_aggregation: true, aggregation_flush_interval: 0.01)
     5.times { client.distribution("metric", 60) }
     client.force_flush
+
+    client.instance_variable_get(:@aggregator).instance_variable_get(:@flush_thread).kill
 
     # undo mock
     mock_sink.unstub(:sample?)
