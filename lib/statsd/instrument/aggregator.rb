@@ -163,7 +163,7 @@ module StatsD
 
       # Aggregates a precompiled metric that can be combined into a single scalar for later flushing.
       # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
-      #   The precompiled metric datagram
+      #   The precompiled metric datagram, with the tag values already "filled-in".
       # @param value [Numeric] The value to aggregate
       # @return [void]
       def aggregate_precompiled_increment_metric(precompiled_datagram, value = 1)
@@ -181,7 +181,7 @@ module StatsD
 
       # Aggregates a precompiled metric that can be packed into a single datagram for later flushing.
       # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
-      #   The precompiled metric datagram
+      #   The precompiled metric datagram, with the tag values already "filled-in".
       # @param value [Numeric] The value to aggregate
       # @return [void]
       def aggregate_precompiled_timing_metric(precompiled_datagram, value = 1)

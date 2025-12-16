@@ -103,7 +103,7 @@ module StatsD
             # For all timing metrics, we have to use the sampling logic.
             # Not doing so would impact performance and CPU usage.
             # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
-            sample_rate ||= @default_sample_rate
+            sample_rate ||= @sample_rate
             if sample_rate && !sample?(sample_rate)
               if block_given?
                 return yield
