@@ -22,15 +22,19 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_define_counter_without_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(name: "foo.bar")
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(name: "foo.bar")
+    end
     assert_respond_to(metric, :increment)
   end
 
   def test_define_counter_with_static_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web", env: "prod" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web", env: "prod" },
+      )
+    end
 
     metric.increment(value: 5)
 
@@ -42,10 +46,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_define_counter_with_dynamic_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer, user_id: Integer },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer, user_id: Integer },
+      )
+    end
 
     metric.increment(shop_id: 123, user_id: 456, value: 1)
 
@@ -57,11 +63,14 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_define_counter_with_mixed_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-      tags: { shop_id: Integer },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+
+        tags: { shop_id: Integer },
+      )
+    end
 
     metric.increment(shop_id: 999, value: 3)
 
@@ -72,10 +81,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_define_counter_with_string_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { country: String, region: String },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { country: String, region: String },
+      )
+    end
 
     metric.increment(country: "US", region: "West", value: 2)
 
@@ -86,10 +97,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_define_counter_with_float_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { rate: Float },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { rate: Float },
+      )
+    end
 
     metric.increment(rate: 1.5, value: 1)
 
@@ -102,10 +115,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_define_counter_no_prefix
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      no_prefix: true,
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        no_prefix: true,
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -114,10 +129,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_sanitizes_tag_names
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { "tag|with|pipes" => "value", "tag,with,commas" => "value2" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { "tag|with|pipes" => "value", "tag,with,commas" => "value2" },
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -128,10 +145,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_sanitizes_tag_values_in_static_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web|api" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web|api" },
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -141,10 +160,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_sanitizes_dynamic_string_tag_values
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { endpoint: String },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { endpoint: String },
+      )
+    end
 
     metric.increment(endpoint: "/api|v1,endpoint", value: 1)
 
@@ -154,10 +175,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_multiple_increments_same_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer },
+      )
+    end
 
     metric.increment(shop_id: 123, value: 1)
     metric.increment(shop_id: 123, value: 2)
@@ -170,10 +193,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_multiple_increments_different_tags
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer },
+      )
+    end
 
     metric.increment(shop_id: 123, value: 1)
     metric.increment(shop_id: 456, value: 1)
@@ -186,10 +211,11 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_normalizes_metric_name
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo:bar|baz@qux",
-    )
-
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo:bar|baz@qux",
+      )
+    end
     metric.increment(value: 1)
 
     datagram = @sink.datagrams.first
@@ -199,10 +225,12 @@ class CompiledMetricTest < Minitest::Test
 
   def test_raises_on_unsupported_tag_type
     assert_raises(ArgumentError) do
-      StatsD::Instrument::CompiledMetric::Counter.define(
-        name: "foo.bar",
-        tags: { invalid: Array },
-      )
+      Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+        define(
+          name: "foo.bar",
+          tags: { invalid: Array },
+        )
+      end
     end
   end
 
@@ -216,10 +244,12 @@ class CompiledMetricTest < Minitest::Test
     )
     StatsD.singleton_client = client
 
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -239,11 +269,14 @@ class CompiledMetricTest < Minitest::Test
     )
     StatsD.singleton_client = client
 
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-      no_prefix: true,
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+
+        no_prefix: true,
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -254,11 +287,14 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_sample_rate_parameter
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-      sample_rate: 0.5,
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+
+        sample_rate: 0.5,
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -277,20 +313,23 @@ class CompiledMetricTest < Minitest::Test
     )
     StatsD.singleton_client = client
 
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-    )
-
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+      )
+    end
     metric.increment(value: 1)
     assert_equal(1, @sink.datagrams.size)
     assert_equal(0.6, @sink.datagrams.first.sample_rate)
   end
 
   def test_sample_rate_default_to_1
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+      )
+    end
 
     metric.increment(value: 5)
 
@@ -299,10 +338,12 @@ class CompiledMetricTest < Minitest::Test
   end
 
   def test_sample_rate_omitted_when_1
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      sample_rate: 1.0,
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        sample_rate: 1.0,
+      )
+    end
 
     # With sample rate = 1.0, it should be omitted from the datagram
     metric.increment(value: 3)
@@ -317,10 +358,12 @@ class CompiledMetricTest < Minitest::Test
 
   def test_normalizes_symbol_tag_values
     # Test with tag value that's a symbol (should hit the else clause)
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { status: String },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { status: String },
+      )
+    end
 
     # Pass a symbol as a tag value (not a common case but should be handled)
     # This will be converted to string
@@ -332,11 +375,14 @@ class CompiledMetricTest < Minitest::Test
 
   def test_emits_metric_when_cache_exceeded
     # Create a metric with a very small cache size
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer },
-      max_cache_size: 2,
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer },
+
+        max_cache_size: 2,
+      )
+    end
 
     # Clear any existing datagrams
     @sink.clear
@@ -362,10 +408,12 @@ class CompiledMetricTest < Minitest::Test
 
   def test_emits_metric_on_hash_collision
     # Create a metric with a single tag
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer },
+      )
+    end
 
     # First call with shop_id=1 to populate cache
     metric.increment(shop_id: 1, value: 1)
@@ -402,10 +450,12 @@ class CompiledMetricTest < Minitest::Test
       enable_aggregation: false,
     )
 
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -421,10 +471,12 @@ class CompiledMetricTest < Minitest::Test
       enable_aggregation: false,
     )
 
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -440,10 +492,12 @@ class CompiledMetricTest < Minitest::Test
       enable_aggregation: false,
     )
 
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+      )
+    end
 
     metric.increment(value: 1)
 
@@ -481,10 +535,12 @@ class CompiledMetricWithAggregationTest < Minitest::Test
   end
 
   def test_aggregates_precompiled_metrics
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer },
+      )
+    end
 
     metric.increment(shop_id: 123, value: 1)
     metric.increment(shop_id: 123, value: 2)
@@ -499,10 +555,12 @@ class CompiledMetricWithAggregationTest < Minitest::Test
   end
 
   def test_aggregates_different_tag_combinations_separately
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      tags: { shop_id: Integer },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer },
+      )
+    end
 
     metric.increment(shop_id: 123, value: 1)
     metric.increment(shop_id: 456, value: 2)
@@ -520,10 +578,12 @@ class CompiledMetricWithAggregationTest < Minitest::Test
   end
 
   def test_aggregates_static_tag_metrics
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+      )
+    end
 
     metric.increment(value: 1)
     metric.increment(value: 2)
@@ -539,11 +599,14 @@ class CompiledMetricWithAggregationTest < Minitest::Test
   def test_sample_rate_equal_to_1_with_aggregation
     # When aggregating with sample_rate, sampling happens before aggregation
     # This test verifies that with sample_rate=1.0, all increments are aggregated
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-      sample_rate: 1.0,
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+
+        sample_rate: 1.0,
+      )
+    end
 
     # With sample_rate=1.0, all increments should be aggregated
     metric.increment(value: 5)
@@ -563,11 +626,14 @@ class CompiledMetricWithAggregationTest < Minitest::Test
   def test_sample_rate_applied_with_aggregation
     # When aggregating with sample_rate, sampling happens before aggregation
     # This test verifies that with sample_rate=0.5, all increments are aggregated
-    metric = StatsD::Instrument::CompiledMetric::Counter.define(
-      name: "foo.bar",
-      static_tags: { service: "web" },
-      sample_rate: 0.5,
-    )
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+
+        sample_rate: 0.5,
+      )
+    end
 
     metric.increment(value: 5)
     metric.increment(value: 3)
