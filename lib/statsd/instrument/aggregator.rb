@@ -33,50 +33,62 @@ module StatsD
       MEASURE = :ms
       HISTOGRAM = :h
       GAUGE = :g
+
+      Finalizer = Struct.new(:aggregation_state, :flush_mutex, :sink, :datagram_builders, :datagram_builder_class, :default_tags, :metric_prefix)
+
       private_constant :COUNT, :DISTRIBUTION, :MEASURE, :HISTOGRAM, :GAUGE, :CONST_SAMPLE_RATE
 
       class << self
-        def finalize(aggregation_state, sink, datagram_builders, datagram_builder_class, default_tags)
+        def finalize(finalizer)
           proc do
-            aggregation_state.each do |key, agg_value|
-              if key.is_a?(StatsD::Instrument::CompiledMetric::PrecompiledDatagram)
-                sink << key.to_datagram(agg_value)
-                next
-              end
+            aggregation_state = finalizer.aggregation_state
+            flush_mutex = finalizer.flush_mutex
+            sink = finalizer.sink
+            datagram_builders = finalizer.datagram_builders
+            datagram_builder_class = finalizer.datagram_builder_class
+            default_tags = finalizer.default_tags
+            metric_prefix = finalizer.metric_prefix
 
-              no_prefix = key.no_prefix
-              datagram_builders[no_prefix] ||= datagram_builder_class.new(
-                prefix: no_prefix ? nil : @metric_prefix,
-                default_tags: default_tags,
-              )
-              case key.type
-              when COUNT
-                sink << datagram_builders[no_prefix].c(
-                  key.name,
-                  agg_value,
-                  CONST_SAMPLE_RATE,
-                  key.tags,
+            flush_mutex.synchronize do
+              aggregation_state.each do |key, agg_value|
+                if key.is_a?(StatsD::Instrument::CompiledMetric::PrecompiledDatagram)
+                  sink << key.to_datagram(agg_value)
+                  next
+                end
+
+                no_prefix = key.no_prefix
+                datagram_builders[no_prefix] ||= datagram_builder_class.new(
+                  prefix: no_prefix ? nil : metric_prefix,
+                  default_tags: default_tags,
                 )
-              when DISTRIBUTION, MEASURE, HISTOGRAM
-                sink << datagram_builders[no_prefix].timing_value_packed(
-                  key.name,
-                  key.type.to_s,
-                  agg_value,
-                  key.sample_rate,
-                  key.tags,
-                )
-              when GAUGE
-                sink << datagram_builders[no_prefix].g(
-                  key.name,
-                  agg_value,
-                  CONST_SAMPLE_RATE,
-                  key.tags,
-                )
-              else
-                StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
+                case key.type
+                when COUNT
+                  sink << datagram_builders[no_prefix].c(
+                    key.name,
+                    agg_value,
+                    CONST_SAMPLE_RATE,
+                    key.tags,
+                  )
+                when DISTRIBUTION, MEASURE, HISTOGRAM
+                  sink << datagram_builders[no_prefix].timing_value_packed(
+                    key.name,
+                    key.type.to_s,
+                    agg_value,
+                    key.sample_rate,
+                    key.tags,
+                  )
+                when GAUGE
+                  sink << datagram_builders[no_prefix].g(
+                    key.name,
+                    agg_value,
+                    CONST_SAMPLE_RATE,
+                    key.tags,
+                  )
+                else
+                  StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
+                end
               end
             end
-            aggregation_state.clear
           end
         end
       end
@@ -116,9 +128,18 @@ module StatsD
         @flush_interval = flush_interval
         start_flush_thread
 
+        @finalizer = Finalizer.new(
+          @aggregation_state,
+          @flush_mutex,
+          @sink,
+          @datagram_builders,
+          @datagram_builder_class,
+          @default_tags,
+        )
+
         ObjectSpace.define_finalizer(
           self,
-          self.class.finalize(@aggregation_state, @sink, @datagram_builders, @datagram_builder_class, @default_tags),
+          self.class.finalize(@finalizer),
         )
       end
 
@@ -178,7 +199,7 @@ module StatsD
           values = @aggregation_state[key] ||= []
           if values.size + 1 >= @max_values
             aggregation_state = @aggregation_state
-            @aggregation_state = {}
+            new_aggregation_state
           end
           values << value
         end
@@ -204,7 +225,7 @@ module StatsD
         state = nil
         @aggregation_state_mutex.synchronize do
           state = @aggregation_state
-          @aggregation_state = {}
+          new_aggregation_state
         end
 
         do_flush(state)
@@ -213,6 +234,11 @@ module StatsD
       private
 
       EMPTY_ARRAY = [].freeze
+
+      def new_aggregation_state
+        @aggregation_state = {}
+        @finalizer.aggregation_state = @aggregation_state
+      end
 
       # Flushes the aggregated metrics to the sink.
       # Iterates over the aggregation state and sends each metric to the sink.

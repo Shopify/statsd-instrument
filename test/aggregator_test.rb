@@ -30,6 +30,7 @@ class AggregatorTest < Minitest::Test
   end
 
   def teardown
+    @subject.instance_variable_get(:@flush_thread)&.kill
     @sink.clear
     StatsD.logger = @old_logger
   end
@@ -328,11 +329,7 @@ class AggregatorTest < Minitest::Test
 
     # Manually trigger the finalizer
     finalizer = StatsD::Instrument::Aggregator.finalize(
-      @subject.instance_variable_get(:@aggregation_state),
-      @subject.instance_variable_get(:@sink),
-      @subject.instance_variable_get(:@datagram_builders),
-      StatsD::Instrument::DatagramBuilder,
-      [],
+      @subject.instance_variable_get(:@finalizer),
     )
     finalizer.call
 
@@ -354,6 +351,49 @@ class AggregatorTest < Minitest::Test
     sampled_timing_datagram = @sink.datagrams.find { |d| d.name == "sampled_timing" }
     assert_equal(100.0, sampled_timing_datagram.value)
     assert_equal(0.01, sampled_timing_datagram.sample_rate)
+  end
+
+  def test_aggregator_finalizer_is_called_on_gc
+    5.times { @subject.increment("foo", 1, tags: { foo: "bar" }) }
+
+    @subject.instance_variable_get(:@flush_thread)&.kill
+    # Unbind the aggregator to allow GC to collect it.
+    @subject = nil
+
+    # We expect the finalizer to flush the aggregated metrics.
+    assert_empty(@sink.datagrams)
+
+    5.times do
+      GC.start(full_mark: true, immediate_mark: true, immediate_sweep: true)
+      break if @sink.datagrams.any?
+
+      sleep(0.1)
+    end
+
+    counter_datagram = @sink.datagrams.first
+    assert_equal("foo", counter_datagram.name)
+    assert_equal(5, counter_datagram.value)
+    assert_equal(["foo:bar"], counter_datagram.tags)
+  end
+
+  def test_aggregator_finalizer_is_called_on_gc_after_aggregation_state_move
+    (StatsD::Instrument::Aggregator::DEFAULT_MAX_CONTEXT_SIZE + 5).times { @subject.aggregate_timing("foo", 1) }
+    assert_equal(1, @sink.datagrams.size)
+
+    # Unbind the aggregator to allow GC to collect it.
+    @subject = nil
+    5.times do
+      GC.start(full_mark: true, immediate_mark: true, immediate_sweep: true)
+      break if @sink.datagrams.size == 2
+
+      sleep(0.1)
+    end
+
+    assert_equal(2, @sink.datagrams.size)
+    counter_datagram = @sink.datagrams.last
+
+    assert_equal("foo", counter_datagram.name)
+    assert_equal([1, 1, 1, 1, 1], counter_datagram.value)
   end
 
   def test_signal_trap_context_fallback_to_direct_writes
