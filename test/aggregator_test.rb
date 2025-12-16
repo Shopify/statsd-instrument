@@ -354,6 +354,8 @@ class AggregatorTest < Minitest::Test
   end
 
   def test_aggregator_finalizer_is_called_on_gc
+    skip_on_jruby("JRuby's GC does not guarantee finalizers are called promptly")
+
     5.times { @subject.increment("foo", 1, tags: { foo: "bar" }) }
 
     @subject.instance_variable_get(:@flush_thread)&.kill
