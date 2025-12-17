@@ -197,7 +197,7 @@ module StatsD
           values = @aggregation_state[precompiled_datagram] ||= []
           if values.size + 1 >= @max_values
             aggregation_state = @aggregation_state
-            @aggregation_state = {}
+            new_aggregation_state
           end
           values << value
         end
