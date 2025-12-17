@@ -96,6 +96,10 @@ module StatsD
           end
         end
 
+        def sample?(sample_rate)
+          @singleton_client.sink.sample?(sample_rate)
+        end
+
         private
 
         def generate_block_handler
@@ -184,10 +188,14 @@ module StatsD
           @static_datagram = PrecompiledDatagram.new([], @datagram_blueprint, @sample_rate)
           method = method_name
           default_val = default_value
+          allow_block = allow_measuring_latency
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
             def self.#{method}(value: #{default_val.inspect})
+              return_value = StatsD::Instrument::VOID
+              #{generate_block_handler if allow_block}
               @singleton_client.emit_precompiled_#{method}_metric(@static_datagram, value)
+              return_value
             end
           RUBY
         end
