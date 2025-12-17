@@ -34,59 +34,57 @@ module StatsD
       HISTOGRAM = :h
       GAUGE = :g
 
-      Finalizer = Struct.new(:aggregation_state, :flush_mutex, :sink, :datagram_builders, :datagram_builder_class, :default_tags, :metric_prefix)
+      Finalizer = Struct.new(:aggregation_state, :sink, :datagram_builders, :datagram_builder_class, :default_tags, :metric_prefix)
 
       private_constant :COUNT, :DISTRIBUTION, :MEASURE, :HISTOGRAM, :GAUGE, :CONST_SAMPLE_RATE
 
       class << self
         def finalize(finalizer)
+          # The finalizer can be called in trap context, which means we cannot use mutexes here.
           proc do
             aggregation_state = finalizer.aggregation_state
-            flush_mutex = finalizer.flush_mutex
             sink = finalizer.sink
             datagram_builders = finalizer.datagram_builders
             datagram_builder_class = finalizer.datagram_builder_class
             default_tags = finalizer.default_tags
             metric_prefix = finalizer.metric_prefix
 
-            flush_mutex.synchronize do
-              aggregation_state.each do |key, agg_value|
-                if key.is_a?(StatsD::Instrument::CompiledMetric::PrecompiledDatagram)
-                  sink << key.to_datagram(agg_value)
-                  next
-                end
+            aggregation_state.each do |key, agg_value|
+              if key.is_a?(StatsD::Instrument::CompiledMetric::PrecompiledDatagram)
+                sink << key.to_datagram(agg_value)
+                next
+              end
 
-                no_prefix = key.no_prefix
-                datagram_builders[no_prefix] ||= datagram_builder_class.new(
-                  prefix: no_prefix ? nil : metric_prefix,
-                  default_tags: default_tags,
+              no_prefix = key.no_prefix
+              datagram_builders[no_prefix] ||= datagram_builder_class.new(
+                prefix: no_prefix ? nil : metric_prefix,
+                default_tags: default_tags,
+              )
+              case key.type
+              when COUNT
+                sink << datagram_builders[no_prefix].c(
+                  key.name,
+                  agg_value,
+                  CONST_SAMPLE_RATE,
+                  key.tags,
                 )
-                case key.type
-                when COUNT
-                  sink << datagram_builders[no_prefix].c(
-                    key.name,
-                    agg_value,
-                    CONST_SAMPLE_RATE,
-                    key.tags,
-                  )
-                when DISTRIBUTION, MEASURE, HISTOGRAM
-                  sink << datagram_builders[no_prefix].timing_value_packed(
-                    key.name,
-                    key.type.to_s,
-                    agg_value,
-                    key.sample_rate,
-                    key.tags,
-                  )
-                when GAUGE
-                  sink << datagram_builders[no_prefix].g(
-                    key.name,
-                    agg_value,
-                    CONST_SAMPLE_RATE,
-                    key.tags,
-                  )
-                else
-                  StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
-                end
+              when DISTRIBUTION, MEASURE, HISTOGRAM
+                sink << datagram_builders[no_prefix].timing_value_packed(
+                  key.name,
+                  key.type.to_s,
+                  agg_value,
+                  key.sample_rate,
+                  key.tags,
+                )
+              when GAUGE
+                sink << datagram_builders[no_prefix].g(
+                  key.name,
+                  agg_value,
+                  CONST_SAMPLE_RATE,
+                  key.tags,
+                )
+              else
+                StatsD.logger.error { "[#{self.class.name}] Unknown aggregation type: #{key.type}" }
               end
             end
           end
@@ -130,7 +128,6 @@ module StatsD
 
         @finalizer = Finalizer.new(
           @aggregation_state,
-          @flush_mutex,
           @sink,
           @datagram_builders,
           @datagram_builder_class,
