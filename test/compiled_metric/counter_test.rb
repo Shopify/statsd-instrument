@@ -21,6 +21,15 @@ class CompiledMetricCounterTest < Minitest::Test
     StatsD.singleton_client = @old_client
   end
 
+  def test_counter_without_define
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
+
+    error = assert_raises(ArgumentError) do
+      metric.increment(value: 5)
+    end
+    assert_equal("Every CompiledMetric subclass needs to call `define` before first invocation of increment.", error.message)
+  end
+
   def test_define_counter_without_tags
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
       define(name: "foo.bar")

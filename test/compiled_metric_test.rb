@@ -21,22 +21,6 @@ class CompiledMetricDefinitionTest < Minitest::Test
     StatsD.singleton_client = @old_client
   end
 
-  # TODO: this should error if the metric is not properly configured
-  def test_counter_without_define
-    skip("This should error")
-
-    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
-    metric.instance_variable_set(:@singleton_client, StatsD.singleton_client)
-
-    metric.increment(value: 5)
-
-    datagram = @sink.datagrams.first
-    assert_equal("test.foo.bar", datagram.name)
-    assert_equal(5, datagram.value)
-    assert_equal(:c, datagram.type)
-    assert_equal(["env:prod", "service:web"], datagram.tags.sort)
-  end
-
   def test_sanitizes_tag_names
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
       define(

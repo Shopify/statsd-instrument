@@ -21,6 +21,15 @@ class CompiledMetricDistributionTest < Minitest::Test
     StatsD.singleton_client = @old_client
   end
 
+  def test_distribution_without_define
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution)
+
+    error = assert_raises(ArgumentError) do
+      metric.distribution(value: 5)
+    end
+    assert_equal("Every CompiledMetric subclass needs to call `define` before first invocation of distribution.", error.message)
+  end
+
   def test_define_distribution_without_tags
     metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
       define(name: "foo.bar")
@@ -237,6 +246,28 @@ class CompiledMetricDistributionTest < Minitest::Test
     assert_equal(100, datagram.value)
     assert_equal(:d, datagram.type)
     assert_equal(["service:web", "shop_id:123", "user_id:456"], datagram.tags.sort)
+  end
+
+  def test_latency_as_value_when_block_provided_with_only_static_tags
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+      )
+    end
+
+    Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0)
+
+    returned_value = metric.distribution do
+      4
+    end
+
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal(4, returned_value)
+    assert_equal(100, datagram.value)
+    assert_equal(:d, datagram.type)
+    assert_equal(["service:web"], datagram.tags.sort)
   end
 
   def test_ignores_explicit_value_when_block_provided

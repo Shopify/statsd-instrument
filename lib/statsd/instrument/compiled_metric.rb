@@ -102,11 +102,18 @@ module StatsD
 
         private
 
+        # The placeholder definitions of the metric subclasses will call this method.
+        # Once `define` was called during the class creation, it will override the
+        # method implementation to emit the actual metric datagrams.
+        def require_define_to_be_called
+          raise ArgumentError, "Every CompiledMetric subclass needs to call `define` before first invocation of #{method_name}."
+        end
+
         def generate_block_handler
+          # For all timing metrics, we have to use the sampling logic.
+          # Not doing so would impact performance and CPU usage.
+          # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
           <<~RUBY
-            # For all timing metrics, we have to use the sampling logic.
-            # Not doing so would impact performance and CPU usage.
-            # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
             sample_rate ||= @sample_rate
             if sample_rate && !sample?(sample_rate)
               if block_given?
@@ -117,7 +124,6 @@ module StatsD
             end
 
             if block_given?
-              # We want to track the time it takes
               start = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
               begin
                 return_value = yield
@@ -393,7 +399,9 @@ module StatsD
             1
           end
 
-          def increment(value: 1, **tags); end
+          def increment(value: 1, **tags)
+            require_define_to_be_called
+          end
         end
       end
 
@@ -416,7 +424,9 @@ module StatsD
             true
           end
 
-          def distribution(value: 0, **tags); end
+          def distribution(value: 0, **tags)
+            require_define_to_be_called
+          end
         end
       end
     end
