@@ -34,7 +34,14 @@ class CompiledMetricCounterTest < Minitest::Test
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
       define(name: "foo.bar")
     end
-    assert_respond_to(metric, :increment)
+
+    metric.increment(value: 5)
+
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal(5, datagram.value)
+    assert_equal(:c, datagram.type)
+    assert_nil(datagram.tags)
   end
 
   def test_define_counter_with_static_tags
@@ -76,7 +83,6 @@ class CompiledMetricCounterTest < Minitest::Test
       define(
         name: "foo.bar",
         static_tags: { service: "web" },
-
         tags: { shop_id: Integer },
       )
     end
@@ -212,7 +218,6 @@ class CompiledMetricCounterTest < Minitest::Test
       define(
         name: "foo.bar",
         static_tags: { service: "web" },
-
         no_prefix: true,
       )
     end
@@ -230,7 +235,6 @@ class CompiledMetricCounterTest < Minitest::Test
       define(
         name: "foo.bar",
         static_tags: { service: "web" },
-
         tags: { shop_id: Integer },
       )
     end
@@ -346,7 +350,6 @@ class CompiledMetricCounterWithAggregationTest < Minitest::Test
       define(
         name: "foo.bar",
         static_tags: { service: "web" },
-
         sample_rate: 1.0,
       )
     end
@@ -373,7 +376,6 @@ class CompiledMetricCounterWithAggregationTest < Minitest::Test
       define(
         name: "foo.bar",
         static_tags: { service: "web" },
-
         sample_rate: 0.5,
       )
     end

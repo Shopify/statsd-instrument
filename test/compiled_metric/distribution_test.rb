@@ -34,7 +34,14 @@ class CompiledMetricDistributionTest < Minitest::Test
     metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
       define(name: "foo.bar")
     end
-    assert_respond_to(metric, :distribution)
+
+    metric.distribution(value: 5)
+
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal(5, datagram.value)
+    assert_equal(:d, datagram.type)
+    assert_nil(datagram.tags)
   end
 
   def test_define_distribution_with_static_tags
@@ -76,7 +83,6 @@ class CompiledMetricDistributionTest < Minitest::Test
       define(
         name: "foo.bar",
         static_tags: { service: "web" },
-
         tags: { shop_id: Integer },
       )
     end
@@ -212,7 +218,6 @@ class CompiledMetricDistributionTest < Minitest::Test
       define(
         name: "foo.bar",
         static_tags: { service: "web" },
-
         no_prefix: true,
       )
     end
@@ -390,7 +395,6 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
       define(
         name: "foo.bar",
         static_tags: { service: "web" },
-
         sample_rate: 1.0,
       )
     end
