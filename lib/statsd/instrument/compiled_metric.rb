@@ -360,7 +360,7 @@ module StatsD
           packed_value = if value.is_a?(Array)
             value.join(":")
           else
-            value
+            value.to_s
           end
 
           # Fast path: no tag values (static metrics)
