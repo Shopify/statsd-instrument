@@ -232,7 +232,7 @@ module StatsD
       end
 
       # Emits a precompiled metric for high-performance use cases.
-      # This method is used by {StatsD::Instrument::CompiledMetric} to emit metrics
+      # This method is used by {StatsD::Instrument::CompiledMetric::Counter} to emit metrics
       # with minimal allocations.
       #
       # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
@@ -240,13 +240,40 @@ module StatsD
       # @param value [Numeric] The metric value
       # @return [void]
       # @api private
-      def emit_precompiled_metric(precompiled_datagram, value)
+      def emit_precompiled_increment_metric(precompiled_datagram, value)
         sample_rate = precompiled_datagram.sample_rate
 
         if @enable_aggregation
           # Sampling decision is done at the definition of a compiled metric, see StatsD::Instrument::CompiledMetric#define
           if sample_rate.nil? || sample?(sample_rate)
-            @aggregator.aggregate_precompiled_metric(precompiled_datagram, value)
+            @aggregator.aggregate_precompiled_increment_metric(precompiled_datagram, value)
+          end
+          return StatsD::Instrument::VOID
+        end
+
+        if sample_rate.nil? || sample?(sample_rate)
+          emit(precompiled_datagram.to_datagram(value))
+        end
+
+        StatsD::Instrument::VOID
+      end
+
+      # Emits a precompiled metric for high-performance use cases.
+      # This method is used by {StatsD::Instrument::CompiledMetric::Counter} to emit metrics
+      # with minimal allocations.
+      #
+      # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
+      #   The precompiled metric datagram
+      # @param value [Numeric] The metric value
+      # @return [void]
+      # @api private
+      def emit_precompiled_distribution_metric(precompiled_datagram, value)
+        sample_rate = precompiled_datagram.sample_rate
+
+        if @enable_aggregation
+          # Sampling decision is done at the definition of a compiled metric, see StatsD::Instrument::CompiledMetric.define
+          if sample_rate.nil? || sample?(sample_rate)
+            @aggregator.aggregate_precompiled_timing_metric(precompiled_datagram, value)
           end
           return StatsD::Instrument::VOID
         end
