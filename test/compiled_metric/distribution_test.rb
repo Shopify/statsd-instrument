@@ -414,6 +414,35 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
     refute_includes(datagram.source, "|@")
   end
 
+  def test_sample_rate_with_aggregation
+    # When aggregating with sample_rate, sampling happens before aggregation
+    # This test verifies that with a sample_rate >0, a subset of distributions are aggregated
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
+      define(
+        name: "foo.bar",
+        static_tags: { service: "web" },
+        sample_rate: 0.5,
+      )
+    end
+
+    metric.stubs(:sample?).returns(false, true, false, false, true)
+
+    metric.distribution(value: 1)
+    metric.distribution(value: 2)
+    metric.distribution(value: 3)
+    metric.distribution(value: 4)
+    metric.distribution(value: 5)
+
+    @aggregator.flush
+
+    assert_equal(1, @sink.datagrams.size)
+    datagram = @sink.datagrams.first
+    assert_equal("test.foo.bar", datagram.name)
+    assert_equal([2, 5], datagram.value)
+    assert_equal(0.5, datagram.sample_rate)
+    assert_includes(datagram.source, "|@")
+  end
+
   def test_aggregates_values_with_blocks
     metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
       define(
