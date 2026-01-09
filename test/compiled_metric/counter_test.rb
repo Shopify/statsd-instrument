@@ -25,7 +25,7 @@ class CompiledMetricCounterTest < Minitest::Test
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
 
     error = assert_raises(ArgumentError) do
-      metric.increment(value: 5)
+      metric.increment(5)
     end
     assert_equal("Every CompiledMetric subclass needs to call `define` before first invocation of increment.", error.message)
   end
@@ -35,7 +35,7 @@ class CompiledMetricCounterTest < Minitest::Test
       define(name: "foo.bar")
     end
 
-    metric.increment(value: 5)
+    metric.increment(5)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -52,7 +52,7 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 5)
+    metric.increment(5)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -69,7 +69,7 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(shop_id: 123, user_id: 456, value: 1)
+    metric.increment(1, shop_id: 123, user_id: 456)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -87,7 +87,7 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(shop_id: 999, value: 3)
+    metric.increment(3, shop_id: 999)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -103,7 +103,7 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(country: "US", region: "West", value: 2)
+    metric.increment(2, country: "US", region: "West")
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -119,7 +119,7 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(rate: 1.5, value: 1)
+    metric.increment(1, rate: 1.5)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -137,7 +137,7 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     assert_equal("foo.bar", datagram.name) # No "test." prefix
@@ -151,9 +151,9 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(shop_id: 123, value: 1)
-    metric.increment(shop_id: 123, value: 2)
-    metric.increment(shop_id: 123, value: 3)
+    metric.increment(1, shop_id: 123)
+    metric.increment(2, shop_id: 123)
+    metric.increment(3, shop_id: 123)
 
     assert_equal(3, @sink.datagrams.size)
     @sink.datagrams.each do |datagram|
@@ -169,9 +169,9 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(shop_id: 123, value: 1)
-    metric.increment(shop_id: 456, value: 1)
-    metric.increment(shop_id: 789, value: 1)
+    metric.increment(1, shop_id: 123)
+    metric.increment(1, shop_id: 456)
+    metric.increment(1, shop_id: 789)
 
     assert_equal(3, @sink.datagrams.size)
     assert_equal(["shop_id:123"], @sink.datagrams[0].tags)
@@ -196,7 +196,7 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -222,7 +222,7 @@ class CompiledMetricCounterTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     assert_equal("foo.bar", datagram.name) # No prefix
@@ -289,9 +289,9 @@ class CompiledMetricCounterWithAggregationTest < Minitest::Test
       )
     end
 
-    metric.increment(shop_id: 123, value: 1)
-    metric.increment(shop_id: 123, value: 2)
-    metric.increment(shop_id: 123, value: 3)
+    metric.increment(1, shop_id: 123)
+    metric.increment(2, shop_id: 123)
+    metric.increment(3, shop_id: 123)
 
     @aggregator.flush
 
@@ -309,9 +309,9 @@ class CompiledMetricCounterWithAggregationTest < Minitest::Test
       )
     end
 
-    metric.increment(shop_id: 123, value: 1)
-    metric.increment(shop_id: 456, value: 2)
-    metric.increment(shop_id: 123, value: 3)
+    metric.increment(1, shop_id: 123)
+    metric.increment(2, shop_id: 456)
+    metric.increment(3, shop_id: 123)
 
     @aggregator.flush
 
@@ -332,9 +332,9 @@ class CompiledMetricCounterWithAggregationTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
-    metric.increment(value: 2)
-    metric.increment(value: 5)
+    metric.increment(1)
+    metric.increment(2)
+    metric.increment(5)
 
     @aggregator.flush
 
@@ -355,8 +355,8 @@ class CompiledMetricCounterWithAggregationTest < Minitest::Test
     end
 
     # With sample_rate=1.0, all increments should be aggregated
-    metric.increment(value: 5)
-    metric.increment(value: 3)
+    metric.increment(5)
+    metric.increment(3)
 
     @aggregator.flush
 
@@ -380,8 +380,8 @@ class CompiledMetricCounterWithAggregationTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 5)
-    metric.increment(value: 3)
+    metric.increment(5)
+    metric.increment(3)
 
     @aggregator.flush
 

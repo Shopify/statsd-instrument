@@ -129,7 +129,7 @@ module StatsD
                 return_value = yield
               ensure
                 stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
-                value = stop - start
+                __value__ = stop - start
               end
             end
           RUBY
@@ -145,7 +145,7 @@ module StatsD
           allow_block = allow_measuring_latency
 
           method_code = <<~RUBY
-            def self.#{method}(#{tag_names.map { |name| "#{name}:" }.join(", ")}, value: #{default_val.inspect})
+            def self.#{method}(__value__ = #{default_val.inspect}, #{tag_names.map { |name| "#{name}:" }.join(", ")})
               return_value = StatsD::Instrument::VOID
               #{generate_block_handler if allow_block}
 
@@ -180,7 +180,7 @@ module StatsD
 
               datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
 
-              @singleton_client.emit_precompiled_#{method}_metric(datagram, value)
+              @singleton_client.emit_precompiled_#{method}_metric(datagram, __value__)
               return_value
             end
           RUBY
@@ -197,10 +197,10 @@ module StatsD
           allow_block = allow_measuring_latency
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
-            def self.#{method}(value: #{default_val.inspect})
+            def self.#{method}(__value__ = #{default_val.inspect})
               return_value = StatsD::Instrument::VOID
               #{generate_block_handler if allow_block}
-              @singleton_client.emit_precompiled_#{method}_metric(@static_datagram, value)
+              @singleton_client.emit_precompiled_#{method}_metric(@static_datagram, __value__)
               return_value
             end
           RUBY
@@ -399,7 +399,7 @@ module StatsD
             1
           end
 
-          def increment(value: 1, **tags)
+          def increment(__value__ = 1, **tags)
             require_define_to_be_called
           end
         end
@@ -424,7 +424,7 @@ module StatsD
             true
           end
 
-          def distribution(value: 0, **tags)
+          def distribution(__value__ = 0, **tags)
             require_define_to_be_called
           end
         end

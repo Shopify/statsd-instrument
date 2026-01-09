@@ -25,7 +25,7 @@ class CompiledMetricDistributionTest < Minitest::Test
     metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution)
 
     error = assert_raises(ArgumentError) do
-      metric.distribution(value: 5)
+      metric.distribution(5)
     end
     assert_equal("Every CompiledMetric subclass needs to call `define` before first invocation of distribution.", error.message)
   end
@@ -35,7 +35,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       define(name: "foo.bar")
     end
 
-    metric.distribution(value: 5)
+    metric.distribution(5)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -52,7 +52,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(value: 5)
+    metric.distribution(5)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -69,7 +69,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(shop_id: 123, user_id: 456, value: 1)
+    metric.distribution(1, shop_id: 123, user_id: 456)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -87,7 +87,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(shop_id: 999, value: 3)
+    metric.distribution(3, shop_id: 999)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -103,7 +103,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(country: "US", region: "West", value: 2)
+    metric.distribution(2, country: "US", region: "West")
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -119,7 +119,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(rate: 1.5, value: 1)
+    metric.distribution(1, rate: 1.5)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -137,7 +137,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(value: 1)
+    metric.distribution(1)
 
     datagram = @sink.datagrams.first
     assert_equal("foo.bar", datagram.name) # No "test." prefix
@@ -151,9 +151,9 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(shop_id: 123, value: 1)
-    metric.distribution(shop_id: 123, value: 2)
-    metric.distribution(shop_id: 123, value: 3)
+    metric.distribution(1, shop_id: 123)
+    metric.distribution(2, shop_id: 123)
+    metric.distribution(3, shop_id: 123)
 
     assert_equal(3, @sink.datagrams.size)
     @sink.datagrams.each do |datagram|
@@ -169,9 +169,9 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(shop_id: 123, value: 1)
-    metric.distribution(shop_id: 456, value: 1)
-    metric.distribution(shop_id: 789, value: 1)
+    metric.distribution(1, shop_id: 123)
+    metric.distribution(1, shop_id: 456)
+    metric.distribution(1, shop_id: 789)
 
     assert_equal(3, @sink.datagrams.size)
     assert_equal(["shop_id:123"], @sink.datagrams[0].tags)
@@ -196,7 +196,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(value: 1)
+    metric.distribution(1)
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -222,7 +222,7 @@ class CompiledMetricDistributionTest < Minitest::Test
       )
     end
 
-    metric.distribution(value: 1)
+    metric.distribution(1)
 
     datagram = @sink.datagrams.first
     assert_equal("foo.bar", datagram.name) # No prefix
@@ -286,7 +286,7 @@ class CompiledMetricDistributionTest < Minitest::Test
 
     Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(100.0, 200.0)
 
-    returned_value = metric.distribution(shop_id: 123, user_id: 456, value: 42) {}
+    returned_value = metric.distribution(42, shop_id: 123, user_id: 456) {}
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
@@ -334,9 +334,9 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
       )
     end
 
-    metric.distribution(shop_id: 123, value: 1)
-    metric.distribution(shop_id: 123, value: 2)
-    metric.distribution(shop_id: 123, value: 3)
+    metric.distribution(1, shop_id: 123)
+    metric.distribution(2, shop_id: 123)
+    metric.distribution(3, shop_id: 123)
 
     @aggregator.flush
 
@@ -354,9 +354,9 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
       )
     end
 
-    metric.distribution(shop_id: 123, value: 1)
-    metric.distribution(shop_id: 456, value: 2)
-    metric.distribution(shop_id: 123, value: 3)
+    metric.distribution(1, shop_id: 123)
+    metric.distribution(2, shop_id: 456)
+    metric.distribution(3, shop_id: 123)
 
     @aggregator.flush
 
@@ -377,9 +377,9 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
       )
     end
 
-    metric.distribution(value: 1)
-    metric.distribution(value: 2)
-    metric.distribution(value: 5)
+    metric.distribution(1)
+    metric.distribution(2)
+    metric.distribution(5)
 
     @aggregator.flush
 
@@ -400,8 +400,8 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
     end
 
     # With sample_rate=1.0, all distributions should be aggregated
-    metric.distribution(value: 5)
-    metric.distribution(value: 3)
+    metric.distribution(5)
+    metric.distribution(3)
 
     @aggregator.flush
 
@@ -427,11 +427,11 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
 
     metric.stubs(:sample?).returns(false, true, false, false, true)
 
-    metric.distribution(value: 1)
-    metric.distribution(value: 2)
-    metric.distribution(value: 3)
-    metric.distribution(value: 4)
-    metric.distribution(value: 5)
+    metric.distribution(1)
+    metric.distribution(2)
+    metric.distribution(3)
+    metric.distribution(4)
+    metric.distribution(5)
 
     @aggregator.flush
 
@@ -485,7 +485,7 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
 
     Process.stubs(:clock_gettime).with(Process::CLOCK_MONOTONIC, :float_millisecond).returns(300.0, 350.0)
 
-    metric.distribution(shop_id: 123, user_id: 456, value: 42)
+    metric.distribution(42, shop_id: 123, user_id: 456)
     second_returned_value = metric.distribution(shop_id: 123, user_id: 456) do
       2
     end
