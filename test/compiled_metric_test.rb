@@ -29,7 +29,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     # Pipes and commas should be removed from tag names
@@ -45,7 +45,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     # Pipes should be removed from tag values
@@ -60,7 +60,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
       )
     end
 
-    metric.increment(endpoint: "/api|v1,endpoint", value: 1)
+    metric.increment(1, endpoint: "/api|v1,endpoint")
 
     datagram = @sink.datagrams.first
     # Pipes and commas should be removed
@@ -73,7 +73,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
         name: "foo:bar|baz@qux",
       )
     end
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     # Special characters should be converted to underscores
@@ -101,7 +101,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     assert_equal(1, @sink.datagrams.size)
     assert_equal(0.5, @sink.datagrams.first.sample_rate)
@@ -123,7 +123,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
         name: "foo.bar",
       )
     end
-    metric.increment(value: 1)
+    metric.increment(1)
     assert_equal(1, @sink.datagrams.size)
     assert_equal(0.6, @sink.datagrams.first.sample_rate)
   end
@@ -136,7 +136,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 5)
+    metric.increment(5)
 
     assert_equal(1, @sink.datagrams.size)
     assert_equal(1.0, @sink.datagrams.first.sample_rate)
@@ -151,7 +151,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
     end
 
     # With sample rate = 1.0, it should be omitted from the datagram
-    metric.increment(value: 3)
+    metric.increment(3)
 
     assert_equal(1, @sink.datagrams.size)
     datagram = @sink.datagrams.first
@@ -172,7 +172,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
 
     # Pass a symbol as a tag value (not a common case but should be handled)
     # This will be converted to string
-    metric.increment(status: :active, value: 1)
+    metric.increment(1, status: :active)
 
     datagram = @sink.datagrams.first
     assert_equal(["status:active"], datagram.tags)
@@ -193,11 +193,11 @@ class CompiledMetricDefinitionTest < Minitest::Test
     @sink.clear
 
     # Fill the cache (2 entries)
-    metric.increment(shop_id: 1, value: 1)
-    metric.increment(shop_id: 2, value: 1)
+    metric.increment(1, shop_id: 1)
+    metric.increment(1, shop_id: 2)
 
     # Third entry brings us to max_cache_size. it should trigger cache exceeded (cache.size = 3 >= 2)
-    metric.increment(shop_id: 3, value: 1)
+    metric.increment(1, shop_id: 3)
 
     # Find the cache exceeded metric (includes prefix)
     cache_exceeded_metric = @sink.datagrams.find do |datagram|
@@ -221,7 +221,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
     end
 
     # First call with shop_id=1 to populate cache
-    metric.increment(shop_id: 1, value: 1)
+    metric.increment(1, shop_id: 1)
 
     cache = metric.instance_variable_get(:@tag_combination_cache)
 
@@ -234,7 +234,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
 
     # Now increment with the collision shop_id - this should detect the collision
     # because the tag_values won't match
-    metric.increment(shop_id: 2, value: 1)
+    metric.increment(1, shop_id: 2)
 
     # Find the hash collision metric (includes prefix)
     hash_collision_metric = @sink.datagrams.find do |datagram|
@@ -262,7 +262,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
@@ -283,7 +283,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     assert_equal(["env:production", "region:us-east", "service:web"], datagram.tags.sort)
@@ -304,9 +304,23 @@ class CompiledMetricDefinitionTest < Minitest::Test
       )
     end
 
-    metric.increment(value: 1)
+    metric.increment(1)
 
     datagram = @sink.datagrams.first
     assert_equal(["env:production", "service:web"], datagram.tags.sort)
+  end
+
+  def test_allows_value_as_tag_name
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { value: String, status: String },
+      )
+    end
+
+    metric.increment(1, value: "product", status: "active")
+
+    datagram = @sink.datagrams.first
+    assert_equal(["status:active", "value:product"], datagram.tags.sort)
   end
 end
