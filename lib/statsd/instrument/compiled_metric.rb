@@ -429,6 +429,31 @@ module StatsD
           end
         end
       end
+
+      # Latency metric type
+      class Latency < CompiledMetric
+        class << self
+          def type
+            "ms"
+          end
+
+          def method_name
+            :measure
+          end
+
+          def default_value
+            0
+          end
+
+          def allow_measuring_latency
+            true
+          end
+
+          def measure(__value__ = 0, **tags)
+            require_define_to_be_called
+          end
+        end
+      end
     end
   end
 end
