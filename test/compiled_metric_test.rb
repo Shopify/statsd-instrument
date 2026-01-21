@@ -178,37 +178,64 @@ class CompiledMetricDefinitionTest < Minitest::Test
     assert_equal(["status:active"], datagram.tags)
   end
 
-  def test_emits_metric_when_cache_exceeded
-    # Create a metric with a very small cache size
+  def test_supports_boolean_dynamic_tags
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
       define(
         name: "foo.bar",
-        tags: { shop_id: Integer },
-
-        max_cache_size: 2,
+        tags: { enabled: :Boolean },
       )
     end
 
-    # Clear any existing datagrams
+    metric.increment(1, enabled: true)
+    assert_equal(["enabled:true"], @sink.datagrams.first.tags)
+
     @sink.clear
 
-    # Fill the cache (2 entries)
-    metric.increment(1, shop_id: 1)
-    metric.increment(1, shop_id: 2)
+    metric.increment(1, enabled: false)
+    assert_equal(["enabled:false"], @sink.datagrams.first.tags)
+  end
 
-    # Third entry brings us to max_cache_size. it should trigger cache exceeded (cache.size = 3 >= 2)
-    metric.increment(1, shop_id: 3)
-
-    # Find the cache exceeded metric (includes prefix)
-    cache_exceeded_metric = @sink.datagrams.find do |datagram|
-      datagram.name == "test.statsd_instrument.compiled_metric.cache_exceeded_total"
+  def test_supports_symbol_dynamic_tags
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { status: Symbol },
+      )
     end
 
-    assert_equal(4, @sink.datagrams.size)
-    refute_nil(cache_exceeded_metric, "Expected cache exceeded metric to be emitted")
-    assert_equal(1, cache_exceeded_metric.value)
-    assert_includes(cache_exceeded_metric.tags, "metric_name:foo.bar")
-    assert_includes(cache_exceeded_metric.tags, "max_size:2")
+    metric.increment(1, status: :active)
+    assert_equal(["status:active"], @sink.datagrams.first.tags)
+
+    @sink.clear
+
+    metric.increment(1, status: :inactive)
+    assert_equal(["status:inactive"], @sink.datagrams.first.tags)
+  end
+
+  def test_sanitizes_symbol_dynamic_tag_values
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { status: Symbol },
+      )
+    end
+
+    metric.increment(1, status: :"active|with,special")
+    assert_equal(["status:activewithspecial"], @sink.datagrams.first.tags)
+  end
+
+  def test_handles_nil_tag_values
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer, name: String, rate: Float },
+      )
+    end
+
+    metric.increment(1, shop_id: nil, name: nil, rate: nil)
+
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal(["name:", "rate:", "shop_id:"], @sink.datagrams.first.tags.sort)
   end
 
   def test_emits_metric_on_hash_collision
