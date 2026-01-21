@@ -152,7 +152,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = tags_normalized(tags)
         key = packet_key(name, tags, no_prefix, COUNT)
 
         @aggregation_state_mutex.synchronize do
@@ -213,7 +213,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = tags_normalized(tags)
         key = packet_key(name, tags, no_prefix, type, sample_rate: sample_rate)
 
         aggregation_state = nil
@@ -236,7 +236,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = tags_normalized(tags)
         key = packet_key(name, tags, no_prefix, GAUGE)
 
         @aggregation_state_mutex.synchronize do
@@ -304,16 +304,17 @@ module StatsD
         end
       end
 
-      def tags_sorted(tags)
-        return [] if tags.nil? || tags.empty?
+      def tags_normalized(tags)
+        return {} if tags.nil? || tags.empty?
 
         unless tags.is_a?(Hash)
-          tags.sort
+          tags = tags.to_h { |tag| tag.include?(":") ? tag.split(":") : [tag, ""] }.transform_keys(&:to_sym)
         end
-        #datagram_builder(no_prefix: false).normalize_tags(tags)
+
+        tags
       end
 
-      def packet_key(name, tags = "".b, no_prefix = false, type = COUNT, sample_rate: CONST_SAMPLE_RATE)
+      def packet_key(name, tags = {}, no_prefix = false, type = COUNT, sample_rate: CONST_SAMPLE_RATE)
         AggregationKey.new(
           DatagramBuilder.normalize_string(name),
           tags,
