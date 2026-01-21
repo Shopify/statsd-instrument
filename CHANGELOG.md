@@ -6,7 +6,7 @@ section below.
 
 ## Unreleased changes
 
-
+- [#407](https://github.com/Shopify/statsd-instrument/pull/407) - Add support for `Symbol` and `:Boolean` types in `CompiledMetric` dynamic tags, allowing symbol and boolean values to be used as tag values.
 - [#403](https://github.com/Shopify/statsd-instrument/pull/403) - Add `CompiledMetric::Distribution` as the second metric type to support pre-compiled metric datagrams. It can be used as a replacement over standard `StatsD.distribution`.
 - [#404](https://github.com/Shopify/statsd-instrument/pull/404) - Fix bug when using aggregation; finalizer was called with the wrong values.
 - [#401](https://github.com/Shopify/statsd-instrument/pull/401), [#402](https://github.com/Shopify/statsd-instrument/pull/402) - Add `CompiledMetric` pattern for high-performance metric emission. Pre-compiles metric datagrams at definition time with tag caching for 2-7x performance improvement over standard `StatsD.increment`. Currently supports Counter metrics only.
