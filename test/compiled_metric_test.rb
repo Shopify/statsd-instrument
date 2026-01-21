@@ -178,6 +178,52 @@ class CompiledMetricDefinitionTest < Minitest::Test
     assert_equal(["status:active"], datagram.tags)
   end
 
+  def test_supports_boolean_dynamic_tags
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { enabled: :Boolean },
+      )
+    end
+
+    metric.increment(1, enabled: true)
+    assert_equal(["enabled:true"], @sink.datagrams.first.tags)
+
+    @sink.clear
+
+    metric.increment(1, enabled: false)
+    assert_equal(["enabled:false"], @sink.datagrams.first.tags)
+  end
+
+  def test_supports_symbol_dynamic_tags
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { status: Symbol },
+      )
+    end
+
+    metric.increment(1, status: :active)
+    assert_equal(["status:active"], @sink.datagrams.first.tags)
+
+    @sink.clear
+
+    metric.increment(1, status: :inactive)
+    assert_equal(["status:inactive"], @sink.datagrams.first.tags)
+  end
+
+  def test_sanitizes_symbol_dynamic_tag_values
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { status: Symbol },
+      )
+    end
+
+    metric.increment(1, status: :"active|with,special")
+    assert_equal(["status:activewithspecial"], @sink.datagrams.first.tags)
+  end
+
   def test_emits_metric_when_cache_exceeded
     # Create a metric with a very small cache size
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
