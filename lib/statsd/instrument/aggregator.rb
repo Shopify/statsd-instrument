@@ -305,14 +305,12 @@ module StatsD
       end
 
       def tags_sorted(tags)
-        return "" if tags.nil? || tags.empty?
+        return [] if tags.nil? || tags.empty?
 
-        if tags.is_a?(Hash)
-          tags = tags.sort_by { |k, _v| k.to_s }.map! { |k, v| "#{k}:#{v}" }
-        else
-          tags.sort!
+        unless tags.is_a?(Hash)
+          tags.sort
         end
-        datagram_builder(no_prefix: false).normalize_tags(tags)
+        #datagram_builder(no_prefix: false).normalize_tags(tags)
       end
 
       def packet_key(name, tags = "".b, no_prefix = false, type = COUNT, sample_rate: CONST_SAMPLE_RATE)
