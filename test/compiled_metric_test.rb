@@ -224,6 +224,20 @@ class CompiledMetricDefinitionTest < Minitest::Test
     assert_equal(["status:activewithspecial"], @sink.datagrams.first.tags)
   end
 
+  def test_handles_nil_tag_values
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { shop_id: Integer, name: String, rate: Float },
+      )
+    end
+
+    metric.increment(1, shop_id: nil, name: nil, rate: nil)
+
+    assert_equal(1, @sink.datagrams.size)
+    assert_equal(["name:", "rate:", "shop_id:"], @sink.datagrams.first.tags.sort)
+  end
+
   def test_emits_metric_when_cache_exceeded
     # Create a metric with a very small cache size
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do

@@ -323,22 +323,11 @@ module StatsD
           def compile_dynamic_tags(dynamic_tags)
             dynamic_tags.map do |key, type|
               tag_name = normalize_statsd_string(key)
-              placeholder =
-                if type == String
-                  "%s"
-                elsif type == Integer
-                  "%d"
-                elsif type == Float
-                  "%f"
-                elsif type == :Boolean
-                  "%s"
-                elsif type == Symbol
-                  "%s"
-                else
-                  raise ArgumentError,
-                    "Unsupported tag value type: #{type}. Use String, Integer, Float, Symbol, or :Boolean."
-                end
-              "#{tag_name}:#{placeholder}"
+              unless [String, Integer, Float, Symbol, :Boolean].include?(type)
+                raise ArgumentError,
+                  "Unsupported tag value type: #{type}. Use String, Integer, Float, Symbol, or :Boolean."
+              end
+              "#{tag_name}:%s"
             end
           end
         end
@@ -371,7 +360,7 @@ module StatsD
           # Fast path: no tag values (static metrics)
           return @datagram_blueprint % packed_value if @tag_values.empty?
 
-          # Sanitize string and symbol values
+          # Sanitize string and symbol values (other types handled by sprintf %s)
           values = @tag_values.map do |arg|
             if arg.is_a?(String)
               /[|,]/.match?(arg) ? arg.tr("|,", "") : arg
