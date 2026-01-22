@@ -114,8 +114,8 @@ module StatsD
           # Not doing so would impact performance and CPU usage.
           # See Datadog's documentation for more details: https://github.com/DataDog/datadog-go/blob/20af2dbfabbbe6bd0347780cd57ed931f903f223/statsd/aggregator.go#L281-L283
           <<~RUBY
-            sample_rate ||= @sample_rate
-            if sample_rate && !sample?(sample_rate)
+            __sample_rate__ ||= @sample_rate
+            if __sample_rate__ && !sample?(__sample_rate__)
               if block_given?
                 return yield
               end
@@ -124,12 +124,12 @@ module StatsD
             end
 
             if block_given?
-              start = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+              __start__ = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
               begin
-                return_value = yield
+                __return_value__ = yield
               ensure
-                stop = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
-                __value__ = stop - start
+                __stop__ = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+                __value__ = __stop__ - __start__
               end
             end
           RUBY
@@ -146,42 +146,42 @@ module StatsD
 
           method_code = <<~RUBY
             def self.#{method}(__value__ = #{default_val.inspect}, #{tag_names.map { |name| "#{name}:" }.join(", ")})
-              return_value = StatsD::Instrument::VOID
+              __return_value__ = StatsD::Instrument::VOID
               #{generate_block_handler if allow_block}
 
               # Compute hash of tag values for cache lookup
-              cache_key = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
+              __cache_key__ = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
 
               # Look up or create a PrecompiledDatagram
-              datagram =
-                if (cache = @tag_combination_cache)
-                  cached_datagram = cache[cache_key] ||=
+              __datagram__ =
+                if (__cache__ = @tag_combination_cache)
+                  __cached_datagram__ = __cache__[__cache_key__] ||=
                     begin
-                      new_datagram = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
+                      __new_datagram__ = PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
 
                       # Clear cache if it grows too large to prevent memory bloat
-                      if cache.size >= @max_cache_size
+                      if __cache__.size >= @max_cache_size
                         StatsD.increment("statsd_instrument.compiled_metric.cache_exceeded_total", tags: { metric_name: @name, max_size: @max_cache_size })
                         @tag_combination_cache = nil
                       end
 
-                      new_datagram
+                      __new_datagram__
                     end
 
                   # Hash collision detection
-                  if #{tag_names.map.with_index { |name, i| "#{name} != cached_datagram.tag_values[#{i}]" }.join(" || ")}
+                  if #{tag_names.map.with_index { |name, i| "#{name} != __cached_datagram__.tag_values[#{i}]" }.join(" || ")}
                     # Hash collision - fall back to creating a new datagram
                     StatsD.increment("statsd_instrument.compiled_metric.hash_collision_detected", tags: { metric_name: @name })
-                    cached_datagram = nil
+                    __cached_datagram__ = nil
                   end
 
-                  cached_datagram
+                  __cached_datagram__
                 end
 
-              datagram ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
+              __datagram__ ||= PrecompiledDatagram.new([#{tag_names.join(", ")}], @datagram_blueprint, @sample_rate)
 
-              @singleton_client.emit_precompiled_#{method}_metric(datagram, __value__)
-              return_value
+              @singleton_client.emit_precompiled_#{method}_metric(__datagram__, __value__)
+              __return_value__
             end
           RUBY
 
@@ -198,10 +198,10 @@ module StatsD
 
           instance_eval(<<~RUBY, __FILE__, __LINE__ + 1)
             def self.#{method}(__value__ = #{default_val.inspect})
-              return_value = StatsD::Instrument::VOID
+              __return_value__ = StatsD::Instrument::VOID
               #{generate_block_handler if allow_block}
               @singleton_client.emit_precompiled_#{method}_metric(@static_datagram, __value__)
-              return_value
+              __return_value__
             end
           RUBY
         end
