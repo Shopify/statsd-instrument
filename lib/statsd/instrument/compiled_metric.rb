@@ -401,6 +401,27 @@ module StatsD
         end
       end
 
+      # Gauge metric type
+      class Gauge < CompiledMetric
+        class << self
+          def type
+            "g"
+          end
+
+          def method_name
+            :gauge
+          end
+
+          def default_value
+            1
+          end
+
+          def gauge(__value__ = 1, **tags)
+            require_define_to_be_called
+          end
+        end
+      end
+
       # Distribution metric type
       class Distribution < CompiledMetric
         class << self

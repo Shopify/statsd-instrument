@@ -205,6 +205,23 @@ module StatsD
         do_flush(aggregation_state) if aggregation_state
       end
 
+      # Aggregates a precompiled metric that can be combined into a single scalar for later flushing.
+      # @param precompiled_datagram [StatsD::Instrument::CompiledMetric::PrecompiledDatagram]
+      #   The precompiled metric datagram, with the tag values already "filled-in".
+      # @param value [Numeric] The value to aggregate
+      # @return [void]
+      def aggregate_precompiled_gauge_metric(precompiled_datagram, value = 1)
+        unless thread_healthcheck
+          # Fallback: emit directly if thread is unhealthy
+          @sink << precompiled_datagram.to_datagram(value)
+          return
+        end
+
+        @aggregation_state_mutex.synchronize do
+          @aggregation_state[precompiled_datagram] = value
+        end
+      end
+
       def aggregate_timing(name, value, tags: [], no_prefix: false, type: DISTRIBUTION, sample_rate: CONST_SAMPLE_RATE)
         unless thread_healthcheck
           @sink << datagram_builder(no_prefix: no_prefix).timing_value_packed(
