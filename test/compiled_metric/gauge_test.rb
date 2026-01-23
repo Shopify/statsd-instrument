@@ -240,14 +240,13 @@ class CompiledMetricGaugeTest < Minitest::Test
     end
 
     block_called = false
-    metric.gauge(shop_id: 999) do
+    metric.gauge(42, shop_id: 999) do
       block_called = true
     end
 
     datagram = @sink.datagrams.first
     assert_equal("test.foo.bar", datagram.name)
-    # Default value
-    assert_equal(1, datagram.value)
+    assert_equal(42, datagram.value)
     refute(block_called)
     assert_equal(["service:web", "shop_id:999"], datagram.tags.sort)
   end

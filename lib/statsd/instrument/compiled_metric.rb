@@ -74,7 +74,8 @@ module StatsD
           raise NotImplementedError, "Subclasses must implement #method_name"
         end
 
-        # @return [Numeric, nil] The default value for the metric
+        # @return [Numeric, nil] The default value for the metric.
+        # Returning nil makes __value__ a required argument.
         def default_value
           raise NotImplementedError, "Subclasses must implement #default_value"
         end
@@ -142,10 +143,11 @@ module StatsD
           tag_names = tags.keys
           method = method_name
           default_val = default_value
+          default_val_assignment = default_val.nil? ? "" : " = #{default_val.inspect}"
           allow_block = allow_measuring_latency
 
           method_code = <<~RUBY
-            def self.#{method}(__value__ = #{default_val.inspect}, #{tag_names.map { |name| "#{name}:" }.join(", ")})
+            def self.#{method}(__value__#{default_val_assignment}, #{tag_names.map { |name| "#{name}:" }.join(", ")})
               __return_value__ = StatsD::Instrument::VOID
               #{generate_block_handler if allow_block}
 
@@ -413,7 +415,7 @@ module StatsD
           end
 
           def default_value
-            1
+            nil
           end
 
           def gauge(__value__ = 1, **tags)

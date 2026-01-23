@@ -210,7 +210,7 @@ module StatsD
       #   The precompiled metric datagram, with the tag values already "filled-in".
       # @param value [Numeric] The value to aggregate
       # @return [void]
-      def aggregate_precompiled_gauge_metric(precompiled_datagram, value = 1)
+      def aggregate_precompiled_gauge_metric(precompiled_datagram, value)
         unless thread_healthcheck
           # Fallback: emit directly if thread is unhealthy
           @sink << precompiled_datagram.to_datagram(value)
