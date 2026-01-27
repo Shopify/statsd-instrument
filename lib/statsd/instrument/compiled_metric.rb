@@ -151,8 +151,10 @@ module StatsD
               __return_value__ = StatsD::Instrument::VOID
               #{generate_block_handler if allow_block}
 
-              # Compute hash of tag values for cache lookup
-              __cache_key__ = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
+              # Compute hash of tag values for cache lookup using XOR with position-based shifts.
+              # Shifting each hash by its position makes it order-dependent, preventing collisions
+              # when tag values are swapped (e.g., (a, b) vs (b, a)).
+              __cache_key__ = #{tag_names.map.with_index { |name, i| i.zero? ? "#{name}.hash" : "(#{name}.hash >> #{i})" }.join(" ^ ")}
 
               # Look up or create a PrecompiledDatagram
               __datagram__ =
