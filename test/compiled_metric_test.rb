@@ -285,9 +285,14 @@ class CompiledMetricDefinitionTest < Minitest::Test
 
     cache = metric.instance_variable_get(:@tag_combination_cache)
 
+    # Compute cache keys using the rotate-left + XOR formula (32-bit bounded)
+    # For single tag, it's the hash value masked to 32 bits
+    cache_key_for_1 = 1.hash & 0xFFFFFFFF
+    cache_key_for_2 = 2.hash & 0xFFFFFFFF
+
     # Store the cached datagram under the collision key
-    cached_datagram = cache[1.hash]
-    cache[2.hash] = cached_datagram
+    cached_datagram = cache[cache_key_for_1]
+    cache[cache_key_for_2] = cached_datagram
 
     # Clear datagrams before the collision test
     @sink.clear
@@ -382,5 +387,31 @@ class CompiledMetricDefinitionTest < Minitest::Test
 
     datagram = @sink.datagrams.first
     assert_equal(["status:active", "value:product"], datagram.tags.sort)
+  end
+
+  def test_cache_key_is_order_dependent
+    # Verify that swapped tag values produce different cache entries
+    # This tests the fix for XOR-based cache keys which are commutative
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        tags: { tag_a: :Boolean, tag_b: :Boolean },
+      )
+    end
+
+    # Emit with (true, false)
+    metric.increment(1, tag_a: true, tag_b: false)
+
+    # Emit with (false, true) - swapped values
+    metric.increment(1, tag_a: false, tag_b: true)
+
+    # Both should be cached separately
+    cache = metric.instance_variable_get(:@tag_combination_cache)
+    assert_equal(2, cache.size, "Swapped tag values should produce different cache entries")
+
+    # Verify the datagrams have different tags
+    assert_equal(2, @sink.datagrams.size)
+    assert_equal(["tag_a:true", "tag_b:false"], @sink.datagrams[0].tags)
+    assert_equal(["tag_a:false", "tag_b:true"], @sink.datagrams[1].tags)
   end
 end
