@@ -285,10 +285,10 @@ class CompiledMetricDefinitionTest < Minitest::Test
 
     cache = metric.instance_variable_get(:@tag_combination_cache)
 
-    # Compute cache keys using the rotate-left + XOR formula (32-bit bounded)
-    # For single tag, it's the hash value masked to 32 bits
-    cache_key_for_1 = 1.hash & 0xFFFFFFFF
-    cache_key_for_2 = 2.hash & 0xFFFFFFFF
+    # Compute cache keys using XOR with position-based shifts
+    # For single tag (position 0), it's just the hash value with no shift
+    cache_key_for_1 = 1.hash
+    cache_key_for_2 = 2.hash
 
     # Store the cached datagram under the collision key
     cached_datagram = cache[cache_key_for_1]
