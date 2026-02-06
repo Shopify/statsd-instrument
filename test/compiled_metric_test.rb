@@ -414,4 +414,34 @@ class CompiledMetricDefinitionTest < Minitest::Test
     assert_equal(["tag_a:true", "tag_b:false"], @sink.datagrams[0].tags)
     assert_equal(["tag_a:false", "tag_b:true"], @sink.datagrams[1].tags)
   end
+
+  def test_sample_rate
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+        sample_rate: 0.1337,
+      )
+    end
+
+    assert_equal(0.1337, metric.sample_rate)
+  end
+
+  def test_sample_rate_with_define_without_sample_rate
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar.withouth_sample_rate",
+      )
+    end
+
+    assert_equal(StatsD.singleton_client.default_sample_rate, metric.sample_rate)
+  end
+
+  def test_sample_rate_without_define
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
+
+    error = assert_raises(ArgumentError) do
+      metric.sample_rate
+    end
+    assert_equal("Every CompiledMetric subclass needs to call `define` before accessing its sample_rate.", error.message)
+  end
 end
