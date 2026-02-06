@@ -56,7 +56,7 @@ module StatsD
             @tag_combination_cache = {}
             @max_cache_size = max_cache_size
             @singleton_client = client
-            @sample_rate = sample_rate
+            @sample_rate = sample_rate || client.default_sample_rate
 
             define_metric_method(tags)
           end
@@ -99,6 +99,14 @@ module StatsD
 
         def sample?(sample_rate)
           @singleton_client.sink.sample?(sample_rate)
+        end
+
+        # @return [Float] The defined sample rate for a metric class.
+        # Will raise when `define` has not yet been called on the class.
+        def sample_rate
+          raise ArgumentError, "Every CompiledMetric subclass needs to call `define` before accessing its sample_rate." unless defined?(@sample_rate)
+
+          @sample_rate
         end
 
         private
