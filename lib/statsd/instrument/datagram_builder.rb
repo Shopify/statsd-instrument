@@ -95,6 +95,10 @@ module StatsD
           datagram << @default_tags
         end
 
+        if tags.respond_to?(:call)
+          tags = tags.call
+        end
+
         unless tags.nil? || tags.empty?
           datagram << (@default_tags.nil? ? "|#" : ",")
           compile_tags(tags, datagram)
