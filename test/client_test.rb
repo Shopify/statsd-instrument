@@ -261,6 +261,78 @@ class ClientTest < Minitest::Test
     client.force_flush
   end
 
+  def test_increment_with_aggregation_respects_sample_rate
+    # Test that increment with aggregation properly samples before aggregation
+    # and preserves sample_rate in the datagram
+    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(sink: sink, enable_aggregation: true)
+
+    # With sample_rate=1.0, all increments should be counted
+    client.increment("counter", 1, sample_rate: 1.0)
+    client.increment("counter", 2, sample_rate: 1.0)
+    client.force_flush
+
+    assert_equal(1, sink.datagrams.size)
+    datagram = sink.datagrams.first
+    assert_equal("counter", datagram.name)
+    assert_equal(3, datagram.value)
+    assert_equal(1.0, datagram.sample_rate)
+  end
+
+  def test_increment_with_aggregation_applies_sampling_before_aggregation
+    # Test that sampling happens BEFORE aggregation, not after
+    # This is the key fix - previously sampling was bypassed when aggregation was enabled
+    mock_sink = mock("sink")
+    # First call samples out (false), second call samples in (true)
+    mock_sink.stubs(:sample?).returns(false, true)
+    mock_sink.expects(:<<).with("counter:3|c|@0.5")
+    mock_sink.stubs(:flush)
+
+    client = StatsD::Instrument::Client.new(sink: mock_sink, enable_aggregation: true)
+
+    # First increment should be sampled out
+    client.increment("counter", 5, sample_rate: 0.5)
+    # Second increment should be sampled in
+    client.increment("counter", 3, sample_rate: 0.5)
+    client.force_flush
+  end
+
+  def test_measure_with_aggregation_respects_sample_rate
+    # Test that measure (timing) with aggregation properly handles sample_rate
+    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: sink,
+      enable_aggregation: true,
+      datagram_builder_class: StatsD::Instrument::StatsDDatagramBuilder,
+    )
+
+    client.measure("timing", 100, sample_rate: 0.5)
+    client.measure("timing", 200, sample_rate: 0.5)
+    client.force_flush
+
+    assert_equal(1, sink.datagrams.size)
+    datagram = sink.datagrams.first
+    assert_equal("timing", datagram.name)
+    assert_equal(0.5, datagram.sample_rate)
+    assert_includes(datagram.source, "|@0.5")
+  end
+
+  def test_histogram_with_aggregation_respects_sample_rate
+    # Test that histogram with aggregation properly handles sample_rate
+    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(sink: sink, enable_aggregation: true)
+
+    client.histogram("hist", 100, sample_rate: 0.25)
+    client.histogram("hist", 200, sample_rate: 0.25)
+    client.force_flush
+
+    assert_equal(1, sink.datagrams.size)
+    datagram = sink.datagrams.first
+    assert_equal("hist", datagram.name)
+    assert_equal(0.25, datagram.sample_rate)
+    assert_includes(datagram.source, "|@0.25")
+  end
+
   def test_clone_with_prefix_option
     # Both clients will use the same sink.
     mock_sink = mock("sink")

@@ -220,14 +220,14 @@ module StatsD
       def increment(name, value = 1, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
 
-        if @enable_aggregation
-          @aggregator.increment(name, value, tags: tags, no_prefix: no_prefix)
-          return StatsD::Instrument::VOID
-        end
+        return StatsD::Instrument::VOID if sample_rate && !sample?(sample_rate)
 
-        if sample_rate.nil? || sample?(sample_rate)
+        if @enable_aggregation
+          @aggregator.increment(name, value, tags: tags, no_prefix: no_prefix, sample_rate: sample_rate)
+        else
           emit(datagram_builder(no_prefix: no_prefix).c(name, value, sample_rate, tags))
         end
+
         StatsD::Instrument::VOID
       end
 
@@ -338,7 +338,7 @@ module StatsD
         end
 
         if @enable_aggregation
-          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :ms)
+          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :ms, sample_rate: sample_rate)
           return StatsD::Instrument::VOID
         end
         emit(datagram_builder(no_prefix: no_prefix).ms(name, value, sample_rate, tags))
@@ -448,7 +448,7 @@ module StatsD
         end
 
         if @enable_aggregation
-          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :h)
+          @aggregator.aggregate_timing(name, value, tags: tags, no_prefix: no_prefix, type: :h, sample_rate: sample_rate)
           return StatsD::Instrument::VOID
         end
 
