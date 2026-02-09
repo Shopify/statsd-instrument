@@ -56,7 +56,7 @@ module StatsD
             @tag_combination_cache = {}
             @max_cache_size = max_cache_size
             @singleton_client = client
-            @sample_rate = sample_rate
+            @sample_rate = sample_rate || client.default_sample_rate
 
             define_metric_method(tags)
           end
@@ -99,6 +99,14 @@ module StatsD
 
         def sample?(sample_rate)
           @singleton_client.sink.sample?(sample_rate)
+        end
+
+        # @return [Float] The defined sample rate for a metric class.
+        # Will raise when `define` has not yet been called on the class.
+        def sample_rate
+          raise ArgumentError, "Every CompiledMetric subclass needs to call `define` before accessing its sample_rate." unless defined?(@sample_rate)
+
+          @sample_rate
         end
 
         private
@@ -151,8 +159,12 @@ module StatsD
               __return_value__ = StatsD::Instrument::VOID
               #{generate_block_handler if allow_block}
 
-              # Compute hash of tag values for cache lookup
-              __cache_key__ = #{tag_names.map { |name| "#{name}.hash" }.join(" ^ ")}
+              # Compute hash of tag values for cache lookup using rotate-left + XOR.
+              # Rotation makes it order-dependent (unlike plain XOR), preventing collisions
+              # when tag values are swapped. We mask to 32 bits to avoid Bignum allocations
+              # from left shifts on 64-bit hash values.
+              __cache_key__ = #{tag_names.first}.hash & 0xFFFFFFFF
+              #{tag_names.drop(1).map { |name| "__cache_key__ = (((__cache_key__ << 5) | (__cache_key__ >> 27)) ^ #{name}.hash) & 0xFFFFFFFF" }.join("\n")}
 
               # Look up or create a PrecompiledDatagram
               __datagram__ =

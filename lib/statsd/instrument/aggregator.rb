@@ -11,7 +11,7 @@ module StatsD
         @no_prefix = no_prefix
         @type = type
         @sample_rate = sample_rate
-        @hash = [@name, @tags, @no_prefix, @type].hash
+        @hash = [@name, @tags, @no_prefix, @type, @sample_rate].hash
       end
 
       def ==(other)
@@ -19,7 +19,8 @@ module StatsD
           @name == other.name &&
           @tags == other.tags &&
           @no_prefix == other.no_prefix &&
-          @type == other.type
+          @type == other.type &&
+          @sample_rate == other.sample_rate
       end
       alias_method :eql?, :==
     end
@@ -65,7 +66,7 @@ module StatsD
                 sink << datagram_builders[no_prefix].c(
                   key.name,
                   agg_value,
-                  CONST_SAMPLE_RATE,
+                  key.sample_rate,
                   key.tags,
                 )
               when DISTRIBUTION, MEASURE, HISTOGRAM
@@ -147,14 +148,14 @@ module StatsD
       # @param tags [Hash{String, Symbol => String},Array<String>] The tags to attach to the counter.
       # @param no_prefix [Boolean] If true, the metric will not be prefixed.
       # @return [void]
-      def increment(name, value = 1, tags: [], no_prefix: false)
+      def increment(name, value = 1, tags: [], no_prefix: false, sample_rate: CONST_SAMPLE_RATE)
         unless thread_healthcheck
-          @sink << datagram_builder(no_prefix: no_prefix).c(name, value, CONST_SAMPLE_RATE, tags)
+          @sink << datagram_builder(no_prefix: no_prefix).c(name, value, sample_rate, tags)
           return
         end
 
         tags = tags_sorted(tags)
-        key = packet_key(name, tags, no_prefix, COUNT)
+        key = packet_key(name, tags, no_prefix, COUNT, sample_rate: sample_rate)
 
         @aggregation_state_mutex.synchronize do
           @aggregation_state[key] ||= 0
@@ -297,7 +298,7 @@ module StatsD
               @sink << datagram_builder(no_prefix: key.no_prefix).c(
                 key.name,
                 value,
-                CONST_SAMPLE_RATE,
+                key.sample_rate,
                 key.tags,
               )
             when DISTRIBUTION, MEASURE, HISTOGRAM

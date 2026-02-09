@@ -47,6 +47,43 @@ class AggregatorTest < Minitest::Test
     assert_equal(["foo:bar"], datagram.tags)
   end
 
+  def test_increment_with_sample_rate
+    # Test that increment properly passes through sample_rate
+    @subject.increment("counter.sampled", 1, tags: { foo: "bar" }, sample_rate: 0.5)
+    @subject.increment("counter.sampled", 2, tags: { foo: "bar" }, sample_rate: 0.5)
+    @subject.increment("counter.unsampled", 1, tags: { foo: "bar" })
+    @subject.flush
+
+    assert_equal(2, @sink.datagrams.size)
+
+    sampled_datagram = @sink.datagrams.find { |d| d.name == "counter.sampled" }
+    assert_equal(3, sampled_datagram.value) # 1 + 2
+    assert_equal(0.5, sampled_datagram.sample_rate)
+    assert_includes(sampled_datagram.source, "|@0.5")
+
+    unsampled_datagram = @sink.datagrams.find { |d| d.name == "counter.unsampled" }
+    assert_equal(1, unsampled_datagram.value)
+    assert_equal(1.0, unsampled_datagram.sample_rate)
+    refute_includes(unsampled_datagram.source, "|@")
+  end
+
+  def test_increment_different_sample_rates_create_different_aggregation_keys
+    # Counters with different sample rates should be aggregated separately
+    @subject.increment("counter", 1, sample_rate: 0.5)
+    @subject.increment("counter", 2, sample_rate: 0.5)
+    @subject.increment("counter", 10, sample_rate: 0.1)
+    @subject.increment("counter", 20, sample_rate: 0.1)
+    @subject.flush
+
+    assert_equal(2, @sink.datagrams.size)
+
+    datagram_05 = @sink.datagrams.find { |d| d.sample_rate == 0.5 }
+    assert_equal(3, datagram_05.value) # 1 + 2
+
+    datagram_01 = @sink.datagrams.find { |d| d.sample_rate == 0.1 }
+    assert_equal(30, datagram_01.value) # 10 + 20
+  end
+
   def test_distribution_simple
     @subject.aggregate_timing("foo", 1, tags: { foo: "bar" })
     @subject.aggregate_timing("foo", 100, tags: { foo: "bar" })
