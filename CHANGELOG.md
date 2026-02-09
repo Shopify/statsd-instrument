@@ -6,6 +6,7 @@ section below.
 
 ## Unreleased changes
 
+- [#416](https://github.com/Shopify/statsd-instrument/pull/416) - Fix missing `metric_prefix` in Aggregator finalizer, causing metrics to lose their prefix when flushed during GC.
 - [#415](https://github.com/Shopify/statsd-instrument/pull/415) - Fix `sample_rate` being ignored when aggregation is enabled. Previously, `increment`, `measure`, and `histogram` calls would bypass sampling entirely when aggregation was enabled, causing metrics to be emitted at 100% rate regardless of the configured sample rate.
 - [#411](https://github.com/Shopify/statsd-instrument/pull/403) - Add `CompiledMetric::Gauge` as the second metric type to support pre-compiled metric datagrams. It can be used as a replacement over standard `StatsD.gauge`.
 - Add support for `nil` tag values in `CompiledMetric` dynamic tags (converted to empty string).

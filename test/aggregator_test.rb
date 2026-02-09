@@ -216,6 +216,31 @@ class AggregatorTest < Minitest::Test
     assert_equal(1, @sink.datagrams.last.value)
   end
 
+  def test_finalizer_with_prefix
+    # Test that the finalizer correctly uses the prefix when flushing metrics
+    # IMPORTANT: Use empty tags to ensure datagram_builder is not pre-created by tags_sorted
+    aggregator = StatsD::Instrument::Aggregator.new(@sink, StatsD::Instrument::DatagramBuilder, "MyApp", [])
+
+    aggregator.increment("foo", 1, tags: [])
+    aggregator.increment("bar", 1, tags: [], no_prefix: true)
+
+    # Manually trigger the finalizer (simulates GC cleanup)
+    finalizer = StatsD::Instrument::Aggregator.finalize(
+      aggregator.instance_variable_get(:@finalizer),
+    )
+    finalizer.call
+
+    assert_equal(2, @sink.datagrams.size)
+
+    prefixed_datagram = @sink.datagrams.find { |d| d.name == "MyApp.foo" }
+    refute_nil(prefixed_datagram, "Expected to find datagram with prefix 'MyApp.foo'")
+    assert_equal(1, prefixed_datagram.value)
+
+    unprefixed_datagram = @sink.datagrams.find { |d| d.name == "bar" }
+    refute_nil(unprefixed_datagram, "Expected to find datagram without prefix 'bar'")
+    assert_equal(1, unprefixed_datagram.value)
+  end
+
   def test_synchronous_operation_on_thread_failure
     # Force thread_healthcheck to return false
     @subject.stubs(:thread_healthcheck).returns(false)

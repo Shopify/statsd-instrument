@@ -133,6 +133,7 @@ module StatsD
           @datagram_builders,
           @datagram_builder_class,
           @default_tags,
+          @metric_prefix,
         )
 
         ObjectSpace.define_finalizer(
