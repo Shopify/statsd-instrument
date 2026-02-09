@@ -6,6 +6,7 @@ section below.
 
 ## Unreleased changes
 
+- [#416](https://github.com/Shopify/statsd-instrument/pull/416) - Fix missing `metric_prefix` in Aggregator finalizer, causing metrics to lose their prefix when flushed during GC.
 - [#411](https://github.com/Shopify/statsd-instrument/pull/403) - Add `CompiledMetric::Gauge` as the second metric type to support pre-compiled metric datagrams. It can be used as a replacement over standard `StatsD.gauge`.
 - Add support for `nil` tag values in `CompiledMetric` dynamic tags (converted to empty string).
 - [#407](https://github.com/Shopify/statsd-instrument/pull/407) - Add support for `Symbol` and `:Boolean` types in `CompiledMetric` dynamic tags, allowing symbol and boolean values to be used as tag values.
