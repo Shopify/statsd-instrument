@@ -159,12 +159,10 @@ module StatsD
               __return_value__ = StatsD::Instrument::VOID
               #{generate_block_handler if allow_block}
 
-              # Compute hash of tag values for cache lookup using rotate-left + XOR.
-              # Rotation makes it order-dependent (unlike plain XOR), preventing collisions
-              # when tag values are swapped. We mask to 32 bits to avoid Bignum allocations
-              # from left shifts on 64-bit hash values.
-              __cache_key__ = #{tag_names.first}.hash & 0xFFFFFFFF
-              #{tag_names.drop(1).map { |name| "__cache_key__ = (((__cache_key__ << 5) | (__cache_key__ >> 27)) ^ #{name}.hash) & 0xFFFFFFFF" }.join("\n")}
+              # Compute hash of tag values for cache lookup using XOR with position-based shifts.
+              # Shifting each hash by its position makes it order-dependent, preventing collisions
+              # when tag values are swapped (e.g., (a, b) vs (b, a)).
+              __cache_key__ = #{tag_names.map.with_index { |name, i| i.zero? ? "#{name}.hash" : "(#{name}.hash >> #{i})" }.join(" ^ ")}
 
               # Look up or create a PrecompiledDatagram
               __datagram__ =
