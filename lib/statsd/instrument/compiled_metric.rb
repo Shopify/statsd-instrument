@@ -101,6 +101,11 @@ module StatsD
           @singleton_client.sink.sample?(sample_rate)
         end
 
+        # @return [String, nil] The normalized metric name for this compiled metric class (`nil` if not yet defined).
+        def metric_name
+          @name
+        end
+
         # @return [Float] The defined sample rate for a metric class.
         # Will raise when `define` has not yet been called on the class.
         def sample_rate
