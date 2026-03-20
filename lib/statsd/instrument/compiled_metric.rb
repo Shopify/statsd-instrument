@@ -51,7 +51,7 @@ module StatsD
           # Create a new class for this specific metric
           # Using classes instead of instances for better YJIT optimization
           metric_class = tap do
-            @name = DatagramBlueprintBuilder.normalize_name(name)
+            @name = DatagramBlueprintBuilder.normalize_name(name).freeze
             @datagram_blueprint = datagram_blueprint
             @tag_combination_cache = {}
             @max_cache_size = max_cache_size

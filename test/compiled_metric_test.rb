@@ -453,6 +453,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
     end
 
     assert_equal("foo.bar", metric.metric_name)
+    assert_predicate(metric.metric_name, :frozen?)
   end
 
   def test_metric_name_is_normalized
@@ -463,6 +464,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
     end
 
     assert_equal("foo_bar_baz_qux", metric.metric_name)
+    assert_predicate(metric.metric_name, :frozen?)
   end
 
   def test_metric_name_without_define
