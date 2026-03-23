@@ -6,6 +6,7 @@ section below.
 
 ## Unreleased changes
 
+- [#418](https://github.com/Shopify/statsd-instrument/pull/418) - Prevent misuse of `CompiledMetric` definitions by requiring a subclass when defining one.
 - [#417](https://github.com/Shopify/statsd-instrument/pull/417) - Add a `metric_name` method to `CompiledMetric`.
 
 ## Version 3.10.0

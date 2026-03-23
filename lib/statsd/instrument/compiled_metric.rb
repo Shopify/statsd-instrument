@@ -33,6 +33,19 @@ module StatsD
         # @param max_cache_size [Integer] Maximum tag combinations this metric supports, and will be retained in-memory. Cardinality beyond this number will fall back to the slow path and should be avoided.
         # @return [Class] A new CompiledMetric subclass configured for this metric
         def define(name:, static_tags: {}, tags: {}, no_prefix: false, sample_rate: nil, max_cache_size: DEFAULT_MAX_TAG_COMBINATION_CACHE_SIZE)
+          if equal?(CompiledMetric) || superclass.equal?(CompiledMetric)
+            raise ArgumentError,
+              "`define` must be called on a subclass, not on #{self.name} directly. " \
+                "Use `Class.new(#{self.name}) { define(...) }` or " \
+                "`class MyMetric < #{self.name}; define(...); end` instead."
+          end
+
+          if defined?(@datagram_blueprint)
+            raise ArgumentError,
+              "`define` has already been called on #{self.name}. " \
+                "Each CompiledMetric subclass can only be defined once."
+          end
+
           client = StatsD.singleton_client
 
           # Build the datagram blueprint using the builder
