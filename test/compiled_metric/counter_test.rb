@@ -24,7 +24,7 @@ class CompiledMetricCounterTest < Minitest::Test
   def test_counter_without_define
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
 
-    error = assert_raises(ArgumentError) do
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
       metric.increment(5)
     end
     assert_equal("Every CompiledMetric subclass needs to call `define` before first invocation of increment.", error.message)

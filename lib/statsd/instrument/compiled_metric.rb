@@ -18,6 +18,12 @@ module StatsD
     #   # Later, emit with minimal allocations:
     #   CheckoutMetric.increment(shop_id: 123, user_id: 456, value: 1)
     class CompiledMetric
+      # Raised when a CompiledMetric subclass is defined incorrectly.
+      # This includes calling `define` on a base type class directly,
+      # calling `define` more than once, or using a metric before `define`
+      # has been called.
+      class DefinitionError < StandardError; end
+
       # Default maximum number of unique tag combinations to cache before clearing
       # the cache to prevent unbounded memory growth
       DEFAULT_MAX_TAG_COMBINATION_CACHE_SIZE = 5000
@@ -34,14 +40,14 @@ module StatsD
         # @return [Class] A new CompiledMetric subclass configured for this metric
         def define(name:, static_tags: {}, tags: {}, no_prefix: false, sample_rate: nil, max_cache_size: DEFAULT_MAX_TAG_COMBINATION_CACHE_SIZE)
           if equal?(CompiledMetric) || superclass.equal?(CompiledMetric)
-            raise ArgumentError,
+            raise DefinitionError,
               "`define` must be called on a subclass, not on #{self.name} directly. " \
                 "Use `Class.new(#{self.name}) { define(...) }` or " \
                 "`class MyMetric < #{self.name}; define(...); end` instead."
           end
 
           if defined?(@datagram_blueprint)
-            raise ArgumentError,
+            raise DefinitionError,
               "`define` has already been called on #{self.name}. " \
                 "Each CompiledMetric subclass can only be defined once."
           end
@@ -122,7 +128,7 @@ module StatsD
         # @return [Float] The defined sample rate for a metric class.
         # Will raise when `define` has not yet been called on the class.
         def sample_rate
-          raise ArgumentError, "Every CompiledMetric subclass needs to call `define` before accessing its sample_rate." unless defined?(@sample_rate)
+          raise DefinitionError, "Every CompiledMetric subclass needs to call `define` before accessing its sample_rate." unless defined?(@sample_rate)
 
           @sample_rate
         end
@@ -133,7 +139,7 @@ module StatsD
         # Once `define` was called during the class creation, it will override the
         # method implementation to emit the actual metric datagrams.
         def require_define_to_be_called
-          raise ArgumentError, "Every CompiledMetric subclass needs to call `define` before first invocation of #{method_name}."
+          raise DefinitionError, "Every CompiledMetric subclass needs to call `define` before first invocation of #{method_name}."
         end
 
         def generate_block_handler

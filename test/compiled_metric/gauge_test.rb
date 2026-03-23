@@ -24,7 +24,7 @@ class CompiledMetricGaugeTest < Minitest::Test
   def test_gauge_without_define
     metric = Class.new(StatsD::Instrument::CompiledMetric::Gauge)
 
-    error = assert_raises(ArgumentError) do
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
       metric.gauge(5)
     end
     assert_equal("Every CompiledMetric subclass needs to call `define` before first invocation of gauge.", error.message)

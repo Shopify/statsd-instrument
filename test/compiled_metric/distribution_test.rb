@@ -24,7 +24,7 @@ class CompiledMetricDistributionTest < Minitest::Test
   def test_distribution_without_define
     metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution)
 
-    error = assert_raises(ArgumentError) do
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
       metric.distribution(5)
     end
     assert_equal("Every CompiledMetric subclass needs to call `define` before first invocation of distribution.", error.message)
