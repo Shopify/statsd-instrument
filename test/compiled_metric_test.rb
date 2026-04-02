@@ -439,7 +439,7 @@ class CompiledMetricDefinitionTest < Minitest::Test
   def test_sample_rate_without_define
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
 
-    error = assert_raises(ArgumentError) do
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
       metric.sample_rate
     end
     assert_equal("Every CompiledMetric subclass needs to call `define` before accessing its sample_rate.", error.message)
@@ -471,5 +471,46 @@ class CompiledMetricDefinitionTest < Minitest::Test
     metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
 
     assert_nil(metric.metric_name)
+  end
+
+  def test_define_directly_on_counter_raises
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
+      StatsD::Instrument::CompiledMetric::Counter.define(name: "bad_metric")
+    end
+    assert_includes(error.message, "`define` must be called on a subclass")
+    assert_includes(error.message, "Counter")
+  end
+
+  def test_define_directly_on_gauge_raises
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
+      StatsD::Instrument::CompiledMetric::Gauge.define(name: "bad_metric")
+    end
+    assert_includes(error.message, "`define` must be called on a subclass")
+    assert_includes(error.message, "Gauge")
+  end
+
+  def test_define_directly_on_distribution_raises
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
+      StatsD::Instrument::CompiledMetric::Distribution.define(name: "bad_metric")
+    end
+    assert_includes(error.message, "`define` must be called on a subclass")
+    assert_includes(error.message, "Distribution")
+  end
+
+  def test_define_directly_on_compiled_metric_raises
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
+      StatsD::Instrument::CompiledMetric.define(name: "bad_metric")
+    end
+    assert_includes(error.message, "`define` must be called on a subclass")
+  end
+
+  def test_double_define_raises
+    error = assert_raises(StatsD::Instrument::CompiledMetric::DefinitionError) do
+      Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+        define(name: "first_metric")
+        define(name: "second_metric")
+      end
+    end
+    assert_includes(error.message, "`define` has already been called")
   end
 end
