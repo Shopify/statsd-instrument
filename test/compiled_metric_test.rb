@@ -444,4 +444,32 @@ class CompiledMetricDefinitionTest < Minitest::Test
     end
     assert_equal("Every CompiledMetric subclass needs to call `define` before accessing its sample_rate.", error.message)
   end
+
+  def test_metric_name
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo.bar",
+      )
+    end
+
+    assert_equal("foo.bar", metric.metric_name)
+    assert_predicate(metric.metric_name, :frozen?)
+  end
+
+  def test_metric_name_is_normalized
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter) do
+      define(
+        name: "foo:bar|baz@qux",
+      )
+    end
+
+    assert_equal("foo_bar_baz_qux", metric.metric_name)
+    assert_predicate(metric.metric_name, :frozen?)
+  end
+
+  def test_metric_name_without_define
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
+
+    assert_nil(metric.metric_name)
+  end
 end

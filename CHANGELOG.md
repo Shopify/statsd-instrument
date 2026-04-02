@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+- [#417](https://github.com/Shopify/statsd-instrument/pull/417) - Add a `metric_name` method to `CompiledMetric`.
+
 ## Version 3.10.0
 
 - [#416](https://github.com/Shopify/statsd-instrument/pull/416) - Fix missing `metric_prefix` in Aggregator finalizer, causing metrics to lose their prefix when flushed during GC.

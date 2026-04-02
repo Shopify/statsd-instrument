@@ -51,7 +51,7 @@ module StatsD
           # Create a new class for this specific metric
           # Using classes instead of instances for better YJIT optimization
           metric_class = tap do
-            @name = DatagramBlueprintBuilder.normalize_name(name)
+            @name = DatagramBlueprintBuilder.normalize_name(name).freeze
             @datagram_blueprint = datagram_blueprint
             @tag_combination_cache = {}
             @max_cache_size = max_cache_size
@@ -99,6 +99,11 @@ module StatsD
 
         def sample?(sample_rate)
           @singleton_client.sink.sample?(sample_rate)
+        end
+
+        # @return [String, nil] The normalized metric name for this compiled metric class (`nil` if not yet defined).
+        def metric_name
+          @name
         end
 
         # @return [Float] The defined sample rate for a metric class.
