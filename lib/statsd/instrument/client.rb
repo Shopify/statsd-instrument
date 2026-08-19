@@ -257,7 +257,7 @@ module StatsD
 
         return StatsD::Instrument::VOID if sample_rate && !sample?(sample_rate)
 
-        tags = enrich_tags(name, tags)
+        tags = @tag_enricher.call(name, tags) if @tag_enricher
         if @enable_aggregation
           @aggregator.increment(name, value, tags || EMPTY_TAGS, no_prefix, sample_rate)
         else
@@ -392,7 +392,7 @@ module StatsD
           return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :ms, no_prefix: no_prefix, &block)
         end
 
-        tags = enrich_tags(name, tags)
+        tags = @tag_enricher.call(name, tags) if @tag_enricher
         if @enable_aggregation
           @aggregator.aggregate_timing(name, value, tags || EMPTY_TAGS, no_prefix, :ms, sample_rate)
           return StatsD::Instrument::VOID
@@ -416,14 +416,14 @@ module StatsD
       # @return [void]
       def gauge(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         if @enable_aggregation
-          tags = enrich_tags(name, tags)
+          tags = @tag_enricher.call(name, tags) if @tag_enricher
           @aggregator.gauge(name, value, tags || EMPTY_TAGS, no_prefix)
           return StatsD::Instrument::VOID
         end
 
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
-          tags = enrich_tags(name, tags)
+          tags = @tag_enricher.call(name, tags) if @tag_enricher
           emit(datagram_builder(no_prefix: no_prefix).g(name, value, sample_rate, tags))
         end
         StatsD::Instrument::VOID
@@ -439,7 +439,7 @@ module StatsD
       def set(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
-          tags = enrich_tags(name, tags)
+          tags = @tag_enricher.call(name, tags) if @tag_enricher
           emit(datagram_builder(no_prefix: no_prefix).s(name, value, sample_rate, tags))
         end
         StatsD::Instrument::VOID
@@ -470,7 +470,7 @@ module StatsD
           return StatsD::Instrument::VOID
         end
 
-        tags = enrich_tags(name, tags)
+        tags = @tag_enricher.call(name, tags) if @tag_enricher
         if @enable_aggregation
           @aggregator.aggregate_timing(name, value, tags || EMPTY_TAGS, no_prefix, :d, sample_rate)
           return StatsD::Instrument::VOID
@@ -500,7 +500,7 @@ module StatsD
           return StatsD::Instrument::VOID
         end
 
-        tags = enrich_tags(name, tags)
+        tags = @tag_enricher.call(name, tags) if @tag_enricher
         if @enable_aggregation
           @aggregator.aggregate_timing(name, value, tags || EMPTY_TAGS, no_prefix, :h, sample_rate)
           return StatsD::Instrument::VOID
@@ -538,7 +538,7 @@ module StatsD
 
             metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
             latency_in_ms = stop - start
-            tags = enrich_tags(name, tags)
+            tags = @tag_enricher.call(name, tags) if @tag_enricher
 
             if @enable_aggregation
               @aggregator.aggregate_timing(
@@ -710,12 +710,6 @@ module StatsD
 
       def sample?(sample_rate)
         @sink.sample?(sample_rate)
-      end
-
-      def enrich_tags(name, tags)
-        return tags unless @tag_enricher
-
-        @tag_enricher.call(name, tags)
       end
 
       def emit(datagram)
