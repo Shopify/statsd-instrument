@@ -111,6 +111,26 @@ Please note that since aggregation is an experimental feature, it should be used
 > [!WARNING]
 > This feature is only compatible with Datadog Agent's version >=6.25.0 && <7.0.0 or Agent's versions >=7.25.0.
 
+### Per-metric tag enrichment
+
+Applications that need to add runtime-dependent tags can provide a callable to
+`Client` or `Environment#client`. The callable receives the metric name and
+explicit tags, and returns the tags to use for the metric:
+
+```ruby
+tag_enricher = lambda do |name, tags|
+  add_runtime_tags(name, tags)
+end
+
+client = StatsD::Instrument::Environment.current.client(tag_enricher: tag_enricher)
+```
+
+The callable runs after sampling and before either aggregation or datagram
+construction. This ordering ensures that runtime tags remain part of the
+aggregation key. It is used by the standard `Client` metric methods; service
+checks, events, and `CompiledMetric` use separate emission paths and are not
+changed by this option.
+
 ## StatsD keys
 
 StatsD keys look like 'admin.logins.api.success'. Dots are used as namespace separators.

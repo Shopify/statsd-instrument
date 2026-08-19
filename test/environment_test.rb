@@ -36,6 +36,13 @@ class EnvironmentTest < Minitest::Test
     assert_kind_of(StatsD::Instrument::Client, env.client)
   end
 
+  def test_client_forwards_client_options
+    env = StatsD::Instrument::Environment.new({})
+    tag_enricher = ->(_name, tags) { tags }
+
+    assert_same(tag_enricher, env.client(tag_enricher: tag_enricher).tag_enricher)
+  end
+
   def test_client_from_env_uses_log_sink_in_development_environment
     env = StatsD::Instrument::Environment.new("STATSD_USE_NEW_CLIENT" => "1", "STATSD_ENV" => "development")
     assert_kind_of(StatsD::Instrument::LogSink, env.client.sink)

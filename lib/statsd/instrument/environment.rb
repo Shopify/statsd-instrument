@@ -132,8 +132,8 @@ module StatsD
         ))
       end
 
-      def client
-        StatsD::Instrument::Client.from_env(self)
+      def client(**options)
+        StatsD::Instrument::Client.from_env(self, **options)
       end
 
       def default_sink_for_environment
