@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+- Add a `Client`-level `tag_enricher` callable for runtime tag enrichment before direct emission or aggregation. The public Client metric API remains keyword-based, and aggregation backends continue to receive the fixed-arity positional interface.
+
 ## Version 3.12.0
 
 - Make the internal aggregator interface positional-only and injectable through `Client`, with fixed-arity `increment`, `gauge`, and `aggregate_timing` entrypoints for native aggregation backends. Public Client metric methods retain their keyword API.

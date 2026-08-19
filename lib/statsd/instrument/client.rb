@@ -35,7 +35,8 @@ module StatsD
           implementation: env.statsd_implementation,
           sink: env.default_sink_for_environment,
           datagram_builder_class: datagram_builder_class_for_implementation(implementation),
-          aggregator: nil
+          aggregator: nil,
+          tag_enricher: nil
         )
           new(
             prefix: prefix,
@@ -47,6 +48,7 @@ module StatsD
             enable_aggregation: env.experimental_aggregation_enabled?,
             aggregation_flush_interval: env.aggregation_interval,
             aggregator: aggregator,
+            tag_enricher: tag_enricher,
           )
         end
 
@@ -139,6 +141,17 @@ module StatsD
       # @return [Array<String>, Hash, nil]
       attr_reader :default_tags
 
+      # A callable that can add or transform per-metric tags before the metric is
+      # passed to the aggregator or datagram builder.
+      #
+      # The callable receives the metric name and the explicit tags supplied to
+      # the metric method, and must return tags in one of the forms accepted by
+      # the client. It is not called for sampled-out metrics, service checks,
+      # events, or compiled metrics.
+      #
+      # @return [#call, nil]
+      attr_reader :tag_enricher
+
       # The default sample rate to use for metrics that are emitted without a
       # sample rate set. This should be a value between 0 (never emit a metric) and
       # 1.0 (always emit). If it is not set, the default value 1.0 is used.
@@ -162,6 +175,9 @@ module StatsD
       #
       # @param aggregator [#increment, #gauge, #aggregate_timing, nil]
       #   Optional external aggregation backend.
+      # @param tag_enricher [#call, nil]
+      #   Optional callable invoked with `(name, tags)` before normal metric
+      #   dispatch. The returned tags are used for aggregation and emission.
       # @see .from_env to instantiate a client using environment variables.
       def initialize(
         prefix: nil,
@@ -173,7 +189,8 @@ module StatsD
         enable_aggregation: false,
         aggregation_flush_interval: 2.0,
         aggregation_max_context_size: StatsD::Instrument::Aggregator::DEFAULT_MAX_CONTEXT_SIZE,
-        aggregator: nil
+        aggregator: nil,
+        tag_enricher: nil
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
@@ -181,6 +198,7 @@ module StatsD
         @prefix = prefix
         @default_tags = default_tags
         @default_sample_rate = default_sample_rate
+        @tag_enricher = tag_enricher
 
         @datagram_builder = { false => nil, true => nil }
         @injected_aggregator = aggregator
@@ -239,6 +257,7 @@ module StatsD
 
         return StatsD::Instrument::VOID if sample_rate && !sample?(sample_rate)
 
+        tags = @tag_enricher.call(name, tags) if @tag_enricher
         if @enable_aggregation
           @aggregator.increment(name, value, tags || EMPTY_TAGS, no_prefix, sample_rate)
         else
@@ -373,6 +392,7 @@ module StatsD
           return latency(name, sample_rate: sample_rate, tags: tags, metric_type: :ms, no_prefix: no_prefix, &block)
         end
 
+        tags = @tag_enricher.call(name, tags) if @tag_enricher
         if @enable_aggregation
           @aggregator.aggregate_timing(name, value, tags || EMPTY_TAGS, no_prefix, :ms, sample_rate)
           return StatsD::Instrument::VOID
@@ -396,12 +416,14 @@ module StatsD
       # @return [void]
       def gauge(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         if @enable_aggregation
+          tags = @tag_enricher.call(name, tags) if @tag_enricher
           @aggregator.gauge(name, value, tags || EMPTY_TAGS, no_prefix)
           return StatsD::Instrument::VOID
         end
 
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
+          tags = @tag_enricher.call(name, tags) if @tag_enricher
           emit(datagram_builder(no_prefix: no_prefix).g(name, value, sample_rate, tags))
         end
         StatsD::Instrument::VOID
@@ -417,6 +439,7 @@ module StatsD
       def set(name, value, sample_rate: nil, tags: nil, no_prefix: false)
         sample_rate ||= @default_sample_rate
         if sample_rate.nil? || sample?(sample_rate)
+          tags = @tag_enricher.call(name, tags) if @tag_enricher
           emit(datagram_builder(no_prefix: no_prefix).s(name, value, sample_rate, tags))
         end
         StatsD::Instrument::VOID
@@ -447,6 +470,7 @@ module StatsD
           return StatsD::Instrument::VOID
         end
 
+        tags = @tag_enricher.call(name, tags) if @tag_enricher
         if @enable_aggregation
           @aggregator.aggregate_timing(name, value, tags || EMPTY_TAGS, no_prefix, :d, sample_rate)
           return StatsD::Instrument::VOID
@@ -476,6 +500,7 @@ module StatsD
           return StatsD::Instrument::VOID
         end
 
+        tags = @tag_enricher.call(name, tags) if @tag_enricher
         if @enable_aggregation
           @aggregator.aggregate_timing(name, value, tags || EMPTY_TAGS, no_prefix, :h, sample_rate)
           return StatsD::Instrument::VOID
@@ -513,6 +538,7 @@ module StatsD
 
             metric_type ||= datagram_builder(no_prefix: no_prefix).latency_metric_type
             latency_in_ms = stop - start
+            tags = @tag_enricher.call(name, tags) if @tag_enricher
 
             if @enable_aggregation
               @aggregator.aggregate_timing(
@@ -609,7 +635,8 @@ module StatsD
         default_sample_rate: NO_CHANGE,
         default_tags: NO_CHANGE,
         datagram_builder_class: NO_CHANGE,
-        aggregator: NO_CHANGE
+        aggregator: NO_CHANGE,
+        tag_enricher: NO_CHANGE
       )
         client = clone_with_options(
           sink: sink,
@@ -618,6 +645,7 @@ module StatsD
           default_tags: default_tags,
           datagram_builder_class: datagram_builder_class,
           aggregator: aggregator,
+          tag_enricher: tag_enricher,
         )
 
         yield(client)
@@ -629,7 +657,8 @@ module StatsD
         default_sample_rate: NO_CHANGE,
         default_tags: NO_CHANGE,
         datagram_builder_class: NO_CHANGE,
-        aggregator: NO_CHANGE
+        aggregator: NO_CHANGE,
+        tag_enricher: NO_CHANGE
       )
         self.class.new(
           sink: sink == NO_CHANGE ? @sink : sink,
@@ -641,6 +670,7 @@ module StatsD
           enable_aggregation: @enable_aggregation,
           aggregation_flush_interval: @aggregation_flush_interval,
           aggregator: aggregator == NO_CHANGE ? @injected_aggregator : aggregator,
+          tag_enricher: tag_enricher == NO_CHANGE ? @tag_enricher : tag_enricher,
         )
       end
 

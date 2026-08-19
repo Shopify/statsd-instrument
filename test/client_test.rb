@@ -67,6 +67,14 @@ class ClientTest < Minitest::Test
     assert_kind_of(StatsD::Instrument::NullSink, client.sink)
   end
 
+  def test_client_from_env_accepts_tag_enricher
+    env = StatsD::Instrument::Environment.new({})
+    tag_enricher = ->(_name, tags) { tags }
+    client = StatsD::Instrument::Client.from_env(env, tag_enricher: tag_enricher)
+
+    assert_same(tag_enricher, client.tag_enricher)
+  end
+
   def test_client_from_env_with_aggregation
     env = StatsD::Instrument::Environment.new(
       "STATSD_SAMPLE_RATE" => "0.1",
@@ -100,6 +108,80 @@ class ClientTest < Minitest::Test
 
     datagram = client.sink.datagrams.find { |d| d.name == "bar.block_duration_example" }
     assert_equal(true, !datagram.nil?)
+  end
+
+  def test_tag_enricher_runs_before_direct_emission
+    calls = []
+    tag_enricher = lambda do |name, tags|
+      calls << [name, tags]
+      Array(tags).dup << "context:one"
+    end
+    client = StatsD::Instrument::Client.new(tag_enricher: tag_enricher)
+
+    datagrams = client.capture do
+      client.increment("counter", tags: ["explicit:yes"], no_prefix: true)
+      client.gauge("gauge", 1)
+      client.set("set", "value")
+    end
+
+    assert_equal(["counter", "gauge", "set"], calls.map(&:first))
+    assert_equal(["explicit:yes"], calls.first.last)
+    assert_equal("counter", datagrams[0].name)
+    assert_includes(datagrams[0].tags, "explicit:yes")
+    assert_includes(datagrams[0].tags, "context:one")
+    assert_equal("gauge", datagrams[1].name)
+    assert_includes(datagrams[1].tags, "context:one")
+    assert_equal("set", datagrams[2].name)
+    assert_includes(datagrams[2].tags, "context:one")
+  end
+
+  def test_tag_enricher_runs_before_aggregation_key_is_built
+    contexts = ["one", "two"]
+    tag_enricher = ->(_name, _tags) { ["pod:#{contexts.shift}"] }
+    sink = StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new)
+    client = StatsD::Instrument::Client.new(
+      sink: sink,
+      enable_aggregation: true,
+      tag_enricher: tag_enricher,
+    )
+
+    client.increment("counter")
+    client.increment("counter")
+    client.force_flush
+
+    assert_equal(2, sink.datagrams.size)
+    assert_equal(["pod:one", "pod:two"], sink.datagrams.map { |datagram| datagram.tags.first })
+    assert_equal([1, 1], sink.datagrams.map(&:value))
+  ensure
+    client&.instance_variable_get(:@aggregator)&.instance_variable_get(:@flush_thread)&.kill
+  end
+
+  def test_tag_enricher_is_not_called_for_sampled_out_metrics
+    calls = 0
+    sink = mock("sink")
+    sink.stubs(:sample?).returns(false)
+    tag_enricher = lambda do |_name, _tags|
+      calls += 1
+      []
+    end
+    client = StatsD::Instrument::Client.new(
+      sink: sink,
+      default_sample_rate: 1.0,
+      tag_enricher: tag_enricher,
+    )
+
+    client.increment("dropped")
+
+    assert_equal(0, calls)
+  end
+
+  def test_clone_with_options_preserves_and_overrides_tag_enricher
+    tag_enricher = ->(_name, tags) { tags }
+    replacement = ->(_name, tags) { tags }
+    client = StatsD::Instrument::Client.new(tag_enricher: tag_enricher)
+
+    assert_same(tag_enricher, client.clone_with_options.tag_enricher)
+    assert_same(replacement, client.clone_with_options(tag_enricher: replacement).tag_enricher)
   end
 
   def test_aggregation_preserves_block_timing_and_return_value
