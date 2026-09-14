@@ -6,6 +6,12 @@ section below.
 
 ## Unreleased changes
 
+- Validate `STATSD_ADDR` before constructing the UDP fallback sinks. A non-`host:port` value (most
+  commonly a Prometheus ingress URL running without `STATSD_PROMETHEUS_AUTH`, e.g. during a
+  secretless image build) previously died deep inside `Integer()` with no context; it now raises an
+  `ArgumentError` naming the value, why the UDP fallback was selected, and the first non-gem frames
+  of the code that emitted the metric.
+
 ## Version 3.5.12
 
 - Update CONTRIBUTING docs about release process

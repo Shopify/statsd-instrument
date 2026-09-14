@@ -167,6 +167,33 @@ module StatsD
         StatsD::Instrument::Client.from_env(self)
       end
 
+      # The UDP sinks need STATSD_ADDR to be "host:port". When it is anything else (most commonly a
+      # Prometheus ingress URL left in the environment while STATSD_PROMETHEUS_AUTH is unset, e.g.
+      # a secretless image build), the sink would die deep in Integer() with no hint of what was
+      # wrong or who emitted the metric. Fail here instead, loudly, naming the value, the reason
+      # the UDP fallback was selected, and the first non-gem frames that triggered the emission.
+      def validated_udp_addr
+        host, port = statsd_addr.split(":", 2)
+        return statsd_addr if host && !host.empty? && port&.match?(/\A[0-9]+\z/)
+
+        culprit_frames = caller_locations(1, 30)
+          .reject { |l| l.absolute_path.to_s.include?("statsd/instrument") || l.absolute_path.to_s.include?("forwardable") }
+          .first(3)
+          .map { |l| "          #{l.path}:#{l.lineno} in #{l.label}" }
+
+        raise ArgumentError, <<~MSG
+          STATSD_ADDR is not a UDP "host:port" address: #{statsd_addr.inspect}
+
+          The UDP sink was selected because STATSD_PROMETHEUS_AUTH is not set (environment: #{environment}).
+          If this value is a Prometheus ingress URL, this process was expected to use the Prometheus sink
+          but is running without its auth key. This typically happens when a metric is emitted during
+          boot in an environment without secrets (e.g. an image build).
+
+          First metric emitted from:
+          #{culprit_frames.join("\n")}
+        MSG
+      end
+
       def default_sink_for_environment
         case environment
         when "production", "staging"
@@ -193,12 +220,12 @@ module StatsD
             )
           elsif statsd_batching?
             StatsD::Instrument::BatchedUDPSink.for_addr(
-              statsd_addr,
+              validated_udp_addr,
               buffer_capacity: statsd_buffer_capacity,
               max_packet_size: statsd_max_packet_size,
             )
           else
-            StatsD::Instrument::UDPSink.for_addr(statsd_addr)
+            StatsD::Instrument::UDPSink.for_addr(validated_udp_addr)
           end
         when "test"
           StatsD::Instrument::NullSink.new

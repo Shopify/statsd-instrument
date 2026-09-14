@@ -56,6 +56,37 @@ class EnvironmentTest < Minitest::Test
     assert_kind_of(StatsD::Instrument::BatchedUDPSink, env.client.sink)
   end
 
+  def test_client_from_env_udp_fallback_accepts_valid_host_port_addr
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_USE_NEW_CLIENT" => "1",
+      "STATSD_ENV" => "production",
+      "STATSD_ADDR" => "statsd.internal:8125",
+    )
+    assert_kind_of(StatsD::Instrument::BatchedUDPSink, env.client.sink)
+  end
+
+  def test_client_from_env_udp_fallback_rejects_url_shaped_addr_with_diagnostic
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_USE_NEW_CLIENT" => "1",
+      "STATSD_ENV" => "production",
+      "STATSD_ADDR" => "https://ingress.coralogix.us/prometheus/v1",
+    )
+    error = assert_raises(ArgumentError) { env.client }
+    assert_includes(error.message, '"https://ingress.coralogix.us/prometheus/v1"')
+    assert_includes(error.message, "STATSD_PROMETHEUS_AUTH is not set")
+    assert_includes(error.message, "First metric emitted from:")
+  end
+
+  def test_client_from_env_udp_fallback_rejects_addr_without_port_with_diagnostic
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_USE_NEW_CLIENT" => "1",
+      "STATSD_ENV" => "production",
+      "STATSD_ADDR" => "statsd.internal",
+    )
+    error = assert_raises(ArgumentError) { env.client }
+    assert_includes(error.message, '"statsd.internal"')
+  end
+
   def test_client_from_env_uses_batched_prometheus_sink_in_staging_environment
     env = StatsD::Instrument::Environment.new(
       "STATSD_USE_NEW_CLIENT" => "1",
