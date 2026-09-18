@@ -302,7 +302,7 @@ module StatsD
           # @param name [String] The metric name
           # @return [String] The normalized metric name
           def normalize_name(name)
-            name.tr(":|@", "_")
+            /[:|@\r\n]/.match?(name) ? name.tr(":|@\r\n", "_") : name.dup
           end
 
           private
@@ -314,7 +314,8 @@ module StatsD
           def build_prefix(client_prefix, no_prefix)
             return "" if no_prefix || client_prefix.nil?
 
-            "#{client_prefix}."
+            prefix = "#{client_prefix}."
+            /[\r\n]/.match?(prefix) ? prefix.tr("\r\n", "_") : prefix
           end
 
           # Normalizes tag names/values by removing StatsD protocol special characters
@@ -322,7 +323,7 @@ module StatsD
           # @return [String] The normalized string
           def normalize_statsd_string(str)
             str = str.to_s
-            str = str.tr("|,", "") if /[|,]/.match?(str)
+            str = str.tr("|,\r\n", "") if /[|,\r\n]/.match?(str)
             str
           end
 
@@ -412,10 +413,10 @@ module StatsD
           # Sanitize string and symbol values (other types handled by sprintf %s)
           values = @tag_values.map do |arg|
             if arg.is_a?(String)
-              /[|,]/.match?(arg) ? arg.tr("|,", "") : arg
+              /[|,\r\n]/.match?(arg) ? arg.tr("|,\r\n", "") : arg
             elsif arg.is_a?(Symbol)
               str = arg.to_s
-              /[|,]/.match?(str) ? str.tr("|,", "") : str
+              /[|,\r\n]/.match?(str) ? str.tr("|,\r\n", "") : str
             else
               arg
             end

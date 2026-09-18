@@ -62,11 +62,11 @@ module StatsD
 
       SERVICE_CHECK_PARSER = %r{
         \A
-        (?<type>_sc)\|(?<name>[^\|]+)\|(?<value>\d+)
-        (?:\|h:(?<hostname>[^\|]+))?
+        (?<type>_sc)\|(?<name>[^|]+)\|(?<value>\d+)
+        (?:\|h:(?<hostname>[^|]+))?
         (?:\|d:(?<timestamp>\d+))?
-        (?:\|\#(?<tags>(?:[^\|,]+(?:,[^\|,]+)*)))?
-        (?:\|m:(?<message>[^\|]+))?
+        (?:\|\#(?<tags>(?:[^|,]+(?:,[^|,]+)*)))?
+        (?:\|m:(?<message>[^|]+))?
         \n? # In some implementations, the datagram may include a trailing newline.
         \z
       }x.freeze
@@ -74,14 +74,14 @@ module StatsD
       # |k:my-key|p:low|s:source|t:success|
       EVENT_PARSER = %r{
         \A
-        (?<type>_e)\{\d+\,\d+\}:(?<name>[^\|]+)\|(?<value>[^\|]+)
-        (?:\|h:(?<hostname>[^\|]+))?
+        (?<type>_e)\{\d+,\d+\}:(?<name>[^|]+)\|(?<value>[^|]+)
+        (?:\|h:(?<hostname>[^|]+))?
         (?:\|d:(?<timestamp>\d+))?
-        (?:\|k:(?<aggregation_key>[^\|]+))?
-        (?:\|p:(?<priority>[^\|]+))?
-        (?:\|s:(?<source_type_name>[^\|]+))?
-        (?:\|t:(?<alert_type>[^\|]+))?
-        (?:\|\#(?<tags>(?:[^\|,]+(?:,[^\|,]+)*)))?
+        (?:\|k:(?<aggregation_key>[^|]+))?
+        (?:\|p:(?<priority>[^|]+))?
+        (?:\|s:(?<source_type_name>[^|]+))?
+        (?:\|t:(?<alert_type>[^|]+))?
+        (?:\|\#(?<tags>(?:[^|,]+(?:,[^|,]+)*)))?
         \n? # In some implementations, the datagram may include a trailing newline.
         \z
       }x.freeze

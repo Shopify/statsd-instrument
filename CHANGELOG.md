@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+## Version 4.0.1
+
+- Normalize newlines (`\n` and `\r`) in metric names, prefixes, tags, and set values, including aggregated and compiled metrics.
+
 ## Version 4.0.0
 
 - Make the internal aggregator interface positional-only and injectable through `Client`, with fixed-arity `increment`, `gauge`, and `aggregate_timing` entrypoints for native aggregation backends. Public Client metric methods retain their keyword API.

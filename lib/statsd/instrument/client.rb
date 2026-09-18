@@ -213,7 +213,7 @@ module StatsD
       #
       #   - We recommend using `snake_case.metric_names` as naming scheme.
       #   - A `.` should be used for namespacing, e.g. `foo.bar.baz`
-      #   - A metric name should not include the following characters: `|`, `@`, and `:`.
+      #   - A metric name should not include `|`, `@`, `:`, or newlines (`\n`, `\r`).
       #     The library will convert these characters to `_`.
       #
       # @param value [Integer] (default: 1) The value to increment the counter by.
