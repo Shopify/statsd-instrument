@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+## Version 4.0.1
+
 - Normalize newlines (`\n` and `\r`) in metric names, prefixes, tags, and set values, including aggregated and compiled metrics.
 
 ## Version 4.0.0
