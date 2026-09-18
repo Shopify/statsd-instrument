@@ -19,9 +19,7 @@ module Rubocop
     def test_offense_statsd_prefix
       assert_offense('StatsD.prefix = "foo"')
       # The interpolation is intentionally literal source passed to the cop under test.
-      # rubocop:disable Lint/InterpolationCheck
-      assert_offense('"#{StatsD.prefix}.foo"')
-      # rubocop:enable Lint/InterpolationCheck
+      assert_offense("\"\#{StatsD.prefix}.foo\"")
     end
 
     def test_offense_statsd_default_tags

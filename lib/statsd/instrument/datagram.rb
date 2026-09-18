@@ -72,9 +72,9 @@ module StatsD
 
       PARSER = %r{
         \A
-        (?<name>[^\:\|\@]+)\:(?<value>(?:[^\:\|\@]+:)*[^\:\|\@]+)\|(?<type>c|ms|g|s|h|d)
-        (?:\|\@(?<sample_rate>\d*(?:\.\d*)?))?
-        (?:\|\#(?<tags>(?:[^\|,]+(?:,[^\|,]+)*)))?
+        (?<name>[^:|@]+):(?<value>(?:[^:|@]+:)*[^:|@]+)\|(?<type>c|ms|g|s|h|d)
+        (?:\|@(?<sample_rate>\d*(?:\.\d*)?))?
+        (?:\|\#(?<tags>(?:[^|,]+(?:,[^|,]+)*)))?
         \n? # In some implementations, the datagram may include a trailing newline.
         \z
       }x.freeze
