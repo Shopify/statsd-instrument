@@ -20,13 +20,14 @@ module StatsD
         end
 
         def normalize_string(string)
-          string = string.tr("|#", "_") if /[|#]/.match?(string)
+          string = string.tr("|#\r\n", "_") if /[|#\r\n]/.match?(string)
           string
         end
       end
 
       def initialize(prefix: nil, default_tags: nil)
-        @prefix = prefix.nil? ? "" : "#{prefix}.".tr(":|@", "_")
+        @prefix = prefix.nil? ? "" : "#{prefix}."
+        @prefix = @prefix.tr(":|@\r\n", "_") if /[:|@\r\n]/.match?(@prefix)
         @default_tags = default_tags.nil? || default_tags.empty? ? nil : compile_tags(default_tags, "|#".b)
       end
 
@@ -43,6 +44,8 @@ module StatsD
       end
 
       def s(name, value, sample_rate, tags)
+        value = value.to_s
+        value = value.tr("\r\n", "_") if /[\r\n]/.match?(value)
         generate_generic_datagram(name, value, "s", sample_rate, tags)
       end
 
@@ -77,15 +80,15 @@ module StatsD
       # Utility function to remove invalid characters from a StatsD metric name
       def normalize_name(name)
         # Fast path when no normalization is needed to avoid copying the string
-        return name unless /[:|@]/.match?(name)
+        return name unless /[:|@\r\n]/.match?(name)
 
-        name.tr(":|@", "_")
+        name.tr(":|@\r\n", "_")
       end
 
       def generate_generic_datagram(name, value, type, sample_rate, tags)
         datagram = "".b <<
           @prefix <<
-          (/[:|@]/.match?(name) ? name.tr(":|@", "_") : name) <<
+          (/[:|@\r\n]/.match?(name) ? name.tr(":|@\r\n", "_") : name) <<
           ":" << value.to_s <<
           "|" << type
 
@@ -105,7 +108,8 @@ module StatsD
 
       def compile_tags(tags, buffer = "".b)
         if tags.is_a?(String)
-          tags = self.class.normalize_string(tags) if /[|,]/.match?(tags)
+          # String tags are already serialized: commas separate tags here.
+          tags = self.class.normalize_string(tags) if /[|,\r\n]/.match?(tags)
           buffer << tags
           return buffer
         end
@@ -118,14 +122,16 @@ module StatsD
               buffer << ","
             end
             key = key.to_s
-            key = key.tr("|,", "") if /[|,]/.match?(key)
+            key = key.tr("|,\r\n", "") if /[|,\r\n]/.match?(key)
             value = value.to_s
-            value = value.tr("|,", "") if /[|,]/.match?(value)
+            value = value.tr("|,\r\n", "") if /[|,\r\n]/.match?(value)
             buffer << key << ":" << value
           end
         else
-          if tags.any? { |tag| /[|,]/.match?(tag) }
-            tags = tags.map { |tag| tag.tr("|,", "") }
+          if tags.any? { |tag| /[|,\r\n]/.match?(tag) }
+            tags = tags.map do |tag|
+              /[|,\r\n]/.match?(tag) ? tag.tr("|,\r\n", "") : tag
+            end
           end
           buffer << tags.join(",")
         end
