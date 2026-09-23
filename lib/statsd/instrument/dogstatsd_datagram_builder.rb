@@ -84,7 +84,7 @@ module StatsD
           compile_tags(tags, datagram)
         end
 
-        datagram << "|m:#{normalize_name(message)}" if message
+        datagram << "|m:#{Sanitization.service_check_message(message)}" if message
         datagram
       end
 
