@@ -70,7 +70,8 @@ module StatsD
           # Create a new class for this specific metric
           # Using classes instead of instances for better YJIT optimization
           metric_class = tap do
-            @name = DatagramBlueprintBuilder.normalize_name(name).freeze
+            # Own a frozen name without freezing a mutable string from the caller.
+            @name = -DatagramBlueprintBuilder.normalize_name(name)
             @datagram_blueprint = datagram_blueprint
             @tag_combination_cache = {}
             @max_cache_size = max_cache_size
@@ -300,9 +301,10 @@ module StatsD
 
           # Normalizes metric names by replacing special characters
           # @param name [String] The metric name
-          # @return [String] The normalized metric name
+          # @return [String] The original string if clean, otherwise a new string.
+          #   Does not copy or freeze clean input; retaining callers own that step.
           def normalize_name(name)
-            /[:|@\r\n]/.match?(name) ? name.tr(":|@\r\n", "_") : name.dup
+            Sanitization.name(name)
           end
 
           private
@@ -314,17 +316,14 @@ module StatsD
           def build_prefix(client_prefix, no_prefix)
             return "" if no_prefix || client_prefix.nil?
 
-            prefix = "#{client_prefix}."
-            /[\r\n]/.match?(prefix) ? prefix.tr("\r\n", "_") : prefix
+            "#{Sanitization.name(client_prefix.to_s)}."
           end
 
           # Normalizes tag names/values by removing StatsD protocol special characters
           # @param str [Symbol, String, Integer, Float] The string to normalize
           # @return [String] The normalized string
           def normalize_statsd_string(str)
-            str = str.to_s
-            str = str.tr("|,\r\n", "") if /[|,\r\n]/.match?(str)
-            str
+            Sanitization.tag(str.to_s)
           end
 
           # Compiles all tags (default_tags, static_tags, dynamic_tags) into a single string
@@ -413,10 +412,10 @@ module StatsD
           # Sanitize string and symbol values (other types handled by sprintf %s)
           values = @tag_values.map do |arg|
             if arg.is_a?(String)
-              /[|,\r\n]/.match?(arg) ? arg.tr("|,\r\n", "") : arg
+              Sanitization::TAG_PATTERN.match?(arg) ? arg.tr(Sanitization::TAG_CHARACTERS, "") : arg
             elsif arg.is_a?(Symbol)
               str = arg.to_s
-              /[|,\r\n]/.match?(str) ? str.tr("|,\r\n", "") : str
+              Sanitization::TAG_PATTERN.match?(str) ? str.tr(Sanitization::TAG_CHARACTERS, "") : str
             else
               arg
             end

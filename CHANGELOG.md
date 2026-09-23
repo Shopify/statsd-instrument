@@ -8,7 +8,7 @@ section below.
 
 ## Version 4.0.1
 
-- Normalize newlines (`\n` and `\r`) in metric names, prefixes, tags, and set values, including aggregated and compiled metrics.
+- Normalize ASCII whitespace in metric names and prefixes, and newlines (`\n` and `\r`) in tags and set values, including aggregated and compiled metrics.
 
 ## Version 4.0.0
 

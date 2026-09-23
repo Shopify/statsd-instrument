@@ -208,6 +208,44 @@ class NewlineNormalizationTest < Minitest::Test
     assert_equal("app_.name_:1|c|#default:value,key:value", @sink.datagrams.first.source)
   end
 
+  def test_names_and_prefixes_share_normalization_across_all_paths
+    [false, true].each do |aggregate|
+      [" ", "\t", "\n", "\r", "\f", "\v", ":", "|", "@"].each do |character|
+        client = new_client(aggregate).clone_with_options(prefix: "app#{character}prefix")
+        @clients << client
+        StatsD.singleton_client = client
+        client.increment("my#{character}value")
+        client.increment("my#{character}value", no_prefix: true)
+        metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
+        metric.define(name: "my#{character}value")
+        metric.increment
+        unprefixed = Class.new(StatsD::Instrument::CompiledMetric::Counter)
+        unprefixed.define(name: "my#{character}value", no_prefix: true)
+        unprefixed.increment
+        client.force_flush
+        assert_equal(4, @sink.datagrams.size)
+        assert_equal(["app_prefix.my_value", "app_prefix.my_value", "my_value", "my_value"], @sink.datagrams.map(&:name).sort)
+        assert_equal("my_value", metric.metric_name)
+        @sink.clear
+      end
+    end
+  end
+
+  def test_tag_values_and_service_check_messages_keep_spaces
+    builder = StatsD::Instrument::DogStatsDDatagramBuilder.new(prefix: "my app")
+    assert_equal("my_app.my_metric:1|c|#key:hello world", builder.c("my metric", 1, nil, ["key:hello world"]))
+    assert_equal("my_app.my_metric:1|c|#key:hello world", builder.c("my metric", 1, nil, { key: "hello world" }))
+    assert_equal("my_app.users:Alice Smith|s", builder.s("users", "Alice Smith", nil, nil))
+    assert_equal("_sc|my_app.my_service|0|m:hello world_", builder._sc("my service", :ok, message: "hello world\n"))
+
+    StatsD.singleton_client = new_client(false)
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Counter)
+    metric.define(name: "my metric", static_tags: { static: "hello world" }, tags: { dynamic: String })
+    metric.increment(dynamic: "hello world")
+    assert_includes(@sink.datagrams.last.tags, "static:hello world")
+    assert_includes(@sink.datagrams.last.tags, "dynamic:hello world")
+  end
+
   private
 
   def new_client(aggregate)

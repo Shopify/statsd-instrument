@@ -114,9 +114,11 @@ Please note that since aggregation is an experimental feature, it should be used
 ## StatsD keys
 
 StatsD keys look like 'admin.logins.api.success'. Dots are used as namespace separators.
-Metric names normalize `:`, `|`, `@`, and newlines (`\n`, `\r`) to `_`.
-Newlines in prefixes and set values are also replaced with `_`; in array/hash tags,
-newlines are removed alongside `|` and `,`. Normalization is silent.
+Metric names and prefixes normalize `:`, `|`, `@`, and ASCII whitespace (spaces,
+tabs, and line breaks) to `_`, one underscore per character.
+Newlines (`\n`, `\r`) in set values are also replaced with `_`; in array/hash tags,
+newlines are removed alongside `|` and `,`. Other tag/value whitespace is preserved.
+Normalization is silent.
 
 ## Usage
 
