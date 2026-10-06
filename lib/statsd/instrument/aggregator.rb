@@ -158,7 +158,7 @@ module StatsD
           return
         end
 
-        tags = serialize_tags(tags)
+        tags = @sort_tags ? tags_sorted(tags) : tags_unsorted(tags)
         key = packet_key(name, tags, no_prefix, COUNT, sample_rate: sample_rate)
 
         @aggregation_state_mutex.synchronize do
@@ -236,7 +236,7 @@ module StatsD
           return
         end
 
-        tags = serialize_tags(tags)
+        tags = @sort_tags ? tags_sorted(tags) : tags_unsorted(tags)
         key = packet_key(name, tags, no_prefix, type, sample_rate: sample_rate)
 
         aggregation_state = nil
@@ -259,7 +259,7 @@ module StatsD
           return
         end
 
-        tags = serialize_tags(tags)
+        tags = @sort_tags ? tags_sorted(tags) : tags_unsorted(tags)
         key = packet_key(name, tags, no_prefix, GAUGE)
 
         @aggregation_state_mutex.synchronize do
@@ -327,17 +327,34 @@ module StatsD
         end
       end
 
-      def serialize_tags(tags)
+      def tags_sorted(tags)
         return "" if tags.nil? || tags.empty?
 
-        if @sort_tags
-          if tags.is_a?(Hash)
-            tags = tags.sort_by { |k, _v| k.to_s }.map! { |k, v| "#{k}:#{v}" }
-          else
-            tags.sort!
-          end
+        if tags.is_a?(Hash)
+          tags = tags.sort_by { |k, _v| k.to_s }.map! { |k, v| "#{k}:#{v}" }
+        else
+          tags.sort!
         end
         datagram_builder(no_prefix: false).normalize_tags(tags)
+      end
+
+      # Symbol#name returns the interned string of the symbol. Symbol#to_s allocates a copy.
+      SYMBOL_HAS_NAME = Symbol.method_defined?(:name)
+
+      def tags_unsorted(tags)
+        return "" if tags.nil? || tags.empty?
+        return datagram_builder(no_prefix: false).normalize_tags(tags) unless tags.is_a?(Hash)
+
+        buffer = "".b
+        tags.each do |key, value|
+          buffer << "," unless buffer.empty?
+          key = SYMBOL_HAS_NAME && key.is_a?(Symbol) ? key.name : key.to_s
+          key = key.tr(Sanitization::TAG_CHARACTERS, "") if Sanitization::TAG_PATTERN.match?(key)
+          value = SYMBOL_HAS_NAME && value.is_a?(Symbol) ? value.name : value.to_s
+          value = value.tr(Sanitization::TAG_CHARACTERS, "") if Sanitization::TAG_PATTERN.match?(value)
+          buffer << key << ":" << value
+        end
+        buffer
       end
 
       def packet_key(name, tags = "".b, no_prefix = false, type = COUNT, sample_rate: CONST_SAMPLE_RATE)

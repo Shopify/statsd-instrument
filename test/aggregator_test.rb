@@ -176,6 +176,33 @@ class AggregatorTest < Minitest::Test
     aggregator&.instance_variable_get(:@flush_thread)&.kill
   end
 
+  def test_unsorted_hash_tags_are_normalized_like_sorted_hash_tags
+    tags = { "tool|name": "a,b", pid: 42, kind: :read, "line\nbreak" => true }
+    aggregator = unsorted_aggregator
+    aggregator.increment("foo", 1, tags, false, 1.0)
+    aggregator.flush
+    @subject.increment("foo", 1, tags, false, 1.0)
+    @subject.flush
+
+    assert_equal(
+      ["foo:1|c|#toolname:ab,pid:42,kind:read,linebreak:true", "foo:1|c|#kind:read,linebreak:true,pid:42,toolname:ab"],
+      @sink.datagrams.map(&:source),
+    )
+  ensure
+    aggregator&.instance_variable_get(:@flush_thread)&.kill
+  end
+
+  def test_unsorted_tags_accept_a_serialized_string
+    aggregator = unsorted_aggregator
+    aggregator.increment("foo", 1, ["tag2:val2", "tag1:val1"], false, 1.0)
+    aggregator.increment("foo", 1, "tag2:val2,tag1:val1", false, 1.0)
+    aggregator.flush
+
+    assert_equal(["foo:2|c|#tag2:val2,tag1:val1"], @sink.datagrams.map(&:source))
+  ensure
+    aggregator&.instance_variable_get(:@flush_thread)&.kill
+  end
+
   def test_unsorted_tags_do_not_mutate_the_caller_tags
     aggregator = unsorted_aggregator
     tags = ["tag2:val2", "tag1:val1"].freeze
