@@ -31,6 +31,19 @@ class EnvironmentTest < Minitest::Test
     assert_equal("development", env.environment)
   end
 
+  def test_aggregation_sorts_tags_unless_disabled
+    assert_predicate(StatsD::Instrument::Environment.new({}), :aggregation_sort_tags?)
+    assert_predicate(
+      StatsD::Instrument::Environment.new("STATSD_AGGREGATION_SORT_TAGS" => "true"),
+      :aggregation_sort_tags?,
+    )
+
+    ["false", "FALSE", "0"].each do |value|
+      env = StatsD::Instrument::Environment.new("STATSD_AGGREGATION_SORT_TAGS" => value)
+      refute_predicate(env, :aggregation_sort_tags?)
+    end
+  end
+
   def test_client_returns_client_instance
     env = StatsD::Instrument::Environment.new({})
     assert_kind_of(StatsD::Instrument::Client, env.client)

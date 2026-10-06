@@ -146,6 +146,48 @@ class AggregatorTest < Minitest::Test
     assert_equal(2, @sink.datagrams.first.value)
   end
 
+  def test_unsorted_tags_in_different_orders_aggregate_separately
+    aggregator = unsorted_aggregator
+    aggregator.increment("foo", 1, ["tag1:val1", "tag2:val2"], false, 1.0)
+    aggregator.increment("foo", 1, ["tag1:val1", "tag2:val2"], false, 1.0)
+    aggregator.increment("foo", 1, ["tag2:val2", "tag1:val1"], false, 1.0)
+    aggregator.flush
+
+    assert_equal(
+      ["foo:2|c|#tag1:val1,tag2:val2", "foo:1|c|#tag2:val2,tag1:val1"],
+      @sink.datagrams.map(&:source),
+    )
+  ensure
+    aggregator&.instance_variable_get(:@flush_thread)&.kill
+  end
+
+  def test_unsorted_tags_keep_hash_order
+    aggregator = unsorted_aggregator
+    aggregator.aggregate_timing("foo", 1, { tag2: "val2", tag1: "val1" }, false, :d, 1.0)
+    aggregator.aggregate_timing("foo", 2, ["tag2:val2", "tag1:val1"], false, :d, 1.0)
+    aggregator.gauge("bar", 3, { tag2: "val2", tag1: "val1" }, false)
+    aggregator.flush
+
+    assert_equal(
+      ["foo:1:2|d|#tag2:val2,tag1:val1", "bar:3|g|#tag2:val2,tag1:val1"],
+      @sink.datagrams.map(&:source),
+    )
+  ensure
+    aggregator&.instance_variable_get(:@flush_thread)&.kill
+  end
+
+  def test_unsorted_tags_do_not_mutate_the_caller_tags
+    aggregator = unsorted_aggregator
+    tags = ["tag2:val2", "tag1:val1"].freeze
+    aggregator.increment("foo", 1, tags, false, 1.0)
+    aggregator.flush
+
+    assert_equal(["tag2:val2", "tag1:val1"], tags)
+    assert_equal("foo:1|c|#tag2:val2,tag1:val1", @sink.datagrams.first.source)
+  ensure
+    aggregator&.instance_variable_get(:@flush_thread)&.kill
+  end
+
   def test_increment_with_different_tag_values
     @subject.increment("foo", 1, ["tag1:val1", "tag2:val2"], false, 1.0)
     @subject.increment("foo", 1, { tag1: "val1", tag2: "val2" }, false, 1.0)
@@ -472,5 +514,11 @@ class AggregatorTest < Minitest::Test
     )
   ensure
     Signal.trap("USR1", old_trap || "DEFAULT")
+  end
+
+  private
+
+  def unsorted_aggregator
+    StatsD::Instrument::Aggregator.new(@sink, StatsD::Instrument::DatagramBuilder, nil, [], sort_tags: false)
   end
 end

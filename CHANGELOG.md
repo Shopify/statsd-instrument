@@ -6,6 +6,10 @@ section below.
 
 ## Unreleased changes
 
+- Add an opt-in mode that skips the tag sort during aggregation, for StatsD servers that combine metrics with the same
+  tags in a different order. Set `STATSD_AGGREGATION_SORT_TAGS=false` or pass `aggregation_sort_tags: false` to
+  `Client.new`. Tags are still sorted by default.
+
 ## Version 4.0.1
 
 - Normalize ASCII whitespace in metric names and prefixes, and newlines (`\n` and `\r`) in tags and set values, including aggregated and compiled metrics.

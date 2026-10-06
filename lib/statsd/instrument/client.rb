@@ -46,6 +46,7 @@ module StatsD
             datagram_builder_class: datagram_builder_class,
             enable_aggregation: env.experimental_aggregation_enabled?,
             aggregation_flush_interval: env.aggregation_interval,
+            aggregation_sort_tags: env.aggregation_sort_tags?,
             aggregator: aggregator,
           )
         end
@@ -160,6 +161,9 @@ module StatsD
       # +flush+. Calls without tags receive a shared frozen empty array. Other tag
       # values are forwarded as-is; custom backends may require arrays.
       #
+      # @param aggregation_sort_tags [Boolean] Whether the built-in aggregator sorts
+      #   tags before aggregating. Set to false to skip the sort when the StatsD server
+      #   combines metrics that have the same tags in a different order.
       # @param aggregator [#increment, #gauge, #aggregate_timing, nil]
       #   Optional external aggregation backend.
       # @see .from_env to instantiate a client using environment variables.
@@ -173,6 +177,7 @@ module StatsD
         enable_aggregation: false,
         aggregation_flush_interval: 2.0,
         aggregation_max_context_size: StatsD::Instrument::Aggregator::DEFAULT_MAX_CONTEXT_SIZE,
+        aggregation_sort_tags: true,
         aggregator: nil
       )
         @sink = sink
@@ -186,6 +191,7 @@ module StatsD
         @injected_aggregator = aggregator
         @enable_aggregation = enable_aggregation || !aggregator.nil?
         @aggregation_flush_interval = aggregation_flush_interval
+        @aggregation_sort_tags = aggregation_sort_tags
         if @enable_aggregation
           @aggregator = aggregator ||
             Aggregator.new(
@@ -195,6 +201,7 @@ module StatsD
               default_tags,
               flush_interval: @aggregation_flush_interval,
               max_values: aggregation_max_context_size,
+              sort_tags: @aggregation_sort_tags,
             )
         end
       end
@@ -640,6 +647,7 @@ module StatsD
             datagram_builder_class == NO_CHANGE ? @datagram_builder_class : datagram_builder_class,
           enable_aggregation: @enable_aggregation,
           aggregation_flush_interval: @aggregation_flush_interval,
+          aggregation_sort_tags: @aggregation_sort_tags,
           aggregator: aggregator == NO_CHANGE ? @injected_aggregator : aggregator,
         )
       end

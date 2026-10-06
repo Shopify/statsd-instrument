@@ -98,13 +98,16 @@ module StatsD
       # @param default_tags [Array<String>] The tags to add to all metrics.
       # @param flush_interval [Float] The interval at which to flush the aggregated metrics.
       # @param max_values [Integer] The maximum number of values to aggregate before flushing.
+      # @param sort_tags [Boolean] Whether to sort tags before aggregating. When false, the same tags
+      #   in a different order aggregate separately, and the StatsD server has to combine them.
       def initialize(
         sink,
         datagram_builder_class,
         prefix,
         default_tags,
         flush_interval: 5.0,
-        max_values: DEFAULT_MAX_CONTEXT_SIZE
+        max_values: DEFAULT_MAX_CONTEXT_SIZE,
+        sort_tags: true
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
@@ -115,6 +118,7 @@ module StatsD
           false: nil,
         }
         @max_values = max_values
+        @sort_tags = sort_tags
 
         # Mutex protects the aggregation_state and flush_thread from concurrent access
         @aggregation_state_mutex = Mutex.new
@@ -154,7 +158,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = serialize_tags(tags)
         key = packet_key(name, tags, no_prefix, COUNT, sample_rate: sample_rate)
 
         @aggregation_state_mutex.synchronize do
@@ -232,7 +236,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = serialize_tags(tags)
         key = packet_key(name, tags, no_prefix, type, sample_rate: sample_rate)
 
         aggregation_state = nil
@@ -255,7 +259,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = serialize_tags(tags)
         key = packet_key(name, tags, no_prefix, GAUGE)
 
         @aggregation_state_mutex.synchronize do
@@ -323,13 +327,15 @@ module StatsD
         end
       end
 
-      def tags_sorted(tags)
+      def serialize_tags(tags)
         return "" if tags.nil? || tags.empty?
 
-        if tags.is_a?(Hash)
-          tags = tags.sort_by { |k, _v| k.to_s }.map! { |k, v| "#{k}:#{v}" }
-        else
-          tags.sort!
+        if @sort_tags
+          if tags.is_a?(Hash)
+            tags = tags.sort_by { |k, _v| k.to_s }.map! { |k, v| "#{k}:#{v}" }
+          else
+            tags.sort!
+          end
         end
         datagram_builder(no_prefix: false).normalize_tags(tags)
       end
