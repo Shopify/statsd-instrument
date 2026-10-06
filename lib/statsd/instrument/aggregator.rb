@@ -98,13 +98,16 @@ module StatsD
       # @param default_tags [Array<String>] The tags to add to all metrics.
       # @param flush_interval [Float] The interval at which to flush the aggregated metrics.
       # @param max_values [Integer] The maximum number of values to aggregate before flushing.
+      # @param sort_tags [Boolean] Whether to sort tags before aggregating. When false, the same tags
+      #   in a different order aggregate separately, and the StatsD server has to combine them.
       def initialize(
         sink,
         datagram_builder_class,
         prefix,
         default_tags,
         flush_interval: 5.0,
-        max_values: DEFAULT_MAX_CONTEXT_SIZE
+        max_values: DEFAULT_MAX_CONTEXT_SIZE,
+        sort_tags: true
       )
         @sink = sink
         @datagram_builder_class = datagram_builder_class
@@ -115,6 +118,7 @@ module StatsD
           false: nil,
         }
         @max_values = max_values
+        @sort_tags = sort_tags
 
         # Mutex protects the aggregation_state and flush_thread from concurrent access
         @aggregation_state_mutex = Mutex.new
@@ -154,7 +158,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = @sort_tags ? tags_sorted(tags) : tags_unsorted(tags)
         key = packet_key(name, tags, no_prefix, COUNT, sample_rate: sample_rate)
 
         @aggregation_state_mutex.synchronize do
@@ -232,7 +236,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = @sort_tags ? tags_sorted(tags) : tags_unsorted(tags)
         key = packet_key(name, tags, no_prefix, type, sample_rate: sample_rate)
 
         aggregation_state = nil
@@ -255,7 +259,7 @@ module StatsD
           return
         end
 
-        tags = tags_sorted(tags)
+        tags = @sort_tags ? tags_sorted(tags) : tags_unsorted(tags)
         key = packet_key(name, tags, no_prefix, GAUGE)
 
         @aggregation_state_mutex.synchronize do
@@ -332,6 +336,25 @@ module StatsD
           tags.sort!
         end
         datagram_builder(no_prefix: false).normalize_tags(tags)
+      end
+
+      # Symbol#name returns the interned string of the symbol. Symbol#to_s allocates a copy.
+      SYMBOL_HAS_NAME = Symbol.method_defined?(:name)
+
+      def tags_unsorted(tags)
+        return "" if tags.nil? || tags.empty?
+        return datagram_builder(no_prefix: false).normalize_tags(tags) unless tags.is_a?(Hash)
+
+        buffer = "".b
+        tags.each do |key, value|
+          buffer << "," unless buffer.empty?
+          key = SYMBOL_HAS_NAME && key.is_a?(Symbol) ? key.name : key.to_s
+          key = key.tr(Sanitization::TAG_CHARACTERS, "") if Sanitization::TAG_PATTERN.match?(key)
+          value = SYMBOL_HAS_NAME && value.is_a?(Symbol) ? value.name : value.to_s
+          value = value.tr(Sanitization::TAG_CHARACTERS, "") if Sanitization::TAG_PATTERN.match?(value)
+          buffer << key << ":" << value
+        end
+        buffer
       end
 
       def packet_key(name, tags = "".b, no_prefix = false, type = COUNT, sample_rate: CONST_SAMPLE_RATE)

@@ -105,11 +105,49 @@ To enable metric aggregation, set the following environment variables:
 - `STATSD_ENABLE_AGGREGATION`: Set this to `true` to enable the experimental aggregation feature. Aggregation is disabled by default.
 - `STATSD_AGGREGATION_INTERVAL`: Specifies the interval (in seconds) at which aggregated metrics are flushed and sent to the StatsD server. 
 For example, setting this to `2` will aggregate and send metrics every 2 seconds. Two seconds is also the default value if this environment variable is not set.
+- `STATSD_AGGREGATION_SORT_TAGS`: Set this to `false` to skip the tag sort during aggregation. Tags are sorted by default.
+See [Skipping the tag sort](#skipping-the-tag-sort).
 
 Please note that since aggregation is an experimental feature, it should be used with caution in production environments.
 
 > [!WARNING]
 > This feature is only compatible with Datadog Agent's version >=6.25.0 && <7.0.0 or Agent's versions >=7.25.0.
+
+#### Skipping the tag sort
+
+By default, the aggregator sorts the tags of every metric it receives. The sort makes two calls with the same tags
+in a different order aggregate into one sample:
+
+```ruby
+StatsD.increment("my.counter", tags: ["a:1", "b:2"])
+StatsD.increment("my.counter", tags: ["b:2", "a:1"])
+# my.counter:2|c|#a:1,b:2
+```
+
+The sort runs on every metric call. If your StatsD server combines metrics that have the same tags in a different
+order, as the Datadog Agent does, the server already does this work and you can skip the sort in the client. Set
+`STATSD_AGGREGATION_SORT_TAGS=false`, or pass `aggregation_sort_tags: false` when you create a client yourself:
+
+```ruby
+StatsD::Instrument::Client.new(sink: sink, enable_aggregation: true, aggregation_sort_tags: false)
+```
+
+Without the sort:
+
+- The library sends tags in the order you provide them. For hash tags, this is the insertion order of the hash.
+- Calls with the same tags in a different order aggregate separately, and the library sends one sample for each order:
+  ```
+  my.counter:1|c|#a:1,b:2
+  my.counter:1|c|#b:2,a:1
+  ```
+  The server adds these together, so counter, histogram, distribution and timing results do not change. The library
+  sends more data when your code emits the same tags in many different orders.
+- A gauge that receives the same tags in more than one order during one flush interval sends one sample for each order.
+  The server keeps the last sample it receives, which is not always the value you set last. Use one tag order for each
+  gauge to avoid this.
+- The aggregator does not change the tag array you pass. With the sort, the aggregator sorts that array in place.
+
+Do not skip the sort if your StatsD server treats the same tags in a different order as different metrics.
 
 ## StatsD keys
 
