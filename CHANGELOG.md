@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+- Format non-whole Float metric values with 15 significant digits instead of `Float#to_s`, which is about twice as fast for full-precision values like measured durations. Received values are unchanged to within about 1e-15, relative; whole and non-finite Floats keep their usual formatting.
+
 ## Version 4.1.0
 
 - [#430](https://github.com/Shopify/statsd-instrument/pull/430) - Add an opt-in mode that skips the tag sort during aggregation, for StatsD servers that combine metrics with the same

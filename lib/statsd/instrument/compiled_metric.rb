@@ -401,9 +401,9 @@ module StatsD
         # @return [String] The complete StatsD datagram
         def to_datagram(value)
           packed_value = if value.is_a?(Array)
-            value.join(":")
+            value.map { |v| ValueFormatter.format(v) }.join(":")
           else
-            value.to_s
+            ValueFormatter.format(value)
           end
 
           # Fast path: no tag values (static metrics)
