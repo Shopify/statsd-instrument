@@ -60,8 +60,12 @@ module StatsD
           [:sample_rate, :value, :tags].each do |expectation|
             next unless options[expectation]
 
+            expected = options[expectation]
+            # Formatted the same way as datagrams, so expected values match the values that are actually sent.
+            expected = Float(ValueFormatter.format(expected)) if expectation == :value && expected.is_a?(Float)
+
             num_matches = metrics.count do |m|
-              matcher = RSpec::Matchers::BuiltIn::Match.new(options[expectation])
+              matcher = RSpec::Matchers::BuiltIn::Match.new(expected)
               matcher.matches?(m.public_send(expectation))
             end
 

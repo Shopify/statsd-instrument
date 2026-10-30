@@ -211,6 +211,18 @@ class AssertionsTest < Minitest::Test
     end
   end
 
+  def test_assert_statsd_distribution_with_a_full_precision_float_value
+    @test_case.assert_statsd_distribution("distribution", 0.24999999965075403) do
+      StatsD.distribution("distribution", 0.24999999965075403)
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_distribution("distribution", 0.25) do
+        StatsD.distribution("distribution", 0.24999999965075403)
+      end
+    end
+  end
+
   def test_assert_statsd_set_call_with_string_value
     @test_case.assert_statsd_set("set", 12345) do
       StatsD.set("set", "12345")

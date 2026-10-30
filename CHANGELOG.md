@@ -6,7 +6,7 @@ section below.
 
 ## Unreleased changes
 
-- Format non-whole Float metric values with 15 significant digits instead of `Float#to_s`, which is about twice as fast for full-precision values like measured durations. Received values are unchanged to within about 1e-15, relative; whole and non-finite Floats keep their usual formatting.
+- Format non-whole Float metric values with 15 significant digits instead of `Float#to_s`, which is about twice as fast for full-precision values like measured durations. Received values are unchanged to within about 1e-15, relative; whole and non-finite Floats keep their usual formatting. Test assertions and RSpec matchers compare expected Float values formatted the same way, so exact-value assertions keep passing.
 
 ## Version 4.1.0
 

@@ -91,6 +91,16 @@ class MatchersTest < Minitest::Test
       .matches?(lambda { StatsD.increment("counter") }))
   end
 
+  def test_statsd_distribution_with_a_full_precision_float_value_matched
+    assert(StatsD::Instrument::Matchers::Distribution.new(:d, "distribution", value: 0.24999999965075403)
+      .matches?(lambda { StatsD.distribution("distribution", 0.24999999965075403) }))
+  end
+
+  def test_statsd_distribution_with_a_different_float_value_not_matched
+    refute(StatsD::Instrument::Matchers::Distribution.new(:d, "distribution", value: 0.25)
+      .matches?(lambda { StatsD.distribution("distribution", 0.24999999965075403) }))
+  end
+
   def test_statsd_increment_with_value_matched_when_multiple_metrics
     assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", value: 1).matches?(lambda {
       StatsD.increment("counter", 2)

@@ -47,7 +47,8 @@ module StatsD
       def normalized_value_for_type(type, value)
         case type
         when :c then Integer(value)
-        when :g, :h, :d, :kv, :ms then Float(value)
+        # Formatted the same way as datagrams, so expected values match the values that are actually sent.
+        when :g, :h, :d, :kv, :ms then Float(ValueFormatter.format(Float(value)))
         when :s then String(value)
         else value
         end
