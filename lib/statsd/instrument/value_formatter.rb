@@ -3,6 +3,7 @@
 module StatsD
   module Instrument
     # Formats metric values for datagrams.
+    # @api private
     module ValueFormatter
       FLOAT_FORMAT = "%.15g"
       private_constant :FLOAT_FORMAT
