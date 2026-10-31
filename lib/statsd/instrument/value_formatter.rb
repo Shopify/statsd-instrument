@@ -19,6 +19,12 @@ module StatsD
             value.to_s
           end
         end
+
+        # Returns the Float that the receiver parses from the formatted value. Non-finite values are returned as is,
+        # because `Float()` can't parse "Infinity" or "NaN".
+        def normalize_float(value)
+          value.finite? ? Float(format(value)) : value
+        end
       end
     end
   end

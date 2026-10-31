@@ -62,7 +62,7 @@ module StatsD
 
             expected = options[expectation]
             # Formatted the same way as datagrams, so expected values match the values that are actually sent.
-            expected = Float(ValueFormatter.format(expected)) if expectation == :value && expected.is_a?(Float)
+            expected = ValueFormatter.normalize_float(expected) if expectation == :value && expected.is_a?(Float)
 
             num_matches = metrics.count do |m|
               matcher = RSpec::Matchers::BuiltIn::Match.new(expected)

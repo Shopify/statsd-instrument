@@ -48,7 +48,7 @@ module StatsD
         case type
         when :c then Integer(value)
         # Formatted the same way as datagrams, so expected values match the values that are actually sent.
-        when :g, :h, :d, :kv, :ms then Float(ValueFormatter.format(Float(value)))
+        when :g, :h, :d, :kv, :ms then ValueFormatter.normalize_float(Float(value))
         when :s then String(value)
         else value
         end

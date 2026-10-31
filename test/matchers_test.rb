@@ -101,6 +101,11 @@ class MatchersTest < Minitest::Test
       .matches?(lambda { StatsD.distribution("distribution", 0.24999999965075403) }))
   end
 
+  def test_statsd_distribution_with_a_non_finite_value_not_matched
+    refute(StatsD::Instrument::Matchers::Distribution.new(:d, "distribution", value: Float::INFINITY)
+      .matches?(lambda { StatsD.distribution("distribution", 1.0) }))
+  end
+
   def test_statsd_increment_with_value_matched_when_multiple_metrics
     assert(StatsD::Instrument::Matchers::Increment.new(:c, "counter", value: 1).matches?(lambda {
       StatsD.increment("counter", 2)

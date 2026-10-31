@@ -30,4 +30,15 @@ class ValueFormatterTest < Minitest::Test
     assert_equal("42", StatsD::Instrument::ValueFormatter.format(42))
     assert_equal("abc", StatsD::Instrument::ValueFormatter.format("abc"))
   end
+
+  def test_normalize_float_returns_the_value_the_receiver_parses
+    assert_equal(0.812345678901235, StatsD::Instrument::ValueFormatter.normalize_float(0.8123456789012345))
+    assert_equal(100.0, StatsD::Instrument::ValueFormatter.normalize_float(100.0))
+  end
+
+  def test_normalize_float_returns_non_finite_values_as_is
+    assert_equal(Float::INFINITY, StatsD::Instrument::ValueFormatter.normalize_float(Float::INFINITY))
+    assert_equal(-Float::INFINITY, StatsD::Instrument::ValueFormatter.normalize_float(-Float::INFINITY))
+    assert_predicate(StatsD::Instrument::ValueFormatter.normalize_float(Float::NAN), :nan?)
+  end
 end
