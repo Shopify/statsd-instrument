@@ -58,7 +58,7 @@ module StatsD
 
       def timing_value_packed(name, type, values, sample_rate, tags)
         # here values is an array
-        values = values.join(":")
+        values = values.map { |value| ValueFormatter.format(value) }.join(":")
         generate_generic_datagram(name, values, type, sample_rate, tags)
       end
 
@@ -85,7 +85,7 @@ module StatsD
         datagram = "".b <<
           @prefix <<
           (Sanitization::NAME_PATTERN.match?(name) ? name.tr(Sanitization::NAME_CHARACTERS, "_") : name) <<
-          ":" << value.to_s <<
+          ":" << ValueFormatter.format(value) <<
           "|" << type
 
         datagram << "|@" << sample_rate.to_s if sample_rate && sample_rate < 1

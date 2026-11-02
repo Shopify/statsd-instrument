@@ -211,6 +211,34 @@ class AssertionsTest < Minitest::Test
     end
   end
 
+  def test_assert_statsd_distribution_with_a_full_precision_float_value
+    @test_case.assert_statsd_distribution("distribution", 0.24999999965075403) do
+      StatsD.distribution("distribution", 0.24999999965075403)
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_distribution("distribution", 0.25) do
+        StatsD.distribution("distribution", 0.24999999965075403)
+      end
+    end
+  end
+
+  def test_assert_statsd_gauge_with_a_non_finite_value
+    @test_case.assert_statsd_gauge("gauge", Float::INFINITY, times: 0) do
+      # noop
+    end
+
+    @test_case.assert_statsd_gauge("gauge", Float::NAN, times: 0) do
+      # noop
+    end
+
+    assert_raises(Minitest::Assertion) do
+      @test_case.assert_statsd_gauge("gauge", Float::INFINITY) do
+        StatsD.gauge("gauge", 1.0)
+      end
+    end
+  end
+
   def test_assert_statsd_set_call_with_string_value
     @test_case.assert_statsd_set("set", 12345) do
       StatsD.set("set", "12345")

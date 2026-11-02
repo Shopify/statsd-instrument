@@ -6,6 +6,8 @@ section below.
 
 ## Unreleased changes
 
+- Format non-whole Float metric values with 15 significant digits (`"%.15g"`) instead of `Float#to_s`, which is faster for full-precision values like measured durations, especially on Ruby 4.0. Values are the same to within about 1e-15 (relative), but their text changes, e.g. `0.8123456789012345` → `0.812345678901235`, `0.30000000000000004` → `0.3`, and `3.0e-05` → `3e-05`; whole and non-finite Floats are unchanged. Tests that compare `Datagram#value` from `capture_statsd_calls` to an exact Float may need updating.
+
 ## Version 4.0.1
 
 - Normalize ASCII whitespace in metric names and prefixes, and newlines (`\n` and `\r`) in tags and set values, including aggregated and compiled metrics.
@@ -45,9 +47,9 @@ section below.
 ## Version 3.9.10
 
 - [#398](https://github.com/Shopify/statsd-instrument/pull/398) - Fix metrics not being sent from signal trap contexts when aggregation is enabled.
-  When the aggregator is enabled and metrics are emitted from within a signal handler (e.g., SIGTERM, SIGINT), 
-  the thread health check would fail with `ThreadError: can't be called from trap context` due to mutex 
-  synchronization. The aggregator now gracefully falls back to direct writes when called from a trap context, 
+  When the aggregator is enabled and metrics are emitted from within a signal handler (e.g., SIGTERM, SIGINT),
+  the thread health check would fail with `ThreadError: can't be called from trap context` due to mutex
+  synchronization. The aggregator now gracefully falls back to direct writes when called from a trap context,
   ensuring metrics are not lost during signal handling such as graceful shutdowns.
 
 ## Version 3.9.9
@@ -56,7 +58,7 @@ section below.
 
 ## Version 3.9.8
 
-- [#390](https://github.com/Shopify/statsd-instrument/pull/391) - Fixing bug in Environment when using UDS. The max packet size option was not being passed to the 
+- [#390](https://github.com/Shopify/statsd-instrument/pull/391) - Fixing bug in Environment when using UDS. The max packet size option was not being passed to the
 UDS connection, causing messages that were too large to be dropped (specially sensitive when used together with BatchedSink).
 
 ## Version 3.9.7
@@ -95,9 +97,9 @@ to avoid contention and verbosity.
 
 ## Version 3.9.0
 
-- Introduced an experimental aggregation feature to improve the efficiency of metrics reporting by aggregating 
-multiple metric events into a single sample. This reduces the number of network requests and can significantly 
-decrease the overhead associated with high-frequency metric reporting. To enable metric aggregation, set the 
+- Introduced an experimental aggregation feature to improve the efficiency of metrics reporting by aggregating
+multiple metric events into a single sample. This reduces the number of network requests and can significantly
+decrease the overhead associated with high-frequency metric reporting. To enable metric aggregation, set the
 `STATSD_ENABLE_AGGREGATION` environment variable to true. More information on this feature is available in the README.
 - Added support for sending StatsD via Unix domain sockets. This feature is enabled by
 setting the `STATSD_SOCKET` environment variable to the path of the Unix domain socket.

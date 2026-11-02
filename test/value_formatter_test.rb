@@ -1,0 +1,62 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class ValueFormatterTest < Minitest::Test
+  def test_formats_floats_with_15_significant_digits
+    assert_equal("0.812345678901235", StatsD::Instrument::ValueFormatter.format(0.8123456789012345))
+    assert_equal("0.3", StatsD::Instrument::ValueFormatter.format(0.30000000000000004))
+    assert_equal("122.54", StatsD::Instrument::ValueFormatter.format(122.54))
+    assert_equal("-0.812345678901235", StatsD::Instrument::ValueFormatter.format(-0.8123456789012345))
+  end
+
+  def test_formats_very_small_and_very_large_floats_with_an_exponent
+    assert_equal("3e-05", StatsD::Instrument::ValueFormatter.format(3.0e-05))
+    assert_equal("1.23456789012346e+15", StatsD::Instrument::ValueFormatter.format(1234567890123456.5))
+  end
+
+  def test_formats_floats_that_round_to_a_whole_number_without_a_decimal_point
+    assert_equal("811135748168", StatsD::Instrument::ValueFormatter.format(811135748167.9998))
+  end
+
+  def test_datagrams_parse_back_exponent_and_rounded_values
+    [3.0e-05, 1234567890123456.5, 811135748167.9998].each do |value|
+      datagram = StatsD::Instrument::Datagram.new("foo:#{StatsD::Instrument::ValueFormatter.format(value)}|d")
+      assert_in_delta(value, datagram.value, value.abs * 1e-14)
+    end
+  end
+
+  def test_formatted_floats_parse_back_to_nearly_the_same_value
+    [0.0031234567891234567, 0.8123456789012345, 45.12345678901234, 123_456.78901234567, -12.3456789].each do |value|
+      assert_in_delta(value, Float(StatsD::Instrument::ValueFormatter.format(value)), value.abs * 1e-14)
+    end
+  end
+
+  def test_keeps_the_usual_formatting_for_whole_floats
+    assert_equal("100.0", StatsD::Instrument::ValueFormatter.format(100.0))
+    assert_equal("-3.0", StatsD::Instrument::ValueFormatter.format(-3.0))
+    assert_equal("-0.0", StatsD::Instrument::ValueFormatter.format(-0.0))
+  end
+
+  def test_keeps_the_usual_formatting_for_non_finite_floats
+    assert_equal("Infinity", StatsD::Instrument::ValueFormatter.format(Float::INFINITY))
+    assert_equal("-Infinity", StatsD::Instrument::ValueFormatter.format(-Float::INFINITY))
+    assert_equal("NaN", StatsD::Instrument::ValueFormatter.format(Float::NAN))
+  end
+
+  def test_formats_other_values_with_to_s
+    assert_equal("42", StatsD::Instrument::ValueFormatter.format(42))
+    assert_equal("abc", StatsD::Instrument::ValueFormatter.format("abc"))
+  end
+
+  def test_normalize_float_returns_the_value_the_receiver_parses
+    assert_equal(0.812345678901235, StatsD::Instrument::ValueFormatter.normalize_float(0.8123456789012345))
+    assert_equal(100.0, StatsD::Instrument::ValueFormatter.normalize_float(100.0))
+  end
+
+  def test_normalize_float_returns_non_finite_values_as_is
+    assert_equal(Float::INFINITY, StatsD::Instrument::ValueFormatter.normalize_float(Float::INFINITY))
+    assert_equal(-Float::INFINITY, StatsD::Instrument::ValueFormatter.normalize_float(-Float::INFINITY))
+    assert_predicate(StatsD::Instrument::ValueFormatter.normalize_float(Float::NAN), :nan?)
+  end
+end
