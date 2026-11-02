@@ -75,6 +75,11 @@ class DatagramBuilderTest < Minitest::Test
     assert_equal("fo_o:10|d|@0.01", datagram)
   end
 
+  def test_d_with_a_full_precision_float_value
+    datagram = @datagram_builder.d("foo", 0.8123456789012345, nil, nil)
+    assert_equal("foo:0.812345678901235|d", datagram)
+  end
+
   def test_tags
     datagram = @datagram_builder.d("foo", 10, nil, {})
     assert_equal("foo:10|d", datagram)
@@ -125,5 +130,10 @@ class DatagramBuilderTest < Minitest::Test
   def test_timing_with_multiple_values
     dt = @datagram_builder.timing_value_packed("test_distribution", "d", [0, 3, 6, 9, 12, 15, 18, 21, 24, 27], 1, nil)
     assert_equal("test_distribution:0:3:6:9:12:15:18:21:24:27|d", dt)
+  end
+
+  def test_timing_with_multiple_full_precision_float_values
+    dt = @datagram_builder.timing_value_packed("test_distribution", "d", [0.8123456789012345, 45.12345678901234, 100.0], 1, nil)
+    assert_equal("test_distribution:0.812345678901235:45.1234567890123:100.0|d", dt)
   end
 end
