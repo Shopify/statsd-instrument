@@ -333,6 +333,16 @@ class CompiledMetricDistributionTest < Minitest::Test
     assert_equal(:d, datagram.type)
     assert_equal(["service:web", "shop_id:123", "user_id:456"], datagram.tags.sort)
   end
+
+  def test_distribution_with_a_full_precision_float_value
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
+      define(name: "foo.bar")
+    end
+
+    metric.distribution(0.8123456789012345)
+
+    assert_equal("test.foo.bar:0.812345678901235|d", @sink.datagrams.first.source)
+  end
 end
 
 class CompiledMetricDistributionWithAggregationTest < Minitest::Test
@@ -381,6 +391,19 @@ class CompiledMetricDistributionWithAggregationTest < Minitest::Test
     datagram = @sink.datagrams.first
     assert_equal([1, 2, 3], datagram.value)
     assert_equal(["shop_id:123"], datagram.tags)
+  end
+
+  def test_aggregates_full_precision_float_values
+    metric = Class.new(StatsD::Instrument::CompiledMetric::Distribution) do
+      define(name: "foo.bar")
+    end
+
+    metric.distribution(0.8123456789012345)
+    metric.distribution(45.12345678901234)
+
+    @aggregator.flush
+
+    assert_equal("test.foo.bar:0.812345678901235:45.1234567890123|d", @sink.datagrams.first.source)
   end
 
   def test_aggregates_different_tag_combinations_separately
