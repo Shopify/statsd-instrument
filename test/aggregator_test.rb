@@ -215,6 +215,14 @@ class AggregatorTest < Minitest::Test
     aggregator&.instance_variable_get(:@flush_thread)&.kill
   end
 
+  def test_hash_tags_raise_at_the_call_site_without_tag_support_when_sorting
+    assert_hash_tags_raise_at_the_call_site(sort_tags: true)
+  end
+
+  def test_hash_tags_raise_at_the_call_site_without_tag_support_when_not_sorting
+    assert_hash_tags_raise_at_the_call_site(sort_tags: false)
+  end
+
   def test_increment_with_different_tag_values
     @subject.increment("foo", 1, ["tag1:val1", "tag2:val2"], false, 1.0)
     @subject.increment("foo", 1, { tag1: "val1", tag2: "val2" }, false, 1.0)
@@ -547,5 +555,20 @@ class AggregatorTest < Minitest::Test
 
   def unsorted_aggregator
     StatsD::Instrument::Aggregator.new(@sink, StatsD::Instrument::DatagramBuilder, nil, [], sort_tags: false)
+  end
+
+  def assert_hash_tags_raise_at_the_call_site(sort_tags:)
+    aggregator = StatsD::Instrument::Aggregator.new(
+      @sink, StatsD::Instrument::StatsDDatagramBuilder, nil, [], sort_tags: sort_tags
+    )
+    tags = { tag2: "val2", tag1: "val1" }
+
+    assert_raises(NotImplementedError) { aggregator.increment("foo", 1, tags, false, 1.0) }
+    assert_raises(NotImplementedError) { aggregator.aggregate_timing("foo", 1, tags, false, :ms, 1.0) }
+    assert_raises(NotImplementedError) { aggregator.gauge("bar", 1, tags, false) }
+    aggregator.flush
+    assert_empty(@sink.datagrams)
+  ensure
+    aggregator&.instance_variable_get(:@flush_thread)&.kill
   end
 end

@@ -163,7 +163,8 @@ module StatsD
       #
       # @param aggregation_sort_tags [Boolean] Whether the built-in aggregator sorts
       #   tags before aggregating. Set to false to skip the sort when the StatsD server
-      #   combines metrics that have the same tags in a different order.
+      #   combines metrics that have the same tags in a different order. Ignored when
+      #   an external aggregator is injected; the backend decides how to handle tags.
       # @param aggregator [#increment, #gauge, #aggregate_timing, nil]
       #   Optional external aggregation backend.
       # @see .from_env to instantiate a client using environment variables.

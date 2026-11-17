@@ -338,23 +338,10 @@ module StatsD
         datagram_builder(no_prefix: false).normalize_tags(tags)
       end
 
-      # Symbol#name returns the interned string of the symbol. Symbol#to_s allocates a copy.
-      SYMBOL_HAS_NAME = Symbol.method_defined?(:name)
-
       def tags_unsorted(tags)
         return "" if tags.nil? || tags.empty?
-        return datagram_builder(no_prefix: false).normalize_tags(tags) unless tags.is_a?(Hash)
 
-        buffer = "".b
-        tags.each do |key, value|
-          buffer << "," unless buffer.empty?
-          key = SYMBOL_HAS_NAME && key.is_a?(Symbol) ? key.name : key.to_s
-          key = key.tr(Sanitization::TAG_CHARACTERS, "") if Sanitization::TAG_PATTERN.match?(key)
-          value = SYMBOL_HAS_NAME && value.is_a?(Symbol) ? value.name : value.to_s
-          value = value.tr(Sanitization::TAG_CHARACTERS, "") if Sanitization::TAG_PATTERN.match?(value)
-          buffer << key << ":" << value
-        end
-        buffer
+        datagram_builder(no_prefix: false).normalize_tags(tags)
       end
 
       def packet_key(name, tags = "".b, no_prefix = false, type = COUNT, sample_rate: CONST_SAMPLE_RATE)
