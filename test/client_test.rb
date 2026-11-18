@@ -166,6 +166,37 @@ class ClientTest < Minitest::Test
     clone&.instance_variable_get(:@aggregator)&.instance_variable_get(:@flush_thread)&.kill
   end
 
+  def test_client_from_env_without_aggregation_tag_sorting
+    env = StatsD::Instrument::Environment.new(
+      "STATSD_ENABLE_AGGREGATION" => "true",
+      "STATSD_AGGREGATION_SORT_TAGS" => "false",
+    )
+    client = StatsD::Instrument::Client.from_env(
+      env,
+      sink: StatsD::Instrument::CaptureSink.new(parent: StatsD::Instrument::NullSink.new),
+    )
+    clone = client.clone_with_options(prefix: "clone")
+
+    [client, clone].each do |c|
+      c.increment("requests", tags: ["b:2", "a:1"])
+      c.increment("requests", tags: ["a:1", "b:2"])
+      c.force_flush
+    end
+
+    assert_equal(
+      [
+        "requests:1|c|#b:2,a:1",
+        "requests:1|c|#a:1,b:2",
+        "clone.requests:1|c|#b:2,a:1",
+        "clone.requests:1|c|#a:1,b:2",
+      ],
+      client.sink.datagrams.map(&:source),
+    )
+  ensure
+    client&.instance_variable_get(:@aggregator)&.instance_variable_get(:@flush_thread)&.kill
+    clone&.instance_variable_get(:@aggregator)&.instance_variable_get(:@flush_thread)&.kill
+  end
+
   def test_capture
     inner_datagrams = nil
 

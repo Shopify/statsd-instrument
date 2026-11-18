@@ -6,6 +6,14 @@ section below.
 
 ## Unreleased changes
 
+## Version 4.1.0
+
+- [#430](https://github.com/Shopify/statsd-instrument/pull/430) - Add an opt-in mode that skips the tag sort during aggregation, for StatsD servers that combine metrics with the same
+  tags in a different order. Set `STATSD_AGGREGATION_SORT_TAGS=false` or pass `aggregation_sort_tags: false` to
+  `Client.new`. Tags are still sorted by default.
+- [#430](https://github.com/Shopify/statsd-instrument/pull/430) - Use `Symbol#name` for Symbol keys and values of hash tags where Ruby provides it (Ruby 3.0 and later), so the
+  datagram builder does not allocate a copy of each one.
+
 ## Version 4.0.1
 
 - Normalize ASCII whitespace in metric names and prefixes, and newlines (`\n` and `\r`) in tags and set values, including aggregated and compiled metrics.

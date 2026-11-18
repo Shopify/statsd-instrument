@@ -27,6 +27,22 @@ class DatagramBuilderTest < Minitest::Test
     assert_equal("tag1:v1,tag2:v2", @datagram_builder.send(:compile_tags, { tag1: "v1", tag2: "v2" }))
   end
 
+  def test_compile_tags_with_symbol_and_other_hash_keys_and_values
+    assert_equal(
+      "kind:read,pid:42,mobile:true,path:/cart,1:2",
+      @datagram_builder.send(:compile_tags, { kind: :read, pid: 42, mobile: true, "path" => "/cart", 1 => 2 }),
+    )
+  end
+
+  def test_compile_tags_sanitizes_symbol_hash_keys_and_values_without_changing_the_symbols
+    key = :"tool|name"
+    value = :"a,b"
+
+    assert_equal("toolname:ab", @datagram_builder.send(:compile_tags, { key => value }))
+    assert_equal("tool|name", key.to_s)
+    assert_equal("a,b", value.to_s)
+  end
+
   def test_c
     datagram = @datagram_builder.c("foo", 1, nil, nil)
     assert_equal("foo:1|c", datagram)

@@ -6,6 +6,12 @@ module StatsD
     #   to become the new default in the next major release of this library.
     class DatagramBuilder
       extend Forwardable
+
+      # Symbol#name returns the interned string of a symbol, and Symbol#to_s allocates a copy.
+      # Symbol#name arrived in Ruby 3.0, and this gem supports Ruby 2.6.
+      SYMBOL_HAS_NAME = Symbol.method_defined?(:name)
+      private_constant :SYMBOL_HAS_NAME
+
       class << self
         def unsupported_datagram_types(*types)
           types.each do |type|
@@ -117,9 +123,9 @@ module StatsD
             else
               buffer << ","
             end
-            key = key.to_s
+            key = SYMBOL_HAS_NAME && key.is_a?(Symbol) ? key.name : key.to_s
             key = key.tr(Sanitization::TAG_CHARACTERS, "") if Sanitization::TAG_PATTERN.match?(key)
-            value = value.to_s
+            value = SYMBOL_HAS_NAME && value.is_a?(Symbol) ? value.name : value.to_s
             value = value.tr(Sanitization::TAG_CHARACTERS, "") if Sanitization::TAG_PATTERN.match?(value)
             buffer << key << ":" << value
           end

@@ -132,6 +132,10 @@ module StatsD
         ))
       end
 
+      def aggregation_sort_tags?
+        !["false", "0"].include?(env.fetch("STATSD_AGGREGATION_SORT_TAGS", "true").downcase)
+      end
+
       def client
         StatsD::Instrument::Client.from_env(self)
       end
